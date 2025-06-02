@@ -1,0 +1,43 @@
+# Claude Workspace Gitignore
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Log files
+*.log
+
+# Private or sensitive information
+secrets/
+private/
+*.key
+*.pem
+
+# Editor directories
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+venv/
+.env
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Build outputs
+build/
+dist/
+out/
