@@ -21,350 +21,6 @@ let propPlatformRelations = new Map(); // prop -> platform
 let propRotatingStageRelations = new Set(); // props on rotating stage
 let propTrapDoorRelations = new Map(); // prop -> trapdoor
 
-// Scene serializer for save/load functionality
-class SceneSerializer {
-    constructor() {
-        this.version = '1.0';
-    }
-
-    // Export current scene to JSON
-    exportScene(sceneName = 'Untitled Scene', description = '') {
-        const sceneData = {
-            version: this.version,
-            timestamp: new Date().toISOString(),
-            name: sceneName,
-            description: description,
-            stage: {
-                actors: this.serializeActors(),
-                props: this.serializeProps(),
-                lighting: this.serializeLighting(),
-                camera: this.serializeCamera(),
-                stageElements: this.serializeStageElements()
-            }
-        };
-        
-        return JSON.stringify(sceneData, null, 2);
-    }
-
-    // Import scene from JSON
-    importScene(jsonData) {
-        try {
-            const sceneData = JSON.parse(jsonData);
-            
-            // Validate version
-            if (sceneData.version !== this.version) {
-                console.warn(`Scene version ${sceneData.version} may not be fully compatible with current version ${this.version}`);
-            }
-            
-            // Clear current scene
-            this.clearScene();
-            
-            // Import all elements
-            this.deserializeActors(sceneData.stage.actors);
-            this.deserializeProps(sceneData.stage.props);
-            this.deserializeLighting(sceneData.stage.lighting);
-            this.deserializeCamera(sceneData.stage.camera);
-            this.deserializeStageElements(sceneData.stage.stageElements);
-            
-            return { success: true, name: sceneData.name, description: sceneData.description };
-        } catch (error) {
-            console.error('Failed to import scene:', error);
-            return { success: false, error: error.message };
-        }
-    }
-
-    // Serialize actors
-    serializeActors() {
-        return actors.map(actor => ({
-            id: actor.userData.id,
-            name: actor.userData.name,
-            position: { x: actor.position.x, y: actor.position.y, z: actor.position.z },
-            rotation: { x: actor.rotation.x, y: actor.rotation.y, z: actor.rotation.z },
-            visible: actor.visible,
-            hidden: actor.userData.hidden
-        }));
-    }
-
-    // Serialize props
-    serializeProps() {
-        return props.map(prop => ({
-            id: prop.userData.id,
-            name: prop.userData.name,
-            type: prop.userData.propType,
-            position: { x: prop.position.x, y: prop.position.y, z: prop.position.z },
-            rotation: { x: prop.rotation.x, y: prop.rotation.y, z: prop.rotation.z },
-            visible: prop.visible,
-            hidden: prop.userData.hidden
-        }));
-    }
-
-    // Serialize lighting
-    serializeLighting() {
-        return {
-            preset: currentLightingPreset,
-            customSettings: {} // For future custom lighting settings
-        };
-    }
-
-    // Serialize camera
-    serializeCamera() {
-        return {
-            position: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
-            target: { x: controls.target.x, y: controls.target.y, z: controls.target.z }
-        };
-    }
-
-    // Serialize stage elements
-    serializeStageElements() {
-        return {
-            platforms: moveablePlatforms.map((platform, index) => ({
-                index: index,
-                height: platform.position.y,
-                visible: platform.visible
-            })),
-            curtains: curtainState,
-            rotatingStage: {
-                visible: rotatingStage.visible,
-                rotating: rotatingStage.userData.rotating,
-                rotation: rotatingStage.rotation.y
-            },
-            trapDoors: trapDoors.map((trapDoor, index) => ({
-                index: index,
-                visible: trapDoor.visible,
-                open: trapDoor.userData.open
-            })),
-            scenery: sceneryPanels.map((panel, index) => {
-                const mesh = panel.children[0];
-                const textureInfo = {
-                    index: index,
-                    position: panel.userData.currentPosition,
-                    hasTexture: !!mesh.material.map,
-                    textureScale: mesh.material.map ? {
-                        x: mesh.material.map.repeat.x,
-                        y: mesh.material.map.repeat.y
-                    } : null
-                };
-                
-                // If using a default texture, save its type
-                if (mesh.material.map) {
-                    const texture = mesh.material.map;
-                    if (texture === textureManager.getDefaultTexture('brick')) {
-                        textureInfo.defaultTexture = 'brick';
-                    } else if (texture === textureManager.getDefaultTexture('wood')) {
-                        textureInfo.defaultTexture = 'wood';
-                    } else if (texture === textureManager.getDefaultTexture('sky')) {
-                        textureInfo.defaultTexture = 'sky';
-                    }
-                }
-                
-                return textureInfo;
-            }),
-            markers: {
-                visible: stageMarkers[0]?.visible || false
-            }
-        };
-    }
-
-    // Clear current scene
-    clearScene() {
-        // Remove all actors
-        actors.forEach(actor => scene.remove(actor));
-        actors = [];
-        nextActorId = 1;
-        
-        // Remove all props
-        props.forEach(prop => scene.remove(prop));
-        props = [];
-        nextPropId = 1;
-        
-        // Reset stage elements to defaults
-        curtainState = 'closed';
-        updateCurtainPositions();
-        
-        // Reset platforms
-        moveablePlatforms.forEach(platform => {
-            platform.position.y = 0.25;
-            platform.userData.targetY = 0.25;
-        });
-        
-        // Reset rotating stage
-        rotatingStage.visible = false;
-        rotatingStage.userData.rotating = false;
-        rotatingStage.rotation.y = 0;
-        
-        // Reset trap doors
-        trapDoors.forEach(trapDoor => {
-            trapDoor.visible = false;
-            trapDoor.userData.open = false;
-            trapDoor.userData.targetRotation = 0;
-        });
-        
-        // Reset scenery
-        sceneryPanels.forEach(panel => {
-            panel.userData.currentPosition = 0;
-            panel.userData.targetPosition = 0;
-            panel.position.x = panel.userData.isBackdrop ? -30 : 30;
-        });
-    }
-
-    // Deserialize actors
-    deserializeActors(actorData) {
-        if (!actorData) return;
-        
-        actorData.forEach(data => {
-            // Extract ID number for proper ordering
-            const idNum = parseInt(data.id.split('_')[1]);
-            if (idNum >= nextActorId) nextActorId = idNum + 1;
-            
-            // Create actor at position
-            addActorAt(data.position.x, data.position.z);
-            
-            // Get the last added actor
-            const actor = actors[actors.length - 1];
-            
-            // Restore properties
-            actor.position.set(data.position.x, data.position.y, data.position.z);
-            actor.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
-            actor.visible = data.visible;
-            actor.userData.hidden = data.hidden;
-            actor.userData.id = data.id;
-            actor.userData.name = data.name;
-        });
-    }
-
-    // Deserialize props
-    deserializeProps(propData) {
-        if (!propData) return;
-        
-        propData.forEach(data => {
-            // Extract ID number for proper ordering
-            const idNum = parseInt(data.id.split('_')[1]);
-            if (idNum >= nextPropId) nextPropId = idNum + 1;
-            
-            // Set the prop type and create it
-            selectedPropType = data.type;
-            addPropAt(data.position.x, data.position.z);
-            
-            // Get the last added prop
-            const prop = props[props.length - 1];
-            
-            // Restore properties
-            prop.position.set(data.position.x, data.position.y, data.position.z);
-            prop.rotation.set(data.rotation.x, data.rotation.y, data.rotation.z);
-            prop.visible = data.visible;
-            prop.userData.hidden = data.hidden;
-            prop.userData.id = data.id;
-            prop.userData.name = data.name;
-        });
-    }
-
-    // Deserialize lighting
-    deserializeLighting(lightingData) {
-        if (!lightingData) return;
-        applyLightingPreset(lightingData.preset);
-    }
-
-    // Deserialize camera
-    deserializeCamera(cameraData) {
-        if (!cameraData) return;
-        camera.position.set(cameraData.position.x, cameraData.position.y, cameraData.position.z);
-        controls.target.set(cameraData.target.x, cameraData.target.y, cameraData.target.z);
-        controls.update();
-    }
-
-    // Deserialize stage elements
-    deserializeStageElements(elementsData) {
-        if (!elementsData) return;
-        
-        // Platforms
-        if (elementsData.platforms) {
-            elementsData.platforms.forEach(platData => {
-                if (platData.index < moveablePlatforms.length) {
-                    const platform = moveablePlatforms[platData.index];
-                    platform.position.y = platData.height;
-                    platform.userData.targetY = platData.height;
-                    platform.visible = platData.visible;
-                }
-            });
-        }
-        
-        // Curtains
-        if (elementsData.curtains) {
-            curtainState = elementsData.curtains;
-            updateCurtainPositions();
-        }
-        
-        // Rotating stage
-        if (elementsData.rotatingStage) {
-            rotatingStage.visible = elementsData.rotatingStage.visible;
-            rotatingStage.userData.rotating = elementsData.rotatingStage.rotating;
-            rotatingStage.rotation.y = elementsData.rotatingStage.rotation;
-        }
-        
-        // Trap doors
-        if (elementsData.trapDoors) {
-            elementsData.trapDoors.forEach(trapData => {
-                if (trapData.index < trapDoors.length) {
-                    const trapDoor = trapDoors[trapData.index];
-                    trapDoor.visible = trapData.visible;
-                    trapDoor.userData.open = trapData.open;
-                    trapDoor.userData.targetRotation = trapData.open ? Math.PI / 2 : 0;
-                }
-            });
-        }
-        
-        // Scenery
-        if (elementsData.scenery) {
-            elementsData.scenery.forEach(sceneryData => {
-                if (sceneryData.index < sceneryPanels.length) {
-                    moveSceneryPanel(sceneryData.index, sceneryData.position);
-                    
-                    // Restore textures
-                    if (sceneryData.defaultTexture) {
-                        const texture = textureManager.getDefaultTexture(sceneryData.defaultTexture);
-                        if (texture) {
-                            textureManager.applyTextureToPanel(sceneryData.index, texture);
-                            
-                            // Restore texture scale
-                            if (sceneryData.textureScale) {
-                                const panel = sceneryPanels[sceneryData.index];
-                                const mesh = panel.children[0];
-                                if (mesh.material.map) {
-                                    mesh.material.map.repeat.set(
-                                        sceneryData.textureScale.x,
-                                        sceneryData.textureScale.y
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-        
-        // Markers
-        if (elementsData.markers) {
-            stageMarkers.forEach(marker => {
-                marker.visible = elementsData.markers.visible;
-            });
-        }
-    }
-}
-
-// Create global serializer instance
-const sceneSerializer = new SceneSerializer();
-
-// Helper function to update curtain positions immediately
-function updateCurtainPositions() {
-    if (curtainState === 'open') {
-        curtainLeft.position.x = -10;
-        curtainRight.position.x = 10;
-    } else {
-        curtainLeft.position.x = -2;
-        curtainRight.position.x = 2;
-    }
-}
-
 function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x001122);
@@ -395,7 +51,6 @@ function init() {
     window.addEventListener('resize', onWindowResize, false);
     window.addEventListener('click', onStageClick, false);
     window.addEventListener('mousemove', onMouseMove, false);
-    window.addEventListener('keydown', onKeyDown, false);
 }
 
 function createStage() {
@@ -883,67 +538,19 @@ function onStageClick(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     
-    // Raycaster to find where clicked
+    // Raycaster to find where clicked on stage
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, camera);
     
-    if (placementMode === 'push') {
-        // Check intersection with all objects
-        const allObjects = [...props, ...actors];
-        const intersects = raycaster.intersectObjects(allObjects, true);
-        
-        if (intersects.length > 0) {
-            // Find the root object (not child meshes)
-            let targetObj = intersects[0].object;
-            while (targetObj.parent && targetObj.parent !== scene) {
-                targetObj = targetObj.parent;
-            }
-            
-            // Apply push force
-            const pushForce = 0.5; // Base push strength
-            const mass = getObjectMass(targetObj);
-            const pushVelocity = pushForce * (50 / mass); // Lighter objects move more
-            
-            // Calculate push direction from camera to object
-            const pushDir = new THREE.Vector3();
-            pushDir.subVectors(targetObj.position, camera.position);
-            pushDir.y = 0; // Keep horizontal
-            pushDir.normalize();
-            
-            // Apply velocity
-            if (!objectVelocities.has(targetObj)) {
-                objectVelocities.set(targetObj, { x: 0, z: 0 });
-            }
-            const vel = objectVelocities.get(targetObj);
-            vel.x = pushDir.x * pushVelocity;
-            vel.z = pushDir.z * pushVelocity;
-            
-            console.log(`Pushed ${targetObj.userData.name || targetObj.userData.id} with velocity ${pushVelocity.toFixed(2)}`);
-        }
-        
-        // Stay in push mode for multiple pushes
-        return;
-    }
-    
-    // Check intersection with stage for placement
+    // Check intersection with stage
     const intersects = raycaster.intersectObject(stage);
     if (intersects.length > 0) {
         const point = intersects[0].point;
         
         if (placementMode === 'prop') {
-            const command = new PlaceObjectCommand('prop', 
-                { propType: selectedPropType }, 
-                { x: point.x, y: 0, z: point.z }
-            );
-            commandManager.executeCommand(command);
-            window.updateUndoRedoButtons();
+            addPropAt(point.x, point.z);
         } else if (placementMode === 'actor') {
-            const command = new PlaceObjectCommand('actor', 
-                {}, 
-                { x: point.x, y: 0, z: point.z }
-            );
-            commandManager.executeCommand(command);
-            window.updateUndoRedoButtons();
+            addActorAt(point.x, point.z);
         }
         
         // Exit placement mode
@@ -982,23 +589,6 @@ function addControls() {
     controls.maxPolarAngle = Math.PI / 2;
 }
 
-function onKeyDown(event) {
-    // Check for Ctrl+Z (undo) and Ctrl+Y (redo)
-    if (event.ctrlKey || event.metaKey) {
-        if (event.key === 'z' && !event.shiftKey) {
-            event.preventDefault();
-            if (commandManager.undo()) {
-                window.updateUndoRedoButtons();
-            }
-        } else if (event.key === 'y' || (event.key === 'z' && event.shiftKey)) {
-            event.preventDefault();
-            if (commandManager.redo()) {
-                window.updateUndoRedoButtons();
-            }
-        }
-    }
-}
-
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -1006,24 +596,6 @@ function onWindowResize() {
 }
 
 function setupUI() {
-    // Create toggle button for menu
-    const toggleButton = document.createElement('button');
-    toggleButton.id = 'menu-toggle';
-    toggleButton.textContent = '☰';
-    toggleButton.style.cssText = `
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        border: none;
-        padding: 10px 15px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 20px;
-        z-index: 1000;
-    `;
-    
     const uiContainer = document.createElement('div');
     uiContainer.id = 'ui-container';
     uiContainer.style.cssText = `
@@ -1035,20 +607,7 @@ function setupUI() {
         border-radius: 5px;
         color: white;
         font-family: Arial, sans-serif;
-        transition: transform 0.3s ease;
     `;
-    
-    let menuVisible = true;
-    toggleButton.addEventListener('click', () => {
-        menuVisible = !menuVisible;
-        if (menuVisible) {
-            uiContainer.style.transform = 'translateX(0)';
-            toggleButton.textContent = '☰';
-        } else {
-            uiContainer.style.transform = 'translateX(-350px)';
-            toggleButton.textContent = '→';
-        }
-    });
 
     const lightingSelect = document.createElement('select');
     lightingSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
@@ -1123,7 +682,7 @@ function setupUI() {
     platformButton.addEventListener('click', movePlatforms);
 
     const rotateButton = document.createElement('button');
-    rotateButton.textContent = 'Start/Stop Rotation';
+    rotateButton.textContent = 'Rotate Stage';
     rotateButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
     rotateButton.addEventListener('click', rotateCenter);
 
@@ -1169,147 +728,6 @@ function setupUI() {
     `;
     midstageSelect.addEventListener('change', (e) => moveSceneryPanel(1, parseFloat(e.target.value)));
 
-    // Texture controls
-    const textureLabel = document.createElement('div');
-    textureLabel.innerHTML = '<strong>Scenery Textures</strong>';
-    textureLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
-    
-    const panelSelect = document.createElement('select');
-    panelSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
-    panelSelect.innerHTML = `
-        <option value="0">Backdrop Panel</option>
-        <option value="1">Midstage Panel</option>
-    `;
-    
-    const defaultTextureSelect = document.createElement('select');
-    defaultTextureSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
-    defaultTextureSelect.innerHTML = `
-        <option value="">Select Default Texture...</option>
-        <option value="brick">Brick Wall</option>
-        <option value="wood">Wood Planks</option>
-        <option value="sky">Sky Gradient</option>
-    `;
-    defaultTextureSelect.addEventListener('change', (e) => {
-        if (e.target.value) {
-            const panelIndex = parseInt(panelSelect.value);
-            const texture = textureManager.getDefaultTexture(e.target.value);
-            textureManager.applyTextureToPanel(panelIndex, texture);
-            console.log(`Applied ${e.target.value} texture to panel ${panelIndex}`);
-        }
-    });
-    
-    const uploadButton = document.createElement('button');
-    uploadButton.textContent = 'Upload Image';
-    uploadButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    uploadButton.addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        
-        input.onchange = async (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            try {
-                const texture = await textureManager.loadCustomTexture(file);
-                const panelIndex = parseInt(panelSelect.value);
-                textureManager.applyTextureToPanel(panelIndex, texture);
-                console.log(`Applied custom texture to panel ${panelIndex}`);
-                alert('Texture applied successfully!');
-            } catch (error) {
-                console.error('Texture loading failed:', error);
-                alert('Failed to load texture: ' + error.message);
-            }
-        };
-        
-        input.click();
-    });
-    
-    const textureScaleLabel = document.createElement('div');
-    textureScaleLabel.textContent = 'Texture Scale:';
-    textureScaleLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
-    
-    const scaleSlider = document.createElement('input');
-    scaleSlider.type = 'range';
-    scaleSlider.min = '0.1';
-    scaleSlider.max = '5';
-    scaleSlider.step = '0.1';
-    scaleSlider.value = '1';
-    scaleSlider.style.cssText = 'margin: 5px 0; width: 150px;';
-    scaleSlider.addEventListener('input', (e) => {
-        const scale = parseFloat(e.target.value);
-        const panelIndex = parseInt(panelSelect.value);
-        const panel = sceneryPanels[panelIndex];
-        if (panel && panel.children[0].material.map) {
-            panel.children[0].material.map.repeat.set(scale, scale);
-        }
-    });
-
-    // Save/Load controls
-    const saveLoadLabel = document.createElement('div');
-    saveLoadLabel.innerHTML = '<strong>Save/Load Scene</strong>';
-    saveLoadLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
-    
-    const saveButton = document.createElement('button');
-    saveButton.textContent = 'Save Scene';
-    saveButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    saveButton.addEventListener('click', saveScene);
-    
-    const loadButton = document.createElement('button');
-    loadButton.textContent = 'Load Scene';
-    loadButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    loadButton.addEventListener('click', loadScene);
-    
-    // Physics test button
-    const physicsLabel = document.createElement('div');
-    physicsLabel.innerHTML = '<strong>Physics Test</strong>';
-    physicsLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
-    
-    const pushButton = document.createElement('button');
-    pushButton.textContent = 'Push Mode';
-    pushButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    pushButton.addEventListener('click', () => {
-        placementMode = 'push';
-        placementMarker.visible = true;
-        alert('Click on an object to push it! Lighter objects move more.');
-    });
-    
-    // Undo/Redo controls
-    const undoRedoLabel = document.createElement('div');
-    undoRedoLabel.innerHTML = '<strong>Undo/Redo</strong>';
-    undoRedoLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
-    
-    const undoButton = document.createElement('button');
-    undoButton.textContent = 'Undo (Ctrl+Z)';
-    undoButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    undoButton.addEventListener('click', () => {
-        if (commandManager.undo()) {
-            updateUndoRedoButtons();
-        }
-    });
-    
-    const redoButton = document.createElement('button');
-    redoButton.textContent = 'Redo (Ctrl+Y)';
-    redoButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    redoButton.addEventListener('click', () => {
-        if (commandManager.redo()) {
-            updateUndoRedoButtons();
-        }
-    });
-    
-    function updateUndoRedoButtons() {
-        undoButton.disabled = !commandManager.canUndo();
-        redoButton.disabled = !commandManager.canRedo();
-        undoButton.style.opacity = commandManager.canUndo() ? '1' : '0.5';
-        redoButton.style.opacity = commandManager.canRedo() ? '1' : '0.5';
-    }
-    
-    // Initialize button states
-    updateUndoRedoButtons();
-    
-    // Store reference for global access
-    window.updateUndoRedoButtons = updateUndoRedoButtons;
-
     const cameraSelect = document.createElement('select');
     cameraSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
     cameraSelect.innerHTML = `
@@ -1352,26 +770,7 @@ function setupUI() {
     uiContainer.appendChild(backdropSelect);
     uiContainer.appendChild(document.createElement('br'));
     uiContainer.appendChild(midstageSelect);
-    uiContainer.appendChild(textureLabel);
-    uiContainer.appendChild(panelSelect);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(defaultTextureSelect);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(uploadButton);
-    uiContainer.appendChild(textureScaleLabel);
-    uiContainer.appendChild(scaleSlider);
-    uiContainer.appendChild(saveLoadLabel);
-    uiContainer.appendChild(saveButton);
-    uiContainer.appendChild(document.createTextNode(' '));
-    uiContainer.appendChild(loadButton);
-    uiContainer.appendChild(physicsLabel);
-    uiContainer.appendChild(pushButton);
-    uiContainer.appendChild(undoRedoLabel);
-    uiContainer.appendChild(undoButton);
-    uiContainer.appendChild(document.createTextNode(' '));
-    uiContainer.appendChild(redoButton);
 
-    document.body.appendChild(toggleButton);
     document.body.appendChild(uiContainer);
 }
 
@@ -1634,42 +1033,8 @@ function addPropAt(x, z) {
         hidden: false
     };
     
-    // Check if position is occupied before placing
-    const tempProps = [...props];
-    props.push(propObject); // Temporarily add to check collisions
-    
-    if (checkAllCollisions(propObject, x, z)) {
-        // Position occupied, try to find nearby free spot
-        props.pop(); // Remove from list
-        
-        let placed = false;
-        const offsets = [
-            {x: 1, z: 0}, {x: -1, z: 0}, {x: 0, z: 1}, {x: 0, z: -1},
-            {x: 1, z: 1}, {x: -1, z: 1}, {x: 1, z: -1}, {x: -1, z: -1}
-        ];
-        
-        for (let offset of offsets) {
-            const newX = x + offset.x * 1.5;
-            const newZ = z + offset.z * 1.5;
-            props.push(propObject); // Re-add to check
-            if (!checkAllCollisions(propObject, newX, newZ)) {
-                propObject.position.set(newX, propDef.y, newZ);
-                placed = true;
-                break;
-            }
-            props.pop(); // Remove again
-        }
-        
-        if (!placed) {
-            console.log('Could not find free space for prop');
-            return; // Don't place if no free space
-        }
-    }
-    
     scene.add(propObject);
-    if (props[props.length - 1] !== propObject) {
-        props.push(propObject);
-    }
+    props.push(propObject);
     
     // Check initial relationships
     updatePropRelationships(propObject);
@@ -1732,41 +1097,8 @@ function addActorAt(x, z) {
         name: `Actor ${actorId}`
     };
     
-    // Check if position is occupied before placing
-    actors.push(actorGroup); // Temporarily add to check collisions
-    
-    if (checkAllCollisions(actorGroup, x, z)) {
-        // Position occupied, try to find nearby free spot
-        actors.pop(); // Remove from list
-        
-        let placed = false;
-        const offsets = [
-            {x: 1, z: 0}, {x: -1, z: 0}, {x: 0, z: 1}, {x: 0, z: -1},
-            {x: 1, z: 1}, {x: -1, z: 1}, {x: 1, z: -1}, {x: -1, z: -1}
-        ];
-        
-        for (let offset of offsets) {
-            const newX = x + offset.x * 1.5;
-            const newZ = z + offset.z * 1.5;
-            actors.push(actorGroup); // Re-add to check
-            if (!checkAllCollisions(actorGroup, newX, newZ)) {
-                actorGroup.position.set(newX, 0, newZ);
-                placed = true;
-                break;
-            }
-            actors.pop(); // Remove again
-        }
-        
-        if (!placed) {
-            console.log('Could not find free space for actor');
-            return; // Don't place if no free space
-        }
-    }
-    
     scene.add(actorGroup);
-    if (actors[actors.length - 1] !== actorGroup) {
-        actors.push(actorGroup);
-    }
+    actors.push(actorGroup);
     
     // Actors use same physics as props
     updatePropRelationships(actorGroup);
@@ -1883,9 +1215,6 @@ function rotateCenter() {
     if (rotatingStage && rotatingStage.visible) {
         const userData = rotatingStage.userData;
         userData.rotating = !userData.rotating;
-        console.log(`Rotating stage is now ${userData.rotating ? 'rotating' : 'stopped'}`);
-    } else {
-        alert('Please show the rotating stage first using "Show/Hide Rotating Stage" button');
     }
 }
 
@@ -1992,489 +1321,19 @@ function moveSceneryPanel(index, position) {
     }
 }
 
-// Physics properties for objects
-const OBJECT_PHYSICS = {
-    actor: { mass: 70, friction: 0.8 }, // ~70kg human
-    table: { mass: 30, friction: 0.9 }, // Heavy, high friction
-    chair: { mass: 8, friction: 0.7 },  // Lighter, can slide
-    barrel: { mass: 50, friction: 0.6 }, // Heavy but can roll
-    box: { mass: 20, friction: 0.8 },   // Medium weight
-    plant: { mass: 5, friction: 0.7 },  // Light
-    lamp: { mass: 3, friction: 0.9 },   // Very light
-    cube: { mass: 10, friction: 0.7 },  // Default
-    sphere: { mass: 8, friction: 0.4 }, // Low friction (rolls)
-    cylinder: { mass: 12, friction: 0.6 }
-};
-
-// Velocity tracking for momentum
-let objectVelocities = new Map();
-
-// Texture management system
-class TextureManager {
-    constructor() {
-        this.textures = new Map();
-        this.loader = new THREE.TextureLoader();
-        this.defaultTextures = this.createDefaultTextures();
-    }
-    
-    createDefaultTextures() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
-        const ctx = canvas.getContext('2d');
-        
-        const textures = {};
-        
-        // Create brick texture
-        ctx.fillStyle = '#8B4513';
-        ctx.fillRect(0, 0, 256, 256);
-        ctx.fillStyle = '#654321';
-        for (let y = 0; y < 256; y += 32) {
-            for (let x = 0; x < 256; x += 64) {
-                const offset = (y / 32) % 2 * 32;
-                ctx.fillRect(x + offset, y, 60, 30);
-            }
-        }
-        textures.brick = new THREE.CanvasTexture(canvas);
-        textures.brick.wrapS = textures.brick.wrapT = THREE.RepeatWrapping;
-        
-        // Create wood texture
-        ctx.fillStyle = '#DEB887';
-        ctx.fillRect(0, 0, 256, 256);
-        ctx.fillStyle = '#CD853F';
-        for (let y = 0; y < 256; y += 16) {
-            ctx.fillRect(0, y, 256, 8);
-        }
-        textures.wood = new THREE.CanvasTexture(canvas);
-        textures.wood.wrapS = textures.wood.wrapT = THREE.RepeatWrapping;
-        
-        // Create sky texture
-        const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-        gradient.addColorStop(0, '#87CEEB');
-        gradient.addColorStop(1, '#98FB98');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 256, 256);
-        textures.sky = new THREE.CanvasTexture(canvas);
-        
-        return textures;
-    }
-    
-    loadCustomTexture(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const texture = this.loader.load(e.target.result, 
-                    () => resolve(texture),
-                    undefined,
-                    () => reject(new Error('Failed to load texture'))
-                );
-                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-            };
-            reader.onerror = () => reject(new Error('Failed to read file'));
-            reader.readAsDataURL(file);
-        });
-    }
-    
-    applyTextureToPanel(panelIndex, texture, scale = { x: 1, y: 1 }) {
-        if (panelIndex >= sceneryPanels.length) return false;
-        
-        const panel = sceneryPanels[panelIndex];
-        const mesh = panel.children[0]; // Main panel mesh
-        
-        // Clone texture to avoid sharing references
-        const clonedTexture = texture.clone();
-        clonedTexture.repeat.set(scale.x, scale.y);
-        
-        // Apply to material
-        mesh.material.map = clonedTexture;
-        mesh.material.needsUpdate = true;
-        
-        return true;
-    }
-    
-    getDefaultTexture(name) {
-        return this.defaultTextures[name];
-    }
-}
-
-const textureManager = new TextureManager();
-
-// Command pattern for undo/redo system
-class Command {
-    execute() {
-        throw new Error('Execute method must be implemented');
-    }
-    
-    undo() {
-        throw new Error('Undo method must be implemented');
-    }
-    
-    canMerge(otherCommand) {
-        return false;
-    }
-}
-
-class PlaceObjectCommand extends Command {
-    constructor(objectType, objectData, position) {
-        super();
-        this.objectType = objectType; // 'prop' or 'actor'
-        this.objectData = objectData;
-        this.position = position;
-        this.objectRef = null;
-    }
-    
-    execute() {
-        if (this.objectType === 'prop') {
-            const oldPropType = selectedPropType;
-            selectedPropType = this.objectData.propType;
-            addPropAt(this.position.x, this.position.z);
-            selectedPropType = oldPropType;
-            this.objectRef = props[props.length - 1];
-        } else if (this.objectType === 'actor') {
-            addActorAt(this.position.x, this.position.z);
-            this.objectRef = actors[actors.length - 1];
-        }
-    }
-    
-    undo() {
-        if (!this.objectRef) return;
-        
-        scene.remove(this.objectRef);
-        if (this.objectType === 'prop') {
-            const index = props.indexOf(this.objectRef);
-            if (index > -1) props.splice(index, 1);
-        } else if (this.objectType === 'actor') {
-            const index = actors.indexOf(this.objectRef);
-            if (index > -1) actors.splice(index, 1);
-        }
-    }
-}
-
-class MoveObjectCommand extends Command {
-    constructor(object, newPosition, oldPosition) {
-        super();
-        this.object = object;
-        this.newPosition = newPosition;
-        this.oldPosition = oldPosition;
-    }
-    
-    execute() {
-        this.object.position.set(this.newPosition.x, this.newPosition.y, this.newPosition.z);
-    }
-    
-    undo() {
-        this.object.position.set(this.oldPosition.x, this.oldPosition.y, this.oldPosition.z);
-    }
-    
-    canMerge(otherCommand) {
-        return otherCommand instanceof MoveObjectCommand && 
-               otherCommand.object === this.object;
-    }
-}
-
-class StageElementCommand extends Command {
-    constructor(elementType, elementData, newState, oldState) {
-        super();
-        this.elementType = elementType;
-        this.elementData = elementData;
-        this.newState = newState;
-        this.oldState = oldState;
-    }
-    
-    execute() {
-        this.applyState(this.newState);
-    }
-    
-    undo() {
-        this.applyState(this.oldState);
-    }
-    
-    applyState(state) {
-        switch(this.elementType) {
-            case 'curtains':
-                curtainState = state;
-                // Don't call updateCurtainPositions here - let the animation handle it
-                break;
-            case 'platform':
-                const platform = moveablePlatforms[this.elementData.index];
-                if (platform) {
-                    platform.position.y = state.height;
-                    platform.userData.targetY = state.height;
-                }
-                break;
-            case 'rotatingStage':
-                rotatingStage.visible = state.visible;
-                rotatingStage.userData.rotating = state.rotating;
-                break;
-            case 'scenery':
-                moveSceneryPanel(this.elementData.index, state.position);
-                break;
-        }
-    }
-}
-
-class CommandManager {
-    constructor() {
-        this.history = [];
-        this.currentIndex = -1;
-        this.maxHistorySize = 50;
-    }
-    
-    executeCommand(command) {
-        command.execute();
-        
-        // Remove any commands after current index (we're creating a new branch)
-        this.history = this.history.slice(0, this.currentIndex + 1);
-        
-        // Check if we can merge with the last command
-        if (this.history.length > 0) {
-            const lastCommand = this.history[this.history.length - 1];
-            if (command.canMerge(lastCommand)) {
-                // Replace the last command with the new one
-                this.history[this.history.length - 1] = command;
-                return;
-            }
-        }
-        
-        // Add new command
-        this.history.push(command);
-        this.currentIndex = this.history.length - 1;
-        
-        // Limit history size
-        if (this.history.length > this.maxHistorySize) {
-            this.history.shift();
-            this.currentIndex--;
-        }
-        
-        console.log(`Command executed. History: ${this.currentIndex + 1}/${this.history.length}`);
-    }
-    
-    undo() {
-        if (this.currentIndex >= 0) {
-            const command = this.history[this.currentIndex];
-            command.undo();
-            this.currentIndex--;
-            console.log(`Undid command. History: ${this.currentIndex + 1}/${this.history.length}`);
-            return true;
-        }
-        return false;
-    }
-    
-    redo() {
-        if (this.currentIndex < this.history.length - 1) {
-            this.currentIndex++;
-            const command = this.history[this.currentIndex];
-            command.execute();
-            console.log(`Redid command. History: ${this.currentIndex + 1}/${this.history.length}`);
-            return true;
-        }
-        return false;
-    }
-    
-    clear() {
-        this.history = [];
-        this.currentIndex = -1;
-    }
-    
-    canUndo() {
-        return this.currentIndex >= 0;
-    }
-    
-    canRedo() {
-        return this.currentIndex < this.history.length - 1;
-    }
-}
-
-const commandManager = new CommandManager();
-
-// Get bounding box for an object (prop or actor)
-function getObjectBounds(obj) {
-    // Default bounds based on object type
-    let bounds = { width: 1, depth: 1, height: 1 };
-    
-    if (obj.userData.type === 'actor') {
-        bounds = { width: 1, depth: 1, height: 2.5 };
-    } else if (obj.userData.propType) {
-        // Specific bounds for different prop types
-        switch (obj.userData.propType) {
-            case 'table':
-                bounds = { width: 2, depth: 1.5, height: 1 };
-                break;
-            case 'chair':
-                bounds = { width: 1, depth: 1, height: 1.5 };
-                break;
-            case 'barrel':
-                bounds = { width: 1, depth: 1, height: 1.2 };
-                break;
-            case 'box':
-                bounds = { width: 1.2, depth: 1.2, height: 1.2 };
-                break;
-            case 'plant':
-                bounds = { width: 0.8, depth: 0.8, height: 1.2 };
-                break;
-            case 'lamp':
-                bounds = { width: 0.8, depth: 0.8, height: 1.5 };
-                break;
-            default:
-                bounds = { width: 1, depth: 1, height: 1 };
-        }
-    }
-    
-    return bounds;
-}
-
-// Get mass of an object
-function getObjectMass(obj) {
-    if (obj.userData.type === 'actor') {
-        return OBJECT_PHYSICS.actor.mass;
-    } else if (obj.userData.propType && OBJECT_PHYSICS[obj.userData.propType]) {
-        return OBJECT_PHYSICS[obj.userData.propType].mass;
-    }
-    return 10; // Default mass
-}
-
-// Get friction coefficient
-function getObjectFriction(obj) {
-    if (obj.userData.type === 'actor') {
-        return OBJECT_PHYSICS.actor.friction;
-    } else if (obj.userData.propType && OBJECT_PHYSICS[obj.userData.propType]) {
-        return OBJECT_PHYSICS[obj.userData.propType].friction;
-    }
-    return 0.7; // Default friction
-}
-
-// Check collision between two objects
-function checkObjectCollision(obj1, pos1, obj2) {
-    if (obj1 === obj2 || obj2.userData.hidden) return false;
-    
-    const bounds1 = getObjectBounds(obj1);
-    const bounds2 = getObjectBounds(obj2);
-    const pos2 = obj2.position;
-    
-    // Check X-Z plane collision (horizontal)
-    const xOverlap = Math.abs(pos1.x - pos2.x) < (bounds1.width + bounds2.width) / 2;
-    const zOverlap = Math.abs(pos1.z - pos2.z) < (bounds1.depth + bounds2.depth) / 2;
-    
-    // Check Y collision (vertical) - objects at different heights don't collide
-    const yOverlap = Math.abs(pos1.y - pos2.y) < (bounds1.height + bounds2.height) / 2;
-    
-    return xOverlap && zOverlap && yOverlap;
-}
-
-// Handle collision response with momentum transfer
-function handleCollisionResponse(obj1, obj2, velocity1) {
-    const mass1 = getObjectMass(obj1);
-    const mass2 = getObjectMass(obj2);
-    const friction2 = getObjectFriction(obj2);
-    
-    // Calculate momentum transfer
-    const totalMass = mass1 + mass2;
-    const momentum1 = mass1 * velocity1;
-    
-    // If obj2 is immovable (like a heavy table), it doesn't move
-    if (mass2 > mass1 * 5) { // Object 2 is 5x heavier
-        return { obj1Moves: false, obj2Velocity: 0 };
-    }
-    
-    // Calculate resulting velocities based on momentum conservation
-    const velocity2 = (momentum1 / totalMass) * (1 - friction2);
-    const newVelocity1 = velocity1 * (1 - mass2/totalMass) * friction2;
-    
-    return {
-        obj1Moves: Math.abs(newVelocity1) > 0.01,
-        obj1Velocity: newVelocity1,
-        obj2Velocity: velocity2,
-        obj2ShouldMove: Math.abs(velocity2) > 0.01
-    };
-}
-
-// Check if object can move to new position
-function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
-    const testPos = { x: newX, y: movingObj.position.y, z: newZ };
-    let collisionHandled = false;
-    
-    // Check collision with all props
-    for (let prop of props) {
-        if (checkObjectCollision(movingObj, testPos, prop)) {
-            if (velocity > 0) {
-                // Calculate collision response
-                const response = handleCollisionResponse(movingObj, prop, velocity);
-                
-                if (response.obj2ShouldMove) {
-                    // Calculate push direction
-                    const dx = prop.position.x - movingObj.position.x;
-                    const dz = prop.position.z - movingObj.position.z;
-                    const dist = Math.sqrt(dx*dx + dz*dz);
-                    
-                    if (dist > 0) {
-                        // Set velocity for the pushed object
-                        if (!objectVelocities.has(prop)) {
-                            objectVelocities.set(prop, { x: 0, z: 0 });
-                        }
-                        const vel = objectVelocities.get(prop);
-                        vel.x = (dx/dist) * response.obj2Velocity;
-                        vel.z = (dz/dist) * response.obj2Velocity;
-                    }
-                }
-                
-                collisionHandled = true;
-                return !response.obj1Moves; // Can move if momentum allows
-            }
-            return true; // Static collision
-        }
-    }
-    
-    // Check collision with all actors
-    for (let actor of actors) {
-        if (checkObjectCollision(movingObj, testPos, actor)) {
-            if (velocity > 0) {
-                const response = handleCollisionResponse(movingObj, actor, velocity);
-                
-                if (response.obj2ShouldMove) {
-                    const dx = actor.position.x - movingObj.position.x;
-                    const dz = actor.position.z - movingObj.position.z;
-                    const dist = Math.sqrt(dx*dx + dz*dz);
-                    
-                    if (dist > 0) {
-                        if (!objectVelocities.has(actor)) {
-                            objectVelocities.set(actor, { x: 0, z: 0 });
-                        }
-                        const vel = objectVelocities.get(actor);
-                        vel.x = (dx/dist) * response.obj2Velocity;
-                        vel.z = (dz/dist) * response.obj2Velocity;
-                    }
-                }
-                
-                collisionHandled = true;
-                return !response.obj1Moves;
-            }
-            return true;
-        }
-    }
-    
-    // Check scenery panel collisions (immovable)
-    if (checkPropSceneryCollision(movingObj, newX, newZ)) {
-        return true;
-    }
-    
-    return false; // No collision
-}
-
 function checkPropSceneryCollision(prop, newX, newZ) {
-    const bounds = getObjectBounds(prop);
-    const propRadius = Math.max(bounds.width, bounds.depth) / 2;
-    
     // Check collision with each scenery panel
     for (let panel of sceneryPanels) {
         if (panel.userData.currentPosition > 0) { // Panel is on stage
             const panelX = panel.position.x;
             const panelZ = panel.position.z;
-            const panelBounds = panel.userData.panelBounds;
+            const bounds = panel.userData.panelBounds;
             
             // Check if prop would collide with panel
+            const propRadius = 0.5; // Approximate prop radius
             if (Math.abs(newZ - panelZ) < propRadius && 
-                newX + propRadius > panelX + panelBounds.minX && 
-                newX - propRadius < panelX + panelBounds.maxX) {
+                newX + propRadius > panelX + bounds.minX && 
+                newX - propRadius < panelX + bounds.maxX) {
                 
                 // Check if prop can pass through cutout
                 if (panel.userData.hasPassthrough) {
@@ -2632,36 +1491,6 @@ function animate() {
             prop.position.y += yDiff * 0.1;
         }
         
-        // Apply velocity if object has momentum
-        if (objectVelocities.has(prop)) {
-            const vel = objectVelocities.get(prop);
-            if (Math.abs(vel.x) > 0.001 || Math.abs(vel.z) > 0.001) {
-                const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
-                const newX = prop.position.x + vel.x;
-                const newZ = prop.position.z + vel.z;
-                
-                if (!checkAllCollisions(prop, newX, newZ, speed)) {
-                    prop.position.x = newX;
-                    prop.position.z = newZ;
-                    
-                    // Apply friction to slow down
-                    const friction = getObjectFriction(prop);
-                    vel.x *= (1 - friction * 0.1);
-                    vel.z *= (1 - friction * 0.1);
-                    
-                    // Stop if too slow
-                    if (Math.abs(vel.x) < 0.001 && Math.abs(vel.z) < 0.001) {
-                        vel.x = 0;
-                        vel.z = 0;
-                    }
-                } else {
-                    // Bounce off with reduced velocity
-                    vel.x *= -0.3;
-                    vel.z *= -0.3;
-                }
-            }
-        }
-        
         // Rotating stage physics - rotation (works even on platforms)
         if (propRotatingStageRelations.has(prop) && 
             rotatingStage.userData.rotating && 
@@ -2672,16 +1501,12 @@ function animate() {
             // Calculate new position after rotation
             const dx = prop.position.x - stageCenter.x;
             const dz = prop.position.z - stageCenter.z;
-            const radius = Math.sqrt(dx*dx + dz*dz);
             
             const newX = stageCenter.x + (dx * Math.cos(angle) - dz * Math.sin(angle));
             const newZ = stageCenter.z + (dx * Math.sin(angle) + dz * Math.cos(angle));
             
-            // Calculate velocity from rotation
-            const rotationalVelocity = radius * angle;
-            
-            // Check for collision with all objects before moving
-            if (!checkAllCollisions(prop, newX, newZ, rotationalVelocity)) {
+            // Check for collision with scenery before moving
+            if (!checkPropSceneryCollision(prop, newX, newZ)) {
                 prop.position.x = newX;
                 prop.position.z = newZ;
                 
@@ -2690,7 +1515,6 @@ function animate() {
             } else {
                 // Stop rotating stage if collision detected
                 rotatingStage.userData.rotating = false;
-                console.log('Rotation stopped due to collision');
             }
         }
     });
@@ -2700,64 +1524,6 @@ function animate() {
     }
     
     renderer.render(scene, camera);
-}
-
-// Save/Load functions
-function saveScene() {
-    const sceneName = prompt('Enter a name for this scene:', 'My Scene');
-    if (!sceneName) return;
-    
-    const sceneDescription = prompt('Enter a description (optional):', '');
-    
-    // Export the scene
-    const sceneJson = sceneSerializer.exportScene(sceneName, sceneDescription);
-    
-    // Create a download link
-    const blob = new Blob([sceneJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${sceneName.replace(/\s+/g, '_')}_scene.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    console.log('Scene saved successfully!');
-}
-
-function loadScene() {
-    // Create file input
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const result = sceneSerializer.importScene(e.target.result);
-                if (result.success) {
-                    console.log(`Scene loaded: ${result.name}`);
-                    if (result.description) {
-                        console.log(`Description: ${result.description}`);
-                    }
-                    alert(`Scene "${result.name}" loaded successfully!`);
-                } else {
-                    alert(`Failed to load scene: ${result.error}`);
-                }
-            } catch (error) {
-                alert(`Error loading scene: ${error.message}`);
-                console.error('Load error:', error);
-            }
-        };
-        reader.readAsText(file);
-    };
-    
-    input.click();
 }
 
 init();
