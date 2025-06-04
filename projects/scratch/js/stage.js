@@ -3536,8 +3536,24 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
     const testPos = { x: newX, y: movingObj.position.y, z: newZ };
     let collisionHandled = false;
     
-    // Check collision with all props
+    // Performance optimization: Early distance check to reduce collision calculations
+    const maxCheckDistance = 5; // Only check objects within 5 units
+    
+    // Check collision with nearby props only
     for (let prop of props) {
+        if (prop === movingObj) continue; // Skip self
+        
+        // Early distance check - skip distant objects
+        const dx = prop.position.x - testPos.x;
+        const dz = prop.position.z - testPos.z;
+        const distanceSquared = dx * dx + dz * dz;
+        
+        if (distanceSquared > maxCheckDistance * maxCheckDistance) {
+            continue; // Skip distant objects
+        }
+        
+        performanceStats.collisionChecks++;
+        
         if (checkObjectCollision(movingObj, testPos, prop)) {
             if (velocity > 0) {
                 // Calculate collision response
@@ -3647,20 +3663,38 @@ function checkPropSceneryCollision(prop, newX, newZ) {
     return false;
 }
 
-function animate() {
+// Performance optimization: Cache timing and reduce expensive operations
+let lastFrameTime = 0;
+let animationTime = 0;
+let frameCount = 0;
+
+// Performance monitoring
+let performanceStats = {
+    frameTime: 0,
+    collisionChecks: 0,
+    activeObjects: 0,
+    lastFPSUpdate: 0,
+    fps: 0
+};
+
+function animate(currentTime = performance.now()) {
     requestAnimationFrame(animate);
     
-    if (currentLightingPreset === 'default' || currentLightingPreset === 'dramatic') {
-        lights.forEach((light, index) => {
-            light.intensity = 0.8 + Math.sin(Date.now() * 0.001 + index) * 0.2;
-        });
-    }
+    // Cache timing once per frame instead of multiple Date.now() calls
+    const deltaTime = currentTime - lastFrameTime;
+    lastFrameTime = currentTime;
+    animationTime = currentTime * 0.001; // Convert to seconds
+    frameCount++;
     
-    stageMarkers.forEach((marker, i) => {
-        if (marker.visible) {
-            marker.children[1].material.opacity = 0.3 + Math.sin(Date.now() * 0.003 + i) * 0.2;
-        }
-    });
+    // Performance monitoring
+    const frameStart = performance.now();
+    performanceStats.collisionChecks = 0;
+    
+    // Optimize lighting animations - only when needed and using cached time
+    updateLightingAnimations(animationTime);
+    
+    // Optimize marker animations - only visible markers, cached time
+    updateMarkerAnimations(animationTime);
     
     // Animate platforms
     moveablePlatforms.forEach(platform => {
@@ -3737,14 +3771,26 @@ function animate() {
         }
     });
 
-    // Update prop relationships periodically
-    if (Date.now() % 100 < 16) { // Every ~100ms
+    // Update prop relationships periodically - use frame counting for reliability
+    if (frameCount % 6 === 0) { // Every 6 frames (~100ms at 60fps)
         updateAllPropRelationships();
     }
 
-    // Apply physics to props and actors
+    // Apply physics to props and actors - optimize by only processing active objects
     const allObjects = [...props, ...actors];
-    allObjects.forEach(prop => {
+    
+    // Performance optimization: Filter objects that need physics updates
+    const activeObjects = allObjects.filter(prop => {
+        return objectVelocities.has(prop) || // Has velocity
+               propPlatformRelations.has(prop) || // On platform
+               propTrapDoorRelations.has(prop) || // Over trap door
+               propRotatingStageRelations.has(prop) || // On rotating stage
+               prop.userData.hidden; // Hidden state needs checking
+    });
+    
+    performanceStats.activeObjects = activeObjects.length;
+    
+    activeObjects.forEach(prop => {
         // Check if prop should be hidden by trap door first
         if (propTrapDoorRelations.has(prop)) {
             const trapDoor = propTrapDoorRelations.get(prop);
@@ -3857,6 +3903,46 @@ function animate() {
     audioManager.updateListenerPosition(camera);
     
     renderer.render(scene, camera);
+    
+    // Performance monitoring - calculate frame time and FPS
+    const frameEnd = performance.now();
+    performanceStats.frameTime = frameEnd - frameStart;
+    
+    // Update FPS every second
+    if (frameEnd - performanceStats.lastFPSUpdate > 1000) {
+        performanceStats.fps = Math.round(1000 / performanceStats.frameTime);
+        performanceStats.lastFPSUpdate = frameEnd;
+        
+        // Log performance stats every 5 seconds for monitoring
+        if (frameCount % 300 === 0) {
+            console.log('Performance Stats:', {
+                fps: performanceStats.fps,
+                frameTime: `${performanceStats.frameTime.toFixed(2)}ms`,
+                activeObjects: performanceStats.activeObjects,
+                totalObjects: props.length + actors.length,
+                collisionChecks: performanceStats.collisionChecks
+            });
+        }
+    }
+}
+
+// Performance optimized animation functions
+function updateLightingAnimations(time) {
+    // Only animate lights when specific presets are active
+    if (currentLightingPreset === 'default' || currentLightingPreset === 'dramatic') {
+        lights.forEach((light, index) => {
+            light.intensity = 0.8 + Math.sin(time + index) * 0.2;
+        });
+    }
+}
+
+function updateMarkerAnimations(time) {
+    // Only animate visible markers to avoid unnecessary work
+    stageMarkers.forEach((marker, i) => {
+        if (marker.visible) {
+            marker.children[1].material.opacity = 0.3 + Math.sin(time * 3 + i) * 0.2;
+        }
+    });
 }
 
 // Save/Load functions
