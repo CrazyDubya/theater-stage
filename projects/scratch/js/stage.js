@@ -1257,6 +1257,7 @@ function createControlsPanel() {
     const saveLoadLabel = createLabel('Save/Load Scene');
     const saveButton = createButton('Save Scene', saveScene);
     const loadButton = createButton('Load Scene', loadScene);
+    const exportButton = createButton('Export to File', () => sceneManager.exportToFile());
     
     // Undo/Redo section
     const undoRedoLabel = createLabel('Undo/Redo');
@@ -1277,10 +1278,11 @@ function createControlsPanel() {
     // Assemble panel
     panel.appendChild(saveLoadLabel);
     const saveLoadDiv = document.createElement('div');
+    saveLoadDiv.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 5px;';
     saveLoadDiv.appendChild(saveButton);
-    saveLoadDiv.appendChild(document.createTextNode(' '));
     saveLoadDiv.appendChild(loadButton);
     panel.appendChild(saveLoadDiv);
+    panel.appendChild(exportButton);
     
     panel.appendChild(createSpacer());
     panel.appendChild(undoRedoLabel);
@@ -3945,63 +3947,368 @@ function updateMarkerAnimations(time) {
     });
 }
 
-// Save/Load functions
+// Enhanced Save/Load System with Browser Storage and Smart Features
+class SceneManager {
+    constructor() {
+        this.storageKey = 'theater-stage-scenes';
+        this.autoSaveKey = 'theater-stage-autosave';
+        this.currentSceneName = null;
+        this.autoSaveInterval = null;
+        this.setupAutoSave();
+    }
+    
+    // Get all saved scenes from localStorage
+    getSavedScenes() {
+        try {
+            const scenes = localStorage.getItem(this.storageKey);
+            return scenes ? JSON.parse(scenes) : {};
+        } catch (error) {
+            console.error('Error reading saved scenes:', error);
+            return {};
+        }
+    }
+    
+    // Save scene to localStorage with metadata
+    saveScene(name = null, description = '') {
+        if (!name) {
+            name = prompt('Enter a name for this scene:', this.currentSceneName || 'My Scene');
+            if (!name) return false;
+        }
+        
+        if (!description && !this.currentSceneName) {
+            description = prompt('Enter a description (optional):', '') || '';
+        }
+        
+        try {
+            const sceneData = {
+                name: name,
+                description: description,
+                data: sceneSerializer.exportScene(name, description),
+                timestamp: new Date().toISOString(),
+                thumbnail: this.generateThumbnail(),
+                stats: {
+                    props: props.length,
+                    actors: actors.length,
+                    lightingPreset: currentLightingPreset
+                }
+            };
+            
+            const savedScenes = this.getSavedScenes();
+            savedScenes[name] = sceneData;
+            
+            localStorage.setItem(this.storageKey, JSON.stringify(savedScenes));
+            this.currentSceneName = name;
+            
+            console.log(`Scene "${name}" saved successfully!`);
+            this.showNotification(`Scene "${name}" saved!`, 'success');
+            return true;
+        } catch (error) {
+            console.error('Error saving scene:', error);
+            this.showNotification('Failed to save scene', 'error');
+            return false;
+        }
+    }
+    
+    // Auto-save current scene
+    autoSave() {
+        if (props.length === 0 && actors.length === 0) return; // Don't auto-save empty scenes
+        
+        try {
+            const autoSaveData = {
+                data: sceneSerializer.exportScene('AutoSave', 'Automatically saved scene'),
+                timestamp: new Date().toISOString(),
+                stats: {
+                    props: props.length,
+                    actors: actors.length,
+                    lightingPreset: currentLightingPreset
+                }
+            };
+            
+            localStorage.setItem(this.autoSaveKey, JSON.stringify(autoSaveData));
+            console.log('Auto-saved scene');
+        } catch (error) {
+            console.error('Auto-save failed:', error);
+        }
+    }
+    
+    // Setup auto-save every 30 seconds
+    setupAutoSave() {
+        this.autoSaveInterval = setInterval(() => {
+            this.autoSave();
+        }, 30000); // 30 seconds
+    }
+    
+    // Generate scene thumbnail (simplified)
+    generateThumbnail() {
+        return {
+            cameraPosition: {
+                x: camera.position.x,
+                y: camera.position.y,
+                z: camera.position.z
+            },
+            objectCount: props.length + actors.length,
+            lighting: currentLightingPreset
+        };
+    }
+    
+    // Show a nice notification
+    showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 10000;
+            font-family: Arial, sans-serif;
+            transition: opacity 0.3s ease;
+        `;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    document.body.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
+    }
+    
+    // Create a smart load dialog
+    showLoadDialog() {
+        const savedScenes = this.getSavedScenes();
+        const autoSave = this.getAutoSave();
+        
+        if (Object.keys(savedScenes).length === 0 && !autoSave) {
+            this.showNotification('No saved scenes found', 'info');
+            this.loadFromFile(); // Fallback to file upload
+            return;
+        }
+        
+        // Create load dialog
+        const dialog = document.createElement('div');
+        dialog.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10001;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        `;
+        
+        const content = document.createElement('div');
+        content.style.cssText = `
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        `;
+        
+        content.innerHTML = `
+            <h2 style="margin-top: 0; color: #333;">Load Scene</h2>
+            <div id="scene-list"></div>
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button id="load-from-file" style="padding: 10px 20px; cursor: pointer;">Load from File</button>
+                <button id="cancel-load" style="padding: 10px 20px; cursor: pointer; background: #ccc;">Cancel</button>
+            </div>
+        `;
+        
+        const sceneList = content.querySelector('#scene-list');
+        
+        // Add auto-save option
+        if (autoSave) {
+            this.createSceneItem(sceneList, 'AutoSave', autoSave, true);
+        }
+        
+        // Add saved scenes
+        Object.entries(savedScenes).forEach(([name, sceneData]) => {
+            this.createSceneItem(sceneList, name, sceneData, false);
+        });
+        
+        // Event listeners
+        content.querySelector('#load-from-file').addEventListener('click', () => {
+            document.body.removeChild(dialog);
+            this.loadFromFile();
+        });
+        
+        content.querySelector('#cancel-load').addEventListener('click', () => {
+            document.body.removeChild(dialog);
+        });
+        
+        dialog.appendChild(content);
+        document.body.appendChild(dialog);
+    }
+    
+    // Create a scene item in the load dialog
+    createSceneItem(container, name, sceneData, isAutoSave) {
+        const item = document.createElement('div');
+        item.style.cssText = `
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: background 0.2s;
+            ${isAutoSave ? 'background: #f0f8ff;' : ''}
+        `;
+        
+        const date = new Date(sceneData.timestamp).toLocaleString();
+        const stats = sceneData.stats || {};
+        
+        item.innerHTML = `
+            <div style="font-weight: bold; color: #333;">${name} ${isAutoSave ? '(Auto-saved)' : ''}</div>
+            <div style="color: #666; font-size: 14px; margin: 5px 0;">${sceneData.description || 'No description'}</div>
+            <div style="color: #999; font-size: 12px;">
+                ${date} • ${stats.props || 0} props, ${stats.actors || 0} actors • ${stats.lightingPreset || 'default'} lighting
+            </div>
+        `;
+        
+        item.addEventListener('mouseover', () => {
+            item.style.background = isAutoSave ? '#e6f3ff' : '#f5f5f5';
+        });
+        
+        item.addEventListener('mouseout', () => {
+            item.style.background = isAutoSave ? '#f0f8ff' : 'white';
+        });
+        
+        item.addEventListener('click', () => {
+            this.loadScene(sceneData.data);
+            this.currentSceneName = isAutoSave ? null : name;
+            document.body.removeChild(item.closest('.dialog-overlay') || item.closest('div[style*="position: fixed"]'));
+        });
+        
+        container.appendChild(item);
+    }
+    
+    // Get auto-save data
+    getAutoSave() {
+        try {
+            const autoSave = localStorage.getItem(this.autoSaveKey);
+            return autoSave ? JSON.parse(autoSave) : null;
+        } catch (error) {
+            console.error('Error reading auto-save:', error);
+            return null;
+        }
+    }
+    
+    // Load scene from data
+    loadScene(sceneJson) {
+        try {
+            const result = sceneSerializer.importScene(sceneJson);
+            if (result.success) {
+                console.log(`Scene loaded: ${result.name}`);
+                this.showNotification(`Scene "${result.name}" loaded!`, 'success');
+                return true;
+            } else {
+                this.showNotification(`Failed to load scene: ${result.error}`, 'error');
+                return false;
+            }
+        } catch (error) {
+            console.error('Load error:', error);
+            this.showNotification('Error loading scene', 'error');
+            return false;
+        }
+    }
+    
+    // Fallback to file upload
+    loadFromFile() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        
+        input.onchange = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.loadScene(e.target.result);
+            };
+            reader.readAsText(file);
+        };
+        
+        input.click();
+    }
+    
+    // Export scene to file (for sharing)
+    exportToFile(name = null) {
+        if (!name) name = this.currentSceneName || 'My Scene';
+        
+        const sceneJson = sceneSerializer.exportScene(name, '');
+        const blob = new Blob([sceneJson], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${name.replace(/\s+/g, '_')}_scene.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        this.showNotification('Scene exported to file!', 'success');
+    }
+    
+    // Delete saved scene
+    deleteScene(name) {
+        if (confirm(`Are you sure you want to delete "${name}"?`)) {
+            const savedScenes = this.getSavedScenes();
+            delete savedScenes[name];
+            localStorage.setItem(this.storageKey, JSON.stringify(savedScenes));
+            this.showNotification(`Scene "${name}" deleted`, 'info');
+        }
+    }
+    
+    // Quick save (Ctrl+S)
+    quickSave() {
+        if (this.currentSceneName) {
+            this.saveScene(this.currentSceneName);
+        } else {
+            this.saveScene();
+        }
+    }
+}
+
+// Create global scene manager
+const sceneManager = new SceneManager();
+
+// Updated save/load functions
 function saveScene() {
-    const sceneName = prompt('Enter a name for this scene:', 'My Scene');
-    if (!sceneName) return;
-    
-    const sceneDescription = prompt('Enter a description (optional):', '');
-    
-    // Export the scene
-    const sceneJson = sceneSerializer.exportScene(sceneName, sceneDescription);
-    
-    // Create a download link
-    const blob = new Blob([sceneJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${sceneName.replace(/\s+/g, '_')}_scene.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    console.log('Scene saved successfully!');
+    sceneManager.saveScene();
 }
 
 function loadScene() {
-    // Create file input
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const result = sceneSerializer.importScene(e.target.result);
-                if (result.success) {
-                    console.log(`Scene loaded: ${result.name}`);
-                    if (result.description) {
-                        console.log(`Description: ${result.description}`);
-                    }
-                    alert(`Scene "${result.name}" loaded successfully!`);
-                } else {
-                    alert(`Failed to load scene: ${result.error}`);
-                }
-            } catch (error) {
-                alert(`Error loading scene: ${error.message}`);
-                console.error('Load error:', error);
-            }
-        };
-        reader.readAsText(file);
-    };
-    
-    input.click();
+    sceneManager.showLoadDialog();
 }
+
+// Add keyboard shortcuts
+document.addEventListener('keydown', (event) => {
+    if (event.ctrlKey || event.metaKey) {
+        switch (event.key) {
+            case 's':
+                event.preventDefault();
+                sceneManager.quickSave();
+                break;
+            case 'o':
+                event.preventDefault();
+                sceneManager.showLoadDialog();
+                break;
+        }
+    }
+});
 
 init();
 animate();
