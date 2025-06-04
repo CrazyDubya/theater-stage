@@ -1702,30 +1702,53 @@ function applyLightingPreset(preset) {
     currentLightingPreset = preset;
     
     switch(preset) {
-        case 'day':
-            scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
-            lights.forEach(light => light.intensity = 0.6);
-            break;
-        case 'night':
-            scene.background = new THREE.Color(0x000033);
-            scene.fog = new THREE.Fog(0x000033, 10, 80);
-            lights.forEach(light => light.intensity = 1.2);
-            break;
-        case 'sunset':
-            scene.background = new THREE.Color(0xFF6B35);
-            scene.fog = new THREE.Fog(0xFF6B35, 15, 90);
-            lights[0].color.setHex(0xFFB700);
-            lights[1].color.setHex(0xFFB700);
+        case 'normal':
+            scene.background = new THREE.Color(0x001122);
+            scene.fog = new THREE.Fog(0x001122, 10, 100);
+            lights.forEach(light => {
+                light.intensity = 1;
+                light.color.setHex(0xffffff);
+            });
             break;
         case 'dramatic':
             scene.background = new THREE.Color(0x000000);
             scene.fog = new THREE.Fog(0x000000, 5, 50);
             lights.forEach((light, i) => {
-                light.intensity = i === 2 ? 1.5 : 0.3;
+                light.intensity = i === 2 ? 1.5 : 0.3; // Center light bright, sides dim
+                light.color.setHex(0xffffff);
+            });
+            break;
+        case 'evening':
+            scene.background = new THREE.Color(0xFF6B35);
+            scene.fog = new THREE.Fog(0xFF6B35, 15, 90);
+            lights.forEach(light => {
+                light.intensity = 0.8;
+                light.color.setHex(0xFFB700); // Warm golden color
+            });
+            break;
+        case 'concert':
+            scene.background = new THREE.Color(0x000033);
+            scene.fog = new THREE.Fog(0x000033, 10, 80);
+            lights.forEach((light, i) => {
+                light.intensity = 1.2;
+                light.color.setHex(0x4169e1); // Cool blue color
+            });
+            break;
+        case 'spotlight':
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.Fog(0x000000, 5, 30);
+            lights.forEach((light, i) => {
+                if (i === 2) { // Center spotlight only
+                    light.intensity = 2.0;
+                    light.color.setHex(0xffffff);
+                } else {
+                    light.intensity = 0.1; // Very dim side lights
+                    light.color.setHex(0xffffff);
+                }
             });
             break;
         default:
+            // Default case (same as normal)
             scene.background = new THREE.Color(0x001122);
             scene.fog = new THREE.Fog(0x001122, 10, 100);
             lights.forEach(light => {
