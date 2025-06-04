@@ -13,6 +13,8 @@ let sceneryPanels = [];
 let placementMode = null; // 'prop' or 'actor'
 let placementMarker = null;
 let selectedPropType = 'cube'; // default prop type
+let selectedActorType = 'adult_male'; // default actor type
+let selectedSceneryPanel = 0; // default to backdrop panel
 let nextActorId = 1;
 let nextPropId = 1;
 
@@ -1031,11 +1033,14 @@ function setupUI() {
         top: 60px;
         left: 10px;
         background: rgba(0,0,0,0.7);
-        padding: 15px;
+        padding: 0;
         border-radius: 5px;
         color: white;
         font-family: Arial, sans-serif;
         transition: transform 0.3s ease;
+        width: 300px;
+        max-height: calc(100vh - 80px);
+        overflow: hidden;
     `;
     
     let menuVisible = true;
@@ -1049,21 +1054,279 @@ function setupUI() {
             toggleButton.textContent = '→';
         }
     });
-
-    const lightingSelect = document.createElement('select');
-    lightingSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
-    lightingSelect.innerHTML = `
-        <option value="default">Default</option>
-        <option value="day">Day</option>
-        <option value="night">Night</option>
-        <option value="sunset">Sunset</option>
-        <option value="dramatic">Dramatic</option>
+    
+    // Create tab system
+    const tabContainer = document.createElement('div');
+    tabContainer.style.cssText = `
+        display: flex;
+        background: rgba(0,0,0,0.8);
+        border-radius: 5px 5px 0 0;
     `;
-    lightingSelect.addEventListener('change', (e) => applyLightingPreset(e.target.value));
+    
+    const tabs = {
+        objects: { label: 'Objects', icon: '🎭' },
+        stage: { label: 'Stage', icon: '🎪' },
+        scenery: { label: 'Scenery', icon: '🖼️' },
+        controls: { label: 'Controls', icon: '⚙️' }
+    };
+    
+    const tabButtons = {};
+    const tabPanels = {};
+    let activeTab = 'objects';
+    
+    // Create tab buttons
+    Object.entries(tabs).forEach(([key, tab]) => {
+        const button = document.createElement('button');
+        button.textContent = tab.icon + ' ' + tab.label;
+        button.style.cssText = `
+            flex: 1;
+            padding: 10px;
+            border: none;
+            background: ${key === activeTab ? 'rgba(255,255,255,0.1)' : 'transparent'};
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.3s;
+        `;
+        
+        button.addEventListener('click', () => {
+            Object.keys(tabButtons).forEach(k => {
+                tabButtons[k].style.background = k === key ? 'rgba(255,255,255,0.1)' : 'transparent';
+                tabPanels[k].style.display = k === key ? 'block' : 'none';
+            });
+            activeTab = key;
+        });
+        
+        tabButtons[key] = button;
+        tabContainer.appendChild(button);
+    });
+    
+    // Create content container
+    const contentContainer = document.createElement('div');
+    contentContainer.style.cssText = `
+        padding: 15px;
+        max-height: calc(100vh - 140px);
+        overflow-y: auto;
+    `;
+    
+    // Create all tab panels
+    const objectsPanel = createObjectsPanel();
+    const stagePanel = createStagePanel();
+    const sceneryPanel = createSceneryPanel();
+    const controlsPanel = createControlsPanel();
+    
+    tabPanels.objects = objectsPanel;
+    tabPanels.stage = stagePanel;
+    tabPanels.scenery = sceneryPanel;
+    tabPanels.controls = controlsPanel;
+    
+    // Initially hide all but objects panel
+    objectsPanel.style.display = 'block';
+    stagePanel.style.display = 'none';
+    sceneryPanel.style.display = 'none';
+    controlsPanel.style.display = 'none';
+    
+    // Add panels to content container
+    contentContainer.appendChild(objectsPanel);
+    contentContainer.appendChild(stagePanel);
+    contentContainer.appendChild(sceneryPanel);
+    contentContainer.appendChild(controlsPanel);
+    
+    // Assemble UI
+    uiContainer.appendChild(tabContainer);
+    uiContainer.appendChild(contentContainer);
+    
+    document.body.appendChild(toggleButton);
+    document.body.appendChild(uiContainer);
+}
 
-    // Prop selector
-    const propSelect = document.createElement('select');
-    propSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
+function createObjectsPanel() {
+    const panel = document.createElement('div');
+    
+    // Props section
+    const propsLabel = createLabel('Props');
+    const propSelect = createPropSelector();
+    const propButton = createButton('Place Prop', () => {
+        placementMode = 'prop';
+        placementMarker.visible = true;
+    });
+    
+    // Actors section
+    const actorsLabel = createLabel('Actors');
+    const actorSelect = createActorSelector();
+    const actorButton = createButton('Place Actor', () => {
+        placementMode = 'actor';
+        placementMarker.visible = true;
+    });
+    
+    // Assemble panel
+    panel.appendChild(propsLabel);
+    panel.appendChild(propSelect);
+    panel.appendChild(propButton);
+    panel.appendChild(createSpacer());
+    panel.appendChild(actorsLabel);
+    panel.appendChild(actorSelect);
+    panel.appendChild(actorButton);
+    
+    return panel;
+}
+
+function createStagePanel() {
+    const panel = document.createElement('div');
+    
+    // Lighting section
+    const lightingLabel = createLabel('Lighting');
+    const lightingSelect = createLightingSelector();
+    
+    // Camera section
+    const cameraLabel = createLabel('Camera View');
+    const cameraSelect = createCameraSelector();
+    
+    // Stage elements section
+    const elementsLabel = createLabel('Stage Elements');
+    const markerToggle = createButton('Toggle Markers', toggleMarkers);
+    const curtainButton = createButton('Toggle Curtains', toggleCurtains);
+    const platformButton = createButton('Move Platforms', movePlatforms);
+    
+    // Special effects
+    const effectsLabel = createLabel('Special Effects');
+    const showRotatingButton = createButton('Show/Hide Rotating Stage', toggleRotatingStageVisibility);
+    const rotateButton = createButton('Start/Stop Rotation', rotateCenter);
+    const showTrapDoorsButton = createButton('Show/Hide Trap Doors', toggleTrapDoorsVisibility);
+    const trapButton = createButton('Toggle Trap Doors', toggleTrapDoors);
+    
+    // Assemble panel
+    panel.appendChild(lightingLabel);
+    panel.appendChild(lightingSelect);
+    panel.appendChild(createSpacer());
+    panel.appendChild(cameraLabel);
+    panel.appendChild(cameraSelect);
+    panel.appendChild(createSpacer());
+    panel.appendChild(elementsLabel);
+    panel.appendChild(markerToggle);
+    panel.appendChild(curtainButton);
+    panel.appendChild(platformButton);
+    panel.appendChild(createSpacer());
+    panel.appendChild(effectsLabel);
+    panel.appendChild(showRotatingButton);
+    panel.appendChild(rotateButton);
+    panel.appendChild(showTrapDoorsButton);
+    panel.appendChild(trapButton);
+    
+    return panel;
+}
+
+function createSceneryPanel() {
+    const panel = document.createElement('div');
+    
+    // Scenery position
+    const positionLabel = createLabel('Scenery Position');
+    const backdropSelect = createBackdropSelector();
+    const midstageSelect = createMidstageSelector();
+    
+    // Texture controls
+    const textureLabel = createLabel('Textures');
+    const panelSelect = createPanelSelector();
+    const defaultTextureSelect = createDefaultTextureSelector();
+    const uploadButton = createButton('Upload Image', handleTextureUpload);
+    
+    // Texture scale
+    const scaleLabel = createLabel('Texture Scale');
+    const scaleSlider = createScaleSlider();
+    
+    // Assemble panel
+    panel.appendChild(positionLabel);
+    panel.appendChild(backdropSelect);
+    panel.appendChild(midstageSelect);
+    panel.appendChild(createSpacer());
+    panel.appendChild(textureLabel);
+    panel.appendChild(panelSelect);
+    panel.appendChild(defaultTextureSelect);
+    panel.appendChild(uploadButton);
+    panel.appendChild(createSpacer());
+    panel.appendChild(scaleLabel);
+    panel.appendChild(scaleSlider);
+    
+    return panel;
+}
+
+function createControlsPanel() {
+    const panel = document.createElement('div');
+    
+    // Save/Load section
+    const saveLoadLabel = createLabel('Save/Load Scene');
+    const saveButton = createButton('Save Scene', saveScene);
+    const loadButton = createButton('Load Scene', loadScene);
+    
+    // Undo/Redo section
+    const undoRedoLabel = createLabel('Undo/Redo');
+    const { undoButton, redoButton } = createUndoRedoButtons();
+    
+    // Physics section
+    const physicsLabel = createLabel('Physics Test');
+    const pushButton = createButton('Push Mode', () => {
+        placementMode = 'push';
+        placementMarker.visible = true;
+        alert('Click on an object to push it! Lighter objects move more.');
+    });
+    
+    // Audio section
+    const audioLabel = createLabel('Audio System');
+    const { audioInitButton, volumeControls } = createAudioControls();
+    
+    // Assemble panel
+    panel.appendChild(saveLoadLabel);
+    const saveLoadDiv = document.createElement('div');
+    saveLoadDiv.appendChild(saveButton);
+    saveLoadDiv.appendChild(document.createTextNode(' '));
+    saveLoadDiv.appendChild(loadButton);
+    panel.appendChild(saveLoadDiv);
+    
+    panel.appendChild(createSpacer());
+    panel.appendChild(undoRedoLabel);
+    const undoRedoDiv = document.createElement('div');
+    undoRedoDiv.appendChild(undoButton);
+    undoRedoDiv.appendChild(document.createTextNode(' '));
+    undoRedoDiv.appendChild(redoButton);
+    panel.appendChild(undoRedoDiv);
+    
+    panel.appendChild(createSpacer());
+    panel.appendChild(physicsLabel);
+    panel.appendChild(pushButton);
+    
+    panel.appendChild(createSpacer());
+    panel.appendChild(audioLabel);
+    panel.appendChild(audioInitButton);
+    panel.appendChild(volumeControls);
+    
+    return panel;
+}
+
+// Helper functions for creating UI elements
+function createLabel(text) {
+    const label = document.createElement('div');
+    label.innerHTML = `<strong>${text}</strong>`;
+    label.style.cssText = 'margin-bottom: 5px;';
+    return label;
+}
+
+function createButton(text, onClick) {
+    const button = document.createElement('button');
+    button.textContent = text;
+    button.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer; width: 100%;';
+    button.addEventListener('click', onClick);
+    return button;
+}
+
+function createSpacer() {
+    const spacer = document.createElement('div');
+    spacer.style.cssText = 'height: 10px;';
+    return spacer;
+}
+
+function createPropSelector() {
+    const select = document.createElement('select');
+    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
     
     // Group props by category
     const categories = {};
@@ -1084,295 +1347,355 @@ function setupUI() {
             option.textContent = prop.name;
             optgroup.appendChild(option);
         });
-        propSelect.appendChild(optgroup);
+        select.appendChild(optgroup);
     });
     
-    propSelect.addEventListener('change', (e) => {
-        selectedPropType = e.target.value;
+    select.addEventListener('change', () => {
+        selectedPropType = select.value;
     });
     
-    const propButton = document.createElement('button');
-    propButton.textContent = 'Place Prop';
-    propButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    propButton.addEventListener('click', () => {
-        placementMode = 'prop';
-        placementMarker.visible = true;
+    return select;
+}
+
+function createActorSelector() {
+    const select = document.createElement('select');
+    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
+    
+    Object.entries(ACTOR_TYPES).forEach(([key, actor]) => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = actor.name;
+        select.appendChild(option);
     });
     
-    const actorButton = document.createElement('button');
-    actorButton.textContent = 'Place Actor';
-    actorButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    actorButton.addEventListener('click', () => {
-        placementMode = 'actor';
-        placementMarker.visible = true;
+    select.addEventListener('change', () => {
+        selectedActorType = select.value;
     });
-
-    const markerToggle = document.createElement('button');
-    markerToggle.textContent = 'Toggle Markers';
-    markerToggle.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    markerToggle.addEventListener('click', toggleMarkers);
-
-    const curtainButton = document.createElement('button');
-    curtainButton.textContent = 'Toggle Curtains';
-    curtainButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    curtainButton.addEventListener('click', toggleCurtains);
-
-    const platformButton = document.createElement('button');
-    platformButton.textContent = 'Move Platforms';
-    platformButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    platformButton.addEventListener('click', movePlatforms);
-
-    const rotateButton = document.createElement('button');
-    rotateButton.textContent = 'Start/Stop Rotation';
-    rotateButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    rotateButton.addEventListener('click', rotateCenter);
-
-    const trapButton = document.createElement('button');
-    trapButton.textContent = 'Toggle Trap Doors';
-    trapButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    trapButton.addEventListener('click', toggleTrapDoors);
-
-    const showRotatingButton = document.createElement('button');
-    showRotatingButton.textContent = 'Show/Hide Rotating Stage';
-    showRotatingButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    showRotatingButton.addEventListener('click', toggleRotatingStageVisibility);
-
-    const showTrapDoorsButton = document.createElement('button');
-    showTrapDoorsButton.textContent = 'Show/Hide Trap Doors';
-    showTrapDoorsButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    showTrapDoorsButton.addEventListener('click', toggleTrapDoorsVisibility);
-
-    // Scenery controls
-    const sceneryLabel = document.createElement('div');
-    sceneryLabel.innerHTML = '<strong>Scenery Panels</strong>';
-    sceneryLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
     
-    const backdropSelect = document.createElement('select');
-    backdropSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
-    backdropSelect.innerHTML = `
-        <option value="0">Backdrop: Off</option>
-        <option value="0.25">Backdrop: 1/4</option>
-        <option value="0.5">Backdrop: 1/2</option>
-        <option value="0.75">Backdrop: 3/4</option>
-        <option value="1">Backdrop: Full</option>
-    `;
-    backdropSelect.addEventListener('change', (e) => moveSceneryPanel(0, parseFloat(e.target.value)));
-    
-    const midstageSelect = document.createElement('select');
-    midstageSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
-    midstageSelect.innerHTML = `
-        <option value="0">Midstage: Off</option>
-        <option value="0.25">Midstage: 1/4</option>
-        <option value="0.5">Midstage: 1/2</option>
-        <option value="0.75">Midstage: 3/4</option>
-        <option value="1">Midstage: Full</option>
-    `;
-    midstageSelect.addEventListener('change', (e) => moveSceneryPanel(1, parseFloat(e.target.value)));
+    return select;
+}
 
-    // Texture controls
-    const textureLabel = document.createElement('div');
-    textureLabel.innerHTML = '<strong>Scenery Textures</strong>';
-    textureLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+function createLightingSelector() {
+    const select = document.createElement('select');
+    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
     
-    const panelSelect = document.createElement('select');
-    panelSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
-    panelSelect.innerHTML = `
-        <option value="0">Backdrop Panel</option>
-        <option value="1">Midstage Panel</option>
-    `;
+    const presets = [
+        { value: 'normal', label: 'Normal (Bright)' },
+        { value: 'dramatic', label: 'Dramatic (Dim Sides)' },
+        { value: 'evening', label: 'Evening (Warm)' },
+        { value: 'concert', label: 'Concert (Cool)' },
+        { value: 'spotlight', label: 'Spotlight (Center Only)' }
+    ];
     
-    const defaultTextureSelect = document.createElement('select');
-    defaultTextureSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
-    defaultTextureSelect.innerHTML = `
-        <option value="">Select Default Texture...</option>
-        <option value="brick">Brick Wall</option>
-        <option value="wood">Wood Planks</option>
-        <option value="sky">Sky Gradient</option>
-    `;
-    defaultTextureSelect.addEventListener('change', (e) => {
-        if (e.target.value) {
-            const panelIndex = parseInt(panelSelect.value);
-            const texture = textureManager.getDefaultTexture(e.target.value);
-            textureManager.applyTextureToPanel(panelIndex, texture);
-            console.log(`Applied ${e.target.value} texture to panel ${panelIndex}`);
+    presets.forEach(preset => {
+        const option = document.createElement('option');
+        option.value = preset.value;
+        option.textContent = preset.label;
+        select.appendChild(option);
+    });
+    
+    select.addEventListener('change', () => {
+        setLightingPreset(select.value);
+    });
+    
+    return select;
+}
+
+function createCameraSelector() {
+    const select = document.createElement('select');
+    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
+    
+    const presets = [
+        { value: 'audience', label: 'Audience View' },
+        { value: 'overhead', label: 'Overhead' },
+        { value: 'backstage', label: 'Backstage' },
+        { value: 'stage-left', label: 'Stage Left' },
+        { value: 'stage-right', label: 'Stage Right' },
+        { value: 'close-up', label: 'Close-up Center' }
+    ];
+    
+    presets.forEach(preset => {
+        const option = document.createElement('option');
+        option.value = preset.value;
+        option.textContent = preset.label;
+        select.appendChild(option);
+    });
+    
+    select.addEventListener('change', () => {
+        setCameraPreset(select.value);
+    });
+    
+    return select;
+}
+
+function createBackdropSelector() {
+    const label = document.createElement('div');
+    label.innerHTML = '<strong>Backdrop Position:</strong>';
+    label.style.cssText = 'margin-bottom: 5px;';
+    
+    const container = document.createElement('div');
+    container.appendChild(label);
+    
+    const select = document.createElement('select');
+    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
+    
+    const positions = [
+        { value: 0, label: 'Hidden' },
+        { value: 0.25, label: '1/4 In' },
+        { value: 0.5, label: '1/2 In' },
+        { value: 0.75, label: '3/4 In' },
+        { value: 1, label: 'Fully In' }
+    ];
+    
+    positions.forEach(pos => {
+        const option = document.createElement('option');
+        option.value = pos.value;
+        option.textContent = pos.label;
+        select.appendChild(option);
+    });
+    
+    select.addEventListener('change', () => {
+        moveSceneryPanel(0, parseFloat(select.value));
+    });
+    
+    container.appendChild(select);
+    return container;
+}
+
+function createMidstageSelector() {
+    const label = document.createElement('div');
+    label.innerHTML = '<strong>Midstage Position:</strong>';
+    label.style.cssText = 'margin-bottom: 5px;';
+    
+    const container = document.createElement('div');
+    container.appendChild(label);
+    
+    const select = document.createElement('select');
+    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
+    
+    const positions = [
+        { value: 0, label: 'Hidden' },
+        { value: 0.25, label: '1/4 In' },
+        { value: 0.5, label: '1/2 In' },
+        { value: 0.75, label: '3/4 In' },
+        { value: 1, label: 'Fully In' }
+    ];
+    
+    positions.forEach(pos => {
+        const option = document.createElement('option');
+        option.value = pos.value;
+        option.textContent = pos.label;
+        select.appendChild(option);
+    });
+    
+    select.addEventListener('change', () => {
+        moveSceneryPanel(1, parseFloat(select.value));
+    });
+    
+    container.appendChild(select);
+    return container;
+}
+
+function createPanelSelector() {
+    const select = document.createElement('select');
+    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
+    
+    const option1 = document.createElement('option');
+    option1.value = '0';
+    option1.textContent = 'Backdrop Panel';
+    select.appendChild(option1);
+    
+    const option2 = document.createElement('option');
+    option2.value = '1';
+    option2.textContent = 'Midstage Panel';
+    select.appendChild(option2);
+    
+    select.addEventListener('change', () => {
+        selectedSceneryPanel = parseInt(select.value);
+    });
+    
+    return select;
+}
+
+function createDefaultTextureSelector() {
+    const select = document.createElement('select');
+    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
+    
+    const textures = [
+        { value: 'none', label: 'None (Color Only)' },
+        { value: 'forest', label: 'Forest Scene' },
+        { value: 'castle', label: 'Castle Wall' },
+        { value: 'city', label: 'City Skyline' },
+        { value: 'stars', label: 'Starry Night' }
+    ];
+    
+    textures.forEach(texture => {
+        const option = document.createElement('option');
+        option.value = texture.value;
+        option.textContent = texture.label;
+        select.appendChild(option);
+    });
+    
+    select.addEventListener('change', () => {
+        applyDefaultTexture(select.value);
+    });
+    
+    return select;
+}
+
+function createScaleSlider() {
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '0.1';
+    slider.max = '3';
+    slider.step = '0.1';
+    slider.value = '1';
+    slider.style.cssText = 'width: 100%; margin: 5px 0;';
+    
+    slider.addEventListener('input', () => {
+        if (selectedSceneryPanel !== null) {
+            adjustTextureScale(selectedSceneryPanel, parseFloat(slider.value));
         }
     });
     
-    const uploadButton = document.createElement('button');
-    uploadButton.textContent = 'Upload Image';
-    uploadButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    uploadButton.addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'image/*';
-        
-        input.onchange = async (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            try {
-                const texture = await textureManager.loadCustomTexture(file);
-                const panelIndex = parseInt(panelSelect.value);
-                textureManager.applyTextureToPanel(panelIndex, texture);
-                console.log(`Applied custom texture to panel ${panelIndex}`);
-                alert('Texture applied successfully!');
-            } catch (error) {
-                console.error('Texture loading failed:', error);
-                alert('Failed to load texture: ' + error.message);
-            }
-        };
-        
-        input.click();
-    });
-    
-    const textureScaleLabel = document.createElement('div');
-    textureScaleLabel.textContent = 'Texture Scale:';
-    textureScaleLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
-    
-    const scaleSlider = document.createElement('input');
-    scaleSlider.type = 'range';
-    scaleSlider.min = '0.1';
-    scaleSlider.max = '5';
-    scaleSlider.step = '0.1';
-    scaleSlider.value = '1';
-    scaleSlider.style.cssText = 'margin: 5px 0; width: 150px;';
-    scaleSlider.addEventListener('input', (e) => {
-        const scale = parseFloat(e.target.value);
-        const panelIndex = parseInt(panelSelect.value);
-        const panel = sceneryPanels[panelIndex];
-        if (panel && panel.children[0].material.map) {
-            panel.children[0].material.map.repeat.set(scale, scale);
-        }
-    });
+    return slider;
+}
 
-    // Save/Load controls
-    const saveLoadLabel = document.createElement('div');
-    saveLoadLabel.innerHTML = '<strong>Save/Load Scene</strong>';
-    saveLoadLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
-    
-    const saveButton = document.createElement('button');
-    saveButton.textContent = 'Save Scene';
-    saveButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    saveButton.addEventListener('click', saveScene);
-    
-    const loadButton = document.createElement('button');
-    loadButton.textContent = 'Load Scene';
-    loadButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    loadButton.addEventListener('click', loadScene);
-    
-    // Physics test button
-    const physicsLabel = document.createElement('div');
-    physicsLabel.innerHTML = '<strong>Physics Test</strong>';
-    physicsLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
-    
-    const pushButton = document.createElement('button');
-    pushButton.textContent = 'Push Mode';
-    pushButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    pushButton.addEventListener('click', () => {
-        placementMode = 'push';
-        placementMarker.visible = true;
-        alert('Click on an object to push it! Lighter objects move more.');
-    });
-    
-    // Undo/Redo controls
-    const undoRedoLabel = document.createElement('div');
-    undoRedoLabel.innerHTML = '<strong>Undo/Redo</strong>';
-    undoRedoLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
-    
+function createUndoRedoButtons() {
     const undoButton = document.createElement('button');
-    undoButton.textContent = 'Undo (Ctrl+Z)';
-    undoButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    undoButton.textContent = 'Undo';
+    undoButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer; width: 48%;';
     undoButton.addEventListener('click', () => {
-        if (commandManager.undo()) {
-            updateUndoRedoButtons();
-        }
+        commandManager.undo();
+        updateUndoRedoButtons();
     });
     
     const redoButton = document.createElement('button');
-    redoButton.textContent = 'Redo (Ctrl+Y)';
-    redoButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    redoButton.textContent = 'Redo';
+    redoButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer; width: 48%;';
     redoButton.addEventListener('click', () => {
-        if (commandManager.redo()) {
-            updateUndoRedoButtons();
-        }
+        commandManager.redo();
+        updateUndoRedoButtons();
     });
     
-    function updateUndoRedoButtons() {
+    // Make these buttons globally accessible for updates
+    window.updateUndoRedoButtons = () => {
         undoButton.disabled = !commandManager.canUndo();
         redoButton.disabled = !commandManager.canRedo();
-        undoButton.style.opacity = commandManager.canUndo() ? '1' : '0.5';
-        redoButton.style.opacity = commandManager.canRedo() ? '1' : '0.5';
-    }
+    };
     
-    // Initialize button states
+    // Initial state
     updateUndoRedoButtons();
     
-    // Store reference for global access
-    window.updateUndoRedoButtons = updateUndoRedoButtons;
+    return { undoButton, redoButton };
+}
 
-    const cameraSelect = document.createElement('select');
-    cameraSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
-    cameraSelect.innerHTML = `
-        <option value="audience">Audience View</option>
-        <option value="overhead">Overhead</option>
-        <option value="stage-left">Stage Left</option>
-        <option value="stage-right">Stage Right</option>
-        <option value="close-up">Close Up</option>
+function createAudioControls() {
+    const audioInitButton = document.createElement('button');
+    audioInitButton.textContent = 'Initialize Audio';
+    audioInitButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer; width: 100%;';
+    audioInitButton.addEventListener('click', initializeAudio);
+    
+    const volumeControls = document.createElement('div');
+    volumeControls.innerHTML = `
+        <div style="margin: 5px 0;">
+            <label>Master Volume:</label><br>
+            <input type="range" id="master-volume" min="0" max="1" step="0.1" value="0.5" style="width: 100%;">
+        </div>
+        <div style="margin: 5px 0;">
+            <label>Ambience Volume:</label><br>
+            <input type="range" id="ambience-volume" min="0" max="1" step="0.1" value="0.3" style="width: 100%;">
+        </div>
     `;
-    cameraSelect.addEventListener('change', (e) => setCameraPreset(e.target.value));
+    
+    return { audioInitButton, volumeControls };
+}
 
-    uiContainer.innerHTML = '<div style="margin-bottom: 10px;"><strong>Controls</strong></div>';
-    uiContainer.appendChild(document.createTextNode('Lighting: '));
-    uiContainer.appendChild(lightingSelect);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(document.createTextNode('Camera: '));
-    uiContainer.appendChild(cameraSelect);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(document.createTextNode('Prop Type: '));
-    uiContainer.appendChild(propSelect);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(propButton);
-    uiContainer.appendChild(document.createTextNode(' '));
-    uiContainer.appendChild(actorButton);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(markerToggle);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(curtainButton);
-    uiContainer.appendChild(document.createTextNode(' '));
-    uiContainer.appendChild(platformButton);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(rotateButton);
-    uiContainer.appendChild(document.createTextNode(' '));
-    uiContainer.appendChild(trapButton);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(showRotatingButton);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(showTrapDoorsButton);
-    uiContainer.appendChild(sceneryLabel);
-    uiContainer.appendChild(backdropSelect);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(midstageSelect);
-    uiContainer.appendChild(textureLabel);
-    uiContainer.appendChild(panelSelect);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(defaultTextureSelect);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(uploadButton);
-    uiContainer.appendChild(textureScaleLabel);
-    uiContainer.appendChild(scaleSlider);
-    uiContainer.appendChild(saveLoadLabel);
-    uiContainer.appendChild(saveButton);
-    uiContainer.appendChild(document.createTextNode(' '));
-    uiContainer.appendChild(loadButton);
-    uiContainer.appendChild(physicsLabel);
-    uiContainer.appendChild(pushButton);
-    uiContainer.appendChild(undoRedoLabel);
-    uiContainer.appendChild(undoButton);
-    uiContainer.appendChild(document.createTextNode(' '));
-    uiContainer.appendChild(redoButton);
+function handleTextureUpload() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    
+    input.onchange = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        try {
+            console.log('Loading texture from file:', file.name);
+            const texture = await textureManager.loadCustomTexture(file);
+            const panelIndex = selectedSceneryPanel || 0;
+            
+            // Debug: Check if panel exists and is visible
+            const panel = sceneryPanels[panelIndex];
+            console.log('Panel info:', {
+                index: panelIndex,
+                panel: panel,
+                position: panel ? panel.position : null,
+                visible: panel ? panel.visible : null,
+                children: panel ? panel.children.length : 0
+            });
+            
+            // Make sure the panel is visible and in view
+            if (panel) {
+                moveSceneryPanel(panelIndex, 1.0); // Move to full position
+            }
+            
+            const success = textureManager.applyTextureToPanel(panelIndex, texture);
+            if (success) {
+                console.log(`Applied custom texture to panel ${panelIndex}`);
+                alert('Texture applied successfully!');
+            } else {
+                alert('Failed to apply texture to panel');
+            }
+        } catch (error) {
+            console.error('Texture loading failed:', error);
+            alert('Failed to load texture: ' + error.message);
+        }
+    };
+    
+    input.click();
+}
 
-    document.body.appendChild(toggleButton);
-    document.body.appendChild(uiContainer);
+function applyDefaultTexture(textureType) {
+    const panelIndex = selectedSceneryPanel || 0;
+    
+    if (textureType === 'none') {
+        // Remove texture and restore original color
+        const panel = sceneryPanels[panelIndex];
+        if (panel && panel.children[0]) {
+            const mesh = panel.children[0];
+            mesh.material.map = null;
+            // Restore original colors: blue for backdrop (0), green for midstage (1)
+            mesh.material.color.setHex(panelIndex === 0 ? 0x4169e1 : 0x228b22);
+            mesh.material.needsUpdate = true;
+        }
+        return;
+    }
+    
+    const texture = textureManager.getDefaultTexture(textureType);
+    if (texture) {
+        textureManager.applyTextureToPanel(panelIndex, texture);
+        console.log(`Applied ${textureType} texture to panel ${panelIndex}`);
+    }
+}
+
+function adjustTextureScale(panelIndex, scale) {
+    const panel = sceneryPanels[panelIndex];
+    if (panel && panel.children[0] && panel.children[0].material.map) {
+        panel.children[0].material.map.repeat.set(scale, scale);
+        panel.children[0].material.needsUpdate = true;
+    }
+}
+
+async function initializeAudio() {
+    const success = await audioManager.init();
+    if (success) {
+        console.log('Audio system initialized successfully');
+        alert('Audio system enabled');
+    } else {
+        console.error('Failed to initialize audio system');
+        alert('Failed to initialize audio system');
+    }
 }
 
 function applyLightingPreset(preset) {
@@ -1436,6 +1759,111 @@ const PROP_CATALOG = {
         color: 0x808080,
         y: 0.5
     },
+    // Modern furniture
+    modernChair: {
+        name: 'Modern Chair',
+        category: 'furniture',
+        create: () => {
+            const group = new THREE.Group();
+            // Seat with curved edges
+            const seat = new THREE.Mesh(
+                new THREE.BoxGeometry(1.2, 0.15, 1.2),
+                new THREE.MeshPhongMaterial({ color: 0x2C3E50 })
+            );
+            seat.position.y = 0.5;
+            group.add(seat);
+            // Modern angled back
+            const back = new THREE.Mesh(
+                new THREE.BoxGeometry(1.2, 1.2, 0.1),
+                new THREE.MeshPhongMaterial({ color: 0x34495E })
+            );
+            back.position.set(0, 1.1, -0.55);
+            back.rotation.x = -0.1;
+            group.add(back);
+            // Chrome legs
+            const legMaterial = new THREE.MeshPhongMaterial({ color: 0xC0C0C0, shininess: 100 });
+            const legGeometry = new THREE.CylinderGeometry(0.03, 0.03, 0.5);
+            const positions = [[-0.5, 0.25, -0.5], [0.5, 0.25, -0.5], [-0.5, 0.25, 0.5], [0.5, 0.25, 0.5]];
+            positions.forEach(pos => {
+                const leg = new THREE.Mesh(legGeometry, legMaterial);
+                leg.position.set(...pos);
+                group.add(leg);
+            });
+            return group;
+        },
+        y: 0
+    },
+    sofa: {
+        name: 'Sofa',
+        category: 'furniture',
+        create: () => {
+            const group = new THREE.Group();
+            // Main body
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(3, 0.8, 1.5),
+                new THREE.MeshPhongMaterial({ color: 0x8B4513 })
+            );
+            body.position.y = 0.4;
+            group.add(body);
+            // Back cushions
+            const backCushion = new THREE.Mesh(
+                new THREE.BoxGeometry(3, 1, 0.3),
+                new THREE.MeshPhongMaterial({ color: 0xA0522D })
+            );
+            backCushion.position.set(0, 0.9, -0.6);
+            group.add(backCushion);
+            // Arm rests
+            for (let x of [-1.35, 1.35]) {
+                const armRest = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.3, 0.6, 1.5),
+                    new THREE.MeshPhongMaterial({ color: 0x8B4513 })
+                );
+                armRest.position.set(x, 0.7, 0);
+                group.add(armRest);
+            }
+            // Seat cushions
+            for (let x of [-0.8, 0, 0.8]) {
+                const cushion = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.9, 0.2, 1.2),
+                    new THREE.MeshPhongMaterial({ color: 0xDEB887 })
+                );
+                cushion.position.set(x, 0.5, 0.1);
+                group.add(cushion);
+            }
+            return group;
+        },
+        y: 0
+    },
+    diningTable: {
+        name: 'Dining Table',
+        category: 'furniture',
+        create: () => {
+            const group = new THREE.Group();
+            // Elegant table top
+            const top = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.5, 1.5, 0.1, 32),
+                new THREE.MeshPhongMaterial({ color: 0x8B4513, shininess: 50 })
+            );
+            top.position.y = 1;
+            group.add(top);
+            // Ornate central pedestal
+            const pedestal = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.3, 0.5, 0.8, 8),
+                new THREE.MeshPhongMaterial({ color: 0x654321 })
+            );
+            pedestal.position.y = 0.5;
+            group.add(pedestal);
+            // Base
+            const base = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.8, 0.8, 0.1, 8),
+                new THREE.MeshPhongMaterial({ color: 0x654321 })
+            );
+            base.position.y = 0.05;
+            group.add(base);
+            return group;
+        },
+        y: 0
+    },
     // Furniture
     chair: {
         name: 'Chair',
@@ -1490,6 +1918,224 @@ const PROP_CATALOG = {
                     const leg = new THREE.Mesh(legGeometry, legMaterial);
                     leg.position.set(x, 0.5, z);
                     group.add(leg);
+                }
+            }
+            return group;
+        },
+        y: 0
+    },
+    // Performance/Stage props
+    microphone: {
+        name: 'Microphone',
+        category: 'performance',
+        create: () => {
+            const group = new THREE.Group();
+            // Stand
+            const stand = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.5, 0.5, 0.1, 16),
+                new THREE.MeshPhongMaterial({ color: 0x333333 })
+            );
+            stand.position.y = 0.05;
+            group.add(stand);
+            // Pole
+            const pole = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.03, 0.03, 1.5, 8),
+                new THREE.MeshPhongMaterial({ color: 0x444444 })
+            );
+            pole.position.y = 0.75;
+            group.add(pole);
+            // Mic
+            const mic = new THREE.Mesh(
+                new THREE.CapsuleGeometry(0.08, 0.2, 4, 8),
+                new THREE.MeshPhongMaterial({ color: 0x222222 })
+            );
+            mic.position.y = 1.6;
+            group.add(mic);
+            // Grille
+            const grille = new THREE.Mesh(
+                new THREE.SphereGeometry(0.09, 8, 8),
+                new THREE.MeshPhongMaterial({ color: 0x888888 })
+            );
+            grille.position.y = 1.7;
+            group.add(grille);
+            return group;
+        },
+        y: 0
+    },
+    piano: {
+        name: 'Grand Piano',
+        category: 'performance',
+        create: () => {
+            const group = new THREE.Group();
+            // Body
+            const body = new THREE.Mesh(
+                new THREE.BoxGeometry(2.5, 1, 4),
+                new THREE.MeshPhongMaterial({ color: 0x1a1a1a, shininess: 80 })
+            );
+            body.position.y = 0.5;
+            group.add(body);
+            // Lid
+            const lid = new THREE.Mesh(
+                new THREE.BoxGeometry(2.4, 0.1, 3.9),
+                new THREE.MeshPhongMaterial({ color: 0x000000, shininess: 100 })
+            );
+            lid.position.set(0, 1.05, 0);
+            lid.rotation.x = -0.3;
+            group.add(lid);
+            // Keys
+            const keys = new THREE.Mesh(
+                new THREE.BoxGeometry(1.8, 0.05, 0.8),
+                new THREE.MeshPhongMaterial({ color: 0xFFFFF0 })
+            );
+            keys.position.set(0, 0.85, 1.5);
+            group.add(keys);
+            // Legs
+            const legGeometry = new THREE.CylinderGeometry(0.05, 0.08, 0.5, 8);
+            const legMaterial = new THREE.MeshPhongMaterial({ color: 0x1a1a1a });
+            const legPositions = [[-1, 0.25, -1.5], [1, 0.25, -1.5], [0, 0.25, 1.5]];
+            legPositions.forEach(pos => {
+                const leg = new THREE.Mesh(legGeometry, legMaterial);
+                leg.position.set(...pos);
+                group.add(leg);
+            });
+            return group;
+        },
+        y: 0
+    },
+    spotlight: {
+        name: 'Spotlight',
+        category: 'performance',
+        create: () => {
+            const group = new THREE.Group();
+            // Base
+            const base = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.3, 0.4, 0.2, 8),
+                new THREE.MeshPhongMaterial({ color: 0x333333 })
+            );
+            base.position.y = 0.1;
+            group.add(base);
+            // Pole
+            const pole = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.05, 0.05, 2, 8),
+                new THREE.MeshPhongMaterial({ color: 0x444444 })
+            );
+            pole.position.y = 1;
+            group.add(pole);
+            // Light housing
+            const housing = new THREE.Mesh(
+                new THREE.ConeGeometry(0.3, 0.5, 8),
+                new THREE.MeshPhongMaterial({ color: 0x222222 })
+            );
+            housing.position.set(0, 2.2, 0);
+            housing.rotation.x = Math.PI;
+            group.add(housing);
+            // Lens
+            const lens = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.25, 0.25, 0.05, 16),
+                new THREE.MeshPhongMaterial({ color: 0xFFFFAA, transparent: true, opacity: 0.8 })
+            );
+            lens.position.y = 1.95;
+            group.add(lens);
+            return group;
+        },
+        y: 0
+    },
+    // Environment/Set pieces
+    tree: {
+        name: 'Tree',
+        category: 'environment',
+        create: () => {
+            const group = new THREE.Group();
+            // Trunk
+            const trunk = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.2, 0.3, 2, 8),
+                new THREE.MeshPhongMaterial({ color: 0x8B4513 })
+            );
+            trunk.position.y = 1;
+            group.add(trunk);
+            // Foliage layers
+            const foliageColors = [0x228B22, 0x32CD32, 0x90EE90];
+            for (let i = 0; i < 3; i++) {
+                const foliage = new THREE.Mesh(
+                    new THREE.ConeGeometry(1 - i * 0.2, 1.2, 8),
+                    new THREE.MeshPhongMaterial({ color: foliageColors[i] })
+                );
+                foliage.position.y = 2 + i * 0.6;
+                group.add(foliage);
+            }
+            return group;
+        },
+        y: 0
+    },
+    fountain: {
+        name: 'Fountain',
+        category: 'environment',
+        create: () => {
+            const group = new THREE.Group();
+            // Base pool
+            const pool = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.5, 1.5, 0.3, 16),
+                new THREE.MeshPhongMaterial({ color: 0x696969 })
+            );
+            pool.position.y = 0.15;
+            group.add(pool);
+            // Water
+            const water = new THREE.Mesh(
+                new THREE.CylinderGeometry(1.4, 1.4, 0.05, 16),
+                new THREE.MeshPhongMaterial({ color: 0x4169E1, transparent: true, opacity: 0.7 })
+            );
+            water.position.y = 0.32;
+            group.add(water);
+            // Central column
+            const column = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.2, 0.3, 1, 8),
+                new THREE.MeshPhongMaterial({ color: 0x696969 })
+            );
+            column.position.y = 0.8;
+            group.add(column);
+            // Top bowl
+            const bowl = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.5, 0.4, 0.2, 16),
+                new THREE.MeshPhongMaterial({ color: 0x696969 })
+            );
+            bowl.position.y = 1.4;
+            group.add(bowl);
+            return group;
+        },
+        y: 0
+    },
+    // Storage/containers
+    bookshelf: {
+        name: 'Bookshelf',
+        category: 'storage',
+        create: () => {
+            const group = new THREE.Group();
+            // Frame
+            const frame = new THREE.Mesh(
+                new THREE.BoxGeometry(2, 3, 0.4),
+                new THREE.MeshPhongMaterial({ color: 0x8B4513 })
+            );
+            frame.position.y = 1.5;
+            group.add(frame);
+            // Shelves
+            for (let i = 0; i < 4; i++) {
+                const shelf = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.9, 0.05, 0.35),
+                    new THREE.MeshPhongMaterial({ color: 0x654321 })
+                );
+                shelf.position.y = 0.3 + i * 0.7;
+                group.add(shelf);
+            }
+            // Books
+            const bookColors = [0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF, 0x00FFFF];
+            for (let shelf = 0; shelf < 4; shelf++) {
+                for (let book = 0; book < 8; book++) {
+                    const bookMesh = new THREE.Mesh(
+                        new THREE.BoxGeometry(0.2, 0.6, 0.03),
+                        new THREE.MeshPhongMaterial({ color: bookColors[book % bookColors.length] })
+                    );
+                    bookMesh.position.set(-0.8 + book * 0.22, 0.6 + shelf * 0.7, 0.15);
+                    group.add(bookMesh);
                 }
             }
             return group;
@@ -1675,52 +2321,230 @@ function addPropAt(x, z) {
     updatePropRelationships(propObject);
 }
 
-function addActorAt(x, z) {
-    // Create actor group
-    const actorGroup = new THREE.Group();
+// Actor types with different appearances and characteristics
+const ACTOR_TYPES = {
+    human_male: {
+        name: 'Male Actor',
+        category: 'human',
+        bodyColor: 0x4169e1,
+        skinColor: 0xffdbac,
+        height: 1.8,
+        build: 'normal'
+    },
+    human_female: {
+        name: 'Female Actor',
+        category: 'human',
+        bodyColor: 0xdc143c,
+        skinColor: 0xffe4c4,
+        height: 1.65,
+        build: 'slender'
+    },
+    child: {
+        name: 'Child Actor',
+        category: 'human',
+        bodyColor: 0x32cd32,
+        skinColor: 0xffefd5,
+        height: 1.2,
+        build: 'small'
+    },
+    elderly: {
+        name: 'Elderly Actor',
+        category: 'human',
+        bodyColor: 0x8b4513,
+        skinColor: 0xf5deb3,
+        height: 1.7,
+        build: 'stocky'
+    },
+    robot: {
+        name: 'Robot Actor',
+        category: 'artificial',
+        bodyColor: 0x708090,
+        skinColor: 0xc0c0c0,
+        height: 1.9,
+        build: 'mechanical'
+    },
+    alien: {
+        name: 'Alien Actor',
+        category: 'fantasy',
+        bodyColor: 0x9370db,
+        skinColor: 0x98fb98,
+        height: 2.1,
+        build: 'tall'
+    }
+};
+
+function createDetailedActor(actorType) {
+    const type = ACTOR_TYPES[actorType];
+    const group = new THREE.Group();
+    const scale = type.height / 1.8; // Scale based on height
     
-    // Body (cylinder)
-    const bodyGeometry = new THREE.CylinderGeometry(0.4, 0.5, 2, 8);
+    // Body proportions based on build
+    let bodyRadius, bodyHeight;
+    switch(type.build) {
+        case 'slender':
+            bodyRadius = [0.35, 0.4];
+            bodyHeight = 1.8;
+            break;
+        case 'small':
+            bodyRadius = [0.3, 0.35];
+            bodyHeight = 1.4;
+            break;
+        case 'stocky':
+            bodyRadius = [0.45, 0.5];
+            bodyHeight = 1.6;
+            break;
+        case 'mechanical':
+            bodyRadius = [0.4, 0.4]; // Cylindrical
+            bodyHeight = 1.8;
+            break;
+        case 'tall':
+            bodyRadius = [0.3, 0.45];
+            bodyHeight = 2.2;
+            break;
+        default: // normal
+            bodyRadius = [0.4, 0.5];
+            bodyHeight = 1.8;
+    }
+    
+    // Create body
+    const bodyGeometry = new THREE.CylinderGeometry(...bodyRadius, bodyHeight * scale, 8);
     const bodyMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0x4169e1 
+        color: type.bodyColor,
+        shininess: type.build === 'mechanical' ? 80 : 10
     });
     const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-    body.position.y = 1;
-    actorGroup.add(body);
+    body.position.y = (bodyHeight * scale) / 2;
+    group.add(body);
     
-    // Head (sphere)
-    const headGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+    // Create head
+    const headSize = type.build === 'small' ? 0.25 : type.build === 'tall' ? 0.4 : 0.35;
+    let headGeometry;
+    if (type.build === 'mechanical') {
+        headGeometry = new THREE.BoxGeometry(headSize * 2, headSize * 2, headSize * 2);
+    } else if (type.category === 'fantasy') {
+        headGeometry = new THREE.ConeGeometry(headSize, headSize * 1.5, 8);
+    } else {
+        headGeometry = new THREE.SphereGeometry(headSize * scale, 16, 16);
+    }
+    
     const headMaterial = new THREE.MeshPhongMaterial({ 
-        color: 0xffdbac 
+        color: type.skinColor,
+        shininess: type.build === 'mechanical' ? 60 : 5
     });
     const head = new THREE.Mesh(headGeometry, headMaterial);
-    head.position.y = 2.3;
-    actorGroup.add(head);
+    head.position.y = bodyHeight * scale + headSize * scale;
+    group.add(head);
     
-    // Eyes
-    const eyeGeometry = new THREE.SphereGeometry(0.05, 8, 8);
-    const eyeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+    // Create eyes (unless robot)
+    if (type.build !== 'mechanical') {
+        const eyeGeometry = new THREE.SphereGeometry(0.04 * scale, 8, 8);
+        const eyeMaterial = new THREE.MeshBasicMaterial({ 
+            color: type.category === 'fantasy' ? 0xff0000 : 0x000000 
+        });
+        
+        const eyeY = bodyHeight * scale + headSize * scale;
+        const eyeZ = headSize * scale * 0.8;
+        
+        const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        leftEye.position.set(-0.08 * scale, eyeY, eyeZ);
+        group.add(leftEye);
+        
+        const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        rightEye.position.set(0.08 * scale, eyeY, eyeZ);
+        group.add(rightEye);
+    } else {
+        // Robot eyes (glowing rectangles)
+        const eyeGeometry = new THREE.BoxGeometry(0.1 * scale, 0.05 * scale, 0.02);
+        const eyeMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0x00ffff,
+            emissive: 0x004444
+        });
+        
+        const eyeY = bodyHeight * scale + headSize * scale;
+        
+        const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        leftEye.position.set(-0.1 * scale, eyeY, headSize * scale);
+        group.add(leftEye);
+        
+        const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        rightEye.position.set(0.1 * scale, eyeY, headSize * scale);
+        group.add(rightEye);
+    }
     
-    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    leftEye.position.set(-0.1, 2.3, 0.3);
-    actorGroup.add(leftEye);
+    // Create arms
+    const armGeometry = new THREE.CylinderGeometry(0.08 * scale, 0.08 * scale, 1.2 * scale, 6);
+    const armMaterial = new THREE.MeshPhongMaterial({ 
+        color: type.bodyColor,
+        shininess: type.build === 'mechanical' ? 80 : 10
+    });
     
-    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    rightEye.position.set(0.1, 2.3, 0.3);
-    actorGroup.add(rightEye);
+    const armY = bodyHeight * scale * 0.7;
+    const armX = bodyRadius[1] * scale + 0.1 * scale;
+    
+    const leftArm = new THREE.Mesh(armGeometry, armMaterial);
+    leftArm.position.set(-armX, armY, 0);
+    group.add(leftArm);
+    
+    const rightArm = new THREE.Mesh(armGeometry, armMaterial);
+    rightArm.position.set(armX, armY, 0);
+    group.add(rightArm);
+    
+    // Create legs
+    const legGeometry = new THREE.CylinderGeometry(0.1 * scale, 0.12 * scale, 1.4 * scale, 6);
+    const legMaterial = new THREE.MeshPhongMaterial({ 
+        color: type.bodyColor,
+        shininess: type.build === 'mechanical' ? 80 : 10
+    });
+    
+    const legX = bodyRadius[0] * scale * 0.6;
+    const legY = 0.7 * scale;
+    
+    const leftLeg = new THREE.Mesh(legGeometry, legMaterial);
+    leftLeg.position.set(-legX, legY, 0);
+    group.add(leftLeg);
+    
+    const rightLeg = new THREE.Mesh(legGeometry, legMaterial);
+    rightLeg.position.set(legX, legY, 0);
+    group.add(rightLeg);
+    
+    // Add special features based on type
+    if (type.category === 'fantasy') {
+        // Add antenna for alien
+        const antennaGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 4);
+        const antennaMaterial = new THREE.MeshPhongMaterial({ color: type.skinColor });
+        const antenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
+        antenna.position.y = bodyHeight * scale + headSize * scale * 1.5;
+        group.add(antenna);
+        
+        const antennaTop = new THREE.Mesh(
+            new THREE.SphereGeometry(0.05, 8, 8),
+            new THREE.MeshBasicMaterial({ color: 0xffff00, emissive: 0x444400 })
+        );
+        antennaTop.position.y = bodyHeight * scale + headSize * scale * 1.5 + 0.15;
+        group.add(antennaTop);
+    }
+    
+    if (type.build === 'mechanical') {
+        // Add mechanical details
+        const chestPanel = new THREE.Mesh(
+            new THREE.BoxGeometry(0.3 * scale, 0.2 * scale, 0.05),
+            new THREE.MeshPhongMaterial({ color: 0x444444 })
+        );
+        chestPanel.position.set(0, bodyHeight * scale * 0.8, bodyRadius[1] * scale);
+        group.add(chestPanel);
+    }
+    
+    return group;
+}
+
+function addActorAt(x, z) {
+    // Create detailed actor based on selected type
+    const actorGroup = createDetailedActor(selectedActorType);
     
     // Position and properties
     actorGroup.position.set(x, 0, z);
     actorGroup.castShadow = true;
     actorGroup.receiveShadow = true;
-    
-    // Add facing indicator (small cone pointing forward)
-    const noseGeometry = new THREE.ConeGeometry(0.05, 0.1, 4);
-    const noseMaterial = new THREE.MeshPhongMaterial({ color: 0xffdbac });
-    const nose = new THREE.Mesh(noseGeometry, noseMaterial);
-    nose.position.set(0, 2.3, 0.35);
-    nose.rotation.x = Math.PI / 2;
-    actorGroup.add(nose);
     
     const actorId = `actor_${nextActorId++}`;
     actorGroup.userData = { 
@@ -1997,6 +2821,15 @@ const OBJECT_PHYSICS = {
     actor: { mass: 70, friction: 0.8 }, // ~70kg human
     table: { mass: 30, friction: 0.9 }, // Heavy, high friction
     chair: { mass: 8, friction: 0.7 },  // Lighter, can slide
+    modernChair: { mass: 12, friction: 0.8 }, // Modern chair
+    sofa: { mass: 80, friction: 0.95 }, // Very heavy, doesn't move easily
+    diningTable: { mass: 40, friction: 0.9 }, // Heavy dining table
+    microphone: { mass: 15, friction: 0.8 }, // Microphone stand
+    piano: { mass: 300, friction: 0.98 }, // Extremely heavy
+    spotlight: { mass: 25, friction: 0.85 }, // Heavy spotlight
+    tree: { mass: 100, friction: 0.95 }, // Very heavy tree
+    fountain: { mass: 200, friction: 0.98 }, // Extremely heavy fountain
+    bookshelf: { mass: 60, friction: 0.9 }, // Heavy bookshelf
     barrel: { mass: 50, friction: 0.6 }, // Heavy but can roll
     box: { mass: 20, friction: 0.8 },   // Medium weight
     plant: { mass: 5, friction: 0.7 },  // Light
@@ -2063,12 +2896,21 @@ class TextureManager {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const texture = this.loader.load(e.target.result, 
-                    () => resolve(texture),
+                const texture = this.loader.load(
+                    e.target.result, 
+                    (loadedTexture) => {
+                        // Texture loaded successfully
+                        loadedTexture.wrapS = loadedTexture.wrapT = THREE.RepeatWrapping;
+                        loadedTexture.needsUpdate = true;
+                        console.log('Texture loaded successfully:', loadedTexture);
+                        resolve(loadedTexture);
+                    },
                     undefined,
-                    () => reject(new Error('Failed to load texture'))
+                    (error) => {
+                        console.error('Texture loading error:', error);
+                        reject(new Error('Failed to load texture'));
+                    }
                 );
-                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
             };
             reader.onerror = () => reject(new Error('Failed to read file'));
             reader.readAsDataURL(file);
@@ -2076,19 +2918,35 @@ class TextureManager {
     }
     
     applyTextureToPanel(panelIndex, texture, scale = { x: 1, y: 1 }) {
-        if (panelIndex >= sceneryPanels.length) return false;
+        if (panelIndex >= sceneryPanels.length) {
+            console.error('Invalid panel index:', panelIndex);
+            return false;
+        }
         
         const panel = sceneryPanels[panelIndex];
+        if (!panel || !panel.children[0]) {
+            console.error('Panel or mesh not found:', panelIndex);
+            return false;
+        }
+        
         const mesh = panel.children[0]; // Main panel mesh
+        console.log('Applying texture to panel', panelIndex, 'mesh:', mesh, 'texture:', texture);
         
         // Clone texture to avoid sharing references
         const clonedTexture = texture.clone();
         clonedTexture.repeat.set(scale.x, scale.y);
+        clonedTexture.wrapS = THREE.RepeatWrapping;
+        clonedTexture.wrapT = THREE.RepeatWrapping;
+        clonedTexture.needsUpdate = true;
         
-        // Apply to material
+        // Apply to material and set color to white so texture shows properly
         mesh.material.map = clonedTexture;
+        mesh.material.color.setHex(0xffffff); // Set to white so texture isn't tinted
+        mesh.material.transparent = true;
+        mesh.material.opacity = 1.0; // Make fully opaque to see texture clearly
         mesh.material.needsUpdate = true;
         
+        console.log('Texture applied to material:', mesh.material);
         return true;
     }
     
@@ -2287,6 +3145,268 @@ class CommandManager {
 
 const commandManager = new CommandManager();
 
+// Audio management system for 3D positional sound
+class AudioManager {
+    constructor() {
+        this.audioContext = null;
+        this.listener = null;
+        this.sounds = new Map();
+        this.audioBuffers = new Map();
+        this.masterVolume = 1.0;
+        this.categories = {
+            background: { volume: 0.5, sounds: new Set() },
+            effects: { volume: 0.8, sounds: new Set() },
+            voices: { volume: 1.0, sounds: new Set() },
+            ambient: { volume: 0.3, sounds: new Set() }
+        };
+        this.initialized = false;
+    }
+    
+    async init() {
+        try {
+            // Create audio context (requires user interaction)
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.listener = this.audioContext.listener;
+            
+            // Create default sounds
+            this.createDefaultSounds();
+            
+            this.initialized = true;
+            console.log('Audio system initialized');
+            return true;
+        } catch (error) {
+            console.error('Failed to initialize audio:', error);
+            return false;
+        }
+    }
+    
+    createDefaultSounds() {
+        // Create simple sound effects using oscillators
+        this.defaultSounds = {
+            footstep: this.createFootstepSound(),
+            thud: this.createThudSound(),
+            whoosh: this.createWhooshSound(),
+            ambient: this.createAmbientSound()
+        };
+    }
+    
+    createFootstepSound() {
+        return () => {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+            const filter = this.audioContext.createBiquadFilter();
+            
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(80, this.audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(40, this.audioContext.currentTime + 0.1);
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(200, this.audioContext.currentTime);
+            
+            gain.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.15);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            
+            osc.start(this.audioContext.currentTime);
+            osc.stop(this.audioContext.currentTime + 0.15);
+            
+            return gain;
+        };
+    }
+    
+    createThudSound() {
+        return () => {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+            const filter = this.audioContext.createBiquadFilter();
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(60, this.audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(20, this.audioContext.currentTime + 0.3);
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(150, this.audioContext.currentTime);
+            
+            gain.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.3);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            
+            osc.start(this.audioContext.currentTime);
+            osc.stop(this.audioContext.currentTime + 0.3);
+            
+            return gain;
+        };
+    }
+    
+    createWhooshSound() {
+        return () => {
+            const osc = this.audioContext.createOscillator();
+            const gain = this.audioContext.createGain();
+            const filter = this.audioContext.createBiquadFilter();
+            
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(200, this.audioContext.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(800, this.audioContext.currentTime + 0.2);
+            osc.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 0.5);
+            
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(400, this.audioContext.currentTime);
+            filter.Q.setValueAtTime(5, this.audioContext.currentTime);
+            
+            gain.gain.setValueAtTime(0.2, this.audioContext.currentTime);
+            gain.gain.linearRampToValueAtTime(0.4, this.audioContext.currentTime + 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+            
+            osc.connect(filter);
+            filter.connect(gain);
+            
+            osc.start(this.audioContext.currentTime);
+            osc.stop(this.audioContext.currentTime + 0.5);
+            
+            return gain;
+        };
+    }
+    
+    createAmbientSound() {
+        return () => {
+            const gain = this.audioContext.createGain();
+            const filter = this.audioContext.createBiquadFilter();
+            
+            // Create multiple oscillators for rich ambient sound
+            for (let i = 0; i < 3; i++) {
+                const osc = this.audioContext.createOscillator();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(100 + i * 50 + Math.random() * 20, this.audioContext.currentTime);
+                
+                const oscGain = this.audioContext.createGain();
+                oscGain.gain.setValueAtTime(0.05, this.audioContext.currentTime);
+                
+                osc.connect(oscGain);
+                oscGain.connect(filter);
+                
+                osc.start(this.audioContext.currentTime);
+                osc.stop(this.audioContext.currentTime + 2);
+            }
+            
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(300, this.audioContext.currentTime);
+            filter.connect(gain);
+            
+            gain.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+            gain.gain.linearRampToValueAtTime(0.3, this.audioContext.currentTime + 0.5);
+            gain.gain.linearRampToValueAtTime(0.1, this.audioContext.currentTime + 1.5);
+            gain.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 2);
+            
+            return gain;
+        };
+    }
+    
+    createPositionalSound(soundName, position, category = 'effects') {
+        if (!this.initialized || !this.defaultSounds[soundName]) return null;
+        
+        const panner = this.audioContext.createPanner();
+        panner.panningModel = 'HRTF';
+        panner.distanceModel = 'inverse';
+        panner.refDistance = 1;
+        panner.maxDistance = 100;
+        panner.rolloffFactor = 1;
+        panner.coneInnerAngle = 360;
+        panner.coneOuterAngle = 0;
+        panner.coneOuterGain = 0;
+        
+        // Set 3D position
+        panner.positionX.setValueAtTime(position.x, this.audioContext.currentTime);
+        panner.positionY.setValueAtTime(position.y, this.audioContext.currentTime);
+        panner.positionZ.setValueAtTime(position.z, this.audioContext.currentTime);
+        
+        // Create sound source
+        const soundSource = this.defaultSounds[soundName]();
+        
+        // Create category volume control
+        const categoryGain = this.audioContext.createGain();
+        categoryGain.gain.setValueAtTime(this.categories[category].volume * this.masterVolume, this.audioContext.currentTime);
+        
+        // Connect: source -> panner -> category volume -> destination
+        soundSource.connect(panner);
+        panner.connect(categoryGain);
+        categoryGain.connect(this.audioContext.destination);
+        
+        // Track the sound
+        const soundId = Date.now() + Math.random();
+        this.categories[category].sounds.add(soundId);
+        
+        // Clean up after sound ends
+        setTimeout(() => {
+            this.categories[category].sounds.delete(soundId);
+        }, 3000);
+        
+        return { soundId, panner, categoryGain };
+    }
+    
+    updateListenerPosition(camera) {
+        if (!this.initialized) return;
+        
+        // Update listener position to match camera
+        this.listener.positionX.setValueAtTime(camera.position.x, this.audioContext.currentTime);
+        this.listener.positionY.setValueAtTime(camera.position.y, this.audioContext.currentTime);
+        this.listener.positionZ.setValueAtTime(camera.position.z, this.audioContext.currentTime);
+        
+        // Update listener orientation
+        const forward = new THREE.Vector3(0, 0, -1);
+        const up = new THREE.Vector3(0, 1, 0);
+        forward.applyQuaternion(camera.quaternion);
+        up.applyQuaternion(camera.quaternion);
+        
+        this.listener.forwardX.setValueAtTime(forward.x, this.audioContext.currentTime);
+        this.listener.forwardY.setValueAtTime(forward.y, this.audioContext.currentTime);
+        this.listener.forwardZ.setValueAtTime(forward.z, this.audioContext.currentTime);
+        this.listener.upX.setValueAtTime(up.x, this.audioContext.currentTime);
+        this.listener.upY.setValueAtTime(up.y, this.audioContext.currentTime);
+        this.listener.upZ.setValueAtTime(up.z, this.audioContext.currentTime);
+    }
+    
+    setCategoryVolume(category, volume) {
+        if (this.categories[category]) {
+            this.categories[category].volume = Math.max(0, Math.min(1, volume));
+        }
+    }
+    
+    setMasterVolume(volume) {
+        this.masterVolume = Math.max(0, Math.min(1, volume));
+    }
+    
+    playCollisionSound(object1, object2, velocity) {
+        if (!this.initialized) return;
+        
+        const position = object1.position;
+        let soundName = 'thud';
+        
+        // Choose sound based on object types and velocity
+        if (velocity < 0.1) {
+            return; // Too quiet
+        } else if (velocity < 0.5) {
+            soundName = 'footstep';
+        } else {
+            soundName = 'thud';
+        }
+        
+        this.createPositionalSound(soundName, position, 'effects');
+    }
+    
+    playMovementSound(object, velocity) {
+        if (!this.initialized || velocity < 0.05) return;
+        
+        const position = object.position;
+        this.createPositionalSound('whoosh', position, 'effects');
+    }
+}
+
+const audioManager = new AudioManager();
+
 // Get bounding box for an object (prop or actor)
 function getObjectBounds(obj) {
     // Default bounds based on object type
@@ -2417,6 +3537,9 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
                     }
                 }
                 
+                // Play collision sound
+                audioManager.playCollisionSound(movingObj, prop, velocity);
+                
                 collisionHandled = true;
                 return !response.obj1Moves; // Can move if momentum allows
             }
@@ -2444,6 +3567,9 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
                         vel.z = (dz/dist) * response.obj2Velocity;
                     }
                 }
+                
+                // Play collision sound
+                audioManager.playCollisionSound(movingObj, actor, velocity);
                 
                 collisionHandled = true;
                 return !response.obj1Moves;
@@ -2640,6 +3766,11 @@ function animate() {
                 const newX = prop.position.x + vel.x;
                 const newZ = prop.position.z + vel.z;
                 
+                // Play movement sound for fast-moving objects
+                if (speed > 0.1) {
+                    audioManager.playMovementSound(prop, speed);
+                }
+                
                 if (!checkAllCollisions(prop, newX, newZ, speed)) {
                     prop.position.x = newX;
                     prop.position.z = newZ;
@@ -2698,6 +3829,9 @@ function animate() {
     if (controls) {
         controls.update();
     }
+    
+    // Update 3D audio listener position to match camera
+    audioManager.updateListenerPosition(camera);
     
     renderer.render(scene, camera);
 }
