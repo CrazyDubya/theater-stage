@@ -1395,7 +1395,7 @@ function createLightingSelector() {
     });
     
     select.addEventListener('change', () => {
-        setLightingPreset(select.value);
+        applyLightingPreset(select.value);
     });
     
     return select;
