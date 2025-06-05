@@ -15,7 +15,7 @@ let curtainLeft, curtainRight, curtainTop, curtainState, sceneryPanels;
 let placementMode, placementMarker, selectedPropType, selectedActorType, selectedSceneryPanel;
 let nextActorId, nextPropId;
 let propPlatformRelations, propRotatingStageRelations, propTrapDoorRelations, objectVelocities;
-let frameCount, lastFrameTime, animationTime, performanceStats;
+let performanceStats;
 
 // Initialize state references once modules are loaded
 function initializeStateReferences() {
@@ -61,6 +61,11 @@ function initializeStateReferences() {
         lastFrameTime = stageState.performance.lastFrameTime;
         animationTime = stageState.performance.animationTime;
         performanceStats = stageState.performance.stats;
+        
+        // Register managers
+        if (window.threeSceneManager) {
+            stageState.managers.threeScene = window.threeSceneManager;
+        }
         
         console.log('State references initialized');
     }
@@ -422,58 +427,46 @@ function updateCurtainPositions() {
     }
 }
 
-function init() {
+async function init() {
     console.log('Initializing 3D Theater Stage...');
     
-    // Wait for state manager to be available
-    if (!window.stageState) {
-        console.log('Waiting for StateManager...');
-        setTimeout(init, 50);
-        return;
+    try {
+        // Initialize state references
+        initializeStateReferences();
+        
+        // Initialize Three.js scene using SceneManager
+        await window.threeSceneManager.initialize();
+        
+        // Update local references after SceneManager initialization
+        scene = window.stageState.core.scene;
+        camera = window.stageState.core.camera;
+        renderer = window.stageState.core.renderer;
+        controls = window.stageState.core.controls;
+        
+        // Create stage elements
+        createStage();
+        createLighting();
+        createStageMarkers();
+        createMoveablePlatforms();
+        createRotatingStage();
+        createTrapDoors();
+        createSceneryPanels();
+        updateCurtains();
+        createPlacementMarker();
+        
+        // Set up UI
+        setupUI();
+
+        // Set up additional event handlers (SceneManager handles resize)
+        window.addEventListener('click', onStageClick, false);
+        window.addEventListener('mousemove', onMouseMove, false);
+        window.addEventListener('keydown', onKeyDown, false);
+        
+        console.log('3D Theater Stage initialization complete!');
+        
+    } catch (error) {
+        console.error('Failed to initialize 3D Theater Stage:', error);
     }
-    
-    console.log('StateManager found, initializing...');
-    
-    // Initialize state references
-    initializeStateReferences();
-    
-    // Create Three.js objects and store in state
-    const sceneObj = new THREE.Scene();
-    sceneObj.background = new THREE.Color(0x001122);
-    sceneObj.fog = new THREE.Fog(0x001122, 10, 100);
-    window.stageState.core.scene = sceneObj;
-    scene = sceneObj;
-
-    const cameraObj = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    cameraObj.position.set(0, 5, 20);
-    cameraObj.lookAt(0, 0, 0);
-    window.stageState.core.camera = cameraObj;
-    camera = cameraObj;
-
-    const rendererObj = new THREE.WebGLRenderer({ antialias: true });
-    rendererObj.setSize(window.innerWidth, window.innerHeight);
-    rendererObj.shadowMap.enabled = true;
-    rendererObj.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.body.appendChild(rendererObj.domElement);
-    window.stageState.core.renderer = rendererObj;
-    renderer = rendererObj;
-
-    createStage();
-    createLighting();
-    createStageMarkers();
-    createMoveablePlatforms();
-    createRotatingStage();
-    createTrapDoors();
-    createSceneryPanels();
-    updateCurtains();
-    createPlacementMarker();
-    addControls();
-    setupUI();
-
-    window.addEventListener('resize', onWindowResize, false);
-    window.addEventListener('click', onStageClick, false);
-    window.addEventListener('mousemove', onMouseMove, false);
-    window.addEventListener('keydown', onKeyDown, false);
 }
 
 function createStage() {
@@ -1051,15 +1044,7 @@ function onMouseMove(event) {
     }
 }
 
-function addControls() {
-    controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.screenSpacePanning = false;
-    controls.minDistance = 5;
-    controls.maxDistance = 50;
-    controls.maxPolarAngle = Math.PI / 2;
-}
+// addControls() function now handled by SceneManager
 
 function onKeyDown(event) {
     // Check for Ctrl+Z (undo) and Ctrl+Y (redo)
@@ -1078,11 +1063,7 @@ function onKeyDown(event) {
     }
 }
 
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
+// onWindowResize() function now handled by SceneManager
 
 function setupUI() {
     // Create toggle button for menu
@@ -3500,6 +3481,7 @@ class AudioManager {
 }
 
 const audioManager = new AudioManager();
+window.audioManager = audioManager;
 
 // Get bounding box for an object (prop or actor)
 function getObjectBounds(obj) {
@@ -3696,6 +3678,11 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
     return false; // No collision
 }
 
+// Make physics functions available globally for RenderLoop
+window.updatePropRelationships = updatePropRelationships;
+window.checkAllCollisions = checkAllCollisions;
+window.getObjectFriction = getObjectFriction;
+
 function checkPropSceneryCollision(prop, newX, newZ) {
     const bounds = getObjectBounds(prop);
     const propRadius = Math.max(bounds.width, bounds.depth) / 2;
@@ -3736,283 +3723,9 @@ function checkPropSceneryCollision(prop, newX, newZ) {
 
 // Performance optimization: Cache timing and reduce expensive operations (now managed by StateManager)
 
-function animate(currentTime = performance.now()) {
-    requestAnimationFrame(animate);
-    
-    // Cache timing once per frame instead of multiple Date.now() calls
-    const deltaTime = currentTime - window.stageState.performance.lastFrameTime;
-    window.stageState.performance.lastFrameTime = currentTime;
-    window.stageState.performance.animationTime = currentTime * 0.001; // Convert to seconds
-    window.stageState.performance.frameCount++;
-    
-    // Update local references for performance
-    lastFrameTime = window.stageState.performance.lastFrameTime;
-    animationTime = window.stageState.performance.animationTime;
-    frameCount = window.stageState.performance.frameCount;
-    
-    // Performance monitoring
-    const frameStart = performance.now();
-    window.stageState.performance.stats.collisionChecks = 0;
-    performanceStats.collisionChecks = 0;
-    
-    // Optimize lighting animations - only when needed and using cached time
-    updateLightingAnimations(animationTime);
-    
-    // Optimize marker animations - only visible markers, cached time
-    updateMarkerAnimations(animationTime);
-    
-    // Animate platforms
-    moveablePlatforms.forEach(platform => {
-        const userData = platform.userData;
-        if (userData.moving) {
-            const diff = userData.targetY - platform.position.y;
-            if (Math.abs(diff) > 0.01) {
-                platform.position.y += diff * 0.05;
-            } else {
-                platform.position.y = userData.targetY;
-                userData.moving = false;
-            }
-        }
-    });
-    
-    // Animate rotating stage
-    if (rotatingStage && rotatingStage.userData.rotating && rotatingStage.visible) {
-        rotatingStage.rotation.y += rotatingStage.userData.rotationSpeed;
-    }
-    
-    // Animate scenery panels
-    sceneryPanels.forEach(panel => {
-        const userData = panel.userData;
-        if (userData.moving) {
-            let targetX;
-            
-            if (userData.isBackdrop) {
-                // Backdrop slides from left (-30 to 0)
-                // Positions: off=-30, 1/4=-18, 1/2=-10, 3/4=-5, full=0
-                const positions = {
-                    0: -30,
-                    0.25: -18,
-                    0.5: -10,
-                    0.75: -5,
-                    1: 0
-                };
-                targetX = positions[userData.targetPosition];
-            } else {
-                // Midstage slides from right (30 to 0)
-                // Positions: off=30, 1/4=18, 1/2=10, 3/4=5, full=0
-                const positions = {
-                    0: 30,
-                    0.25: 18,
-                    0.5: 10,
-                    0.75: 5,
-                    1: 0
-                };
-                targetX = positions[userData.targetPosition];
-            }
-            
-            const diff = targetX - panel.position.x;
-            if (Math.abs(diff) > 0.1) {
-                panel.position.x += diff * 0.05;
-            } else {
-                panel.position.x = targetX;
-                userData.currentPosition = userData.targetPosition;
-                userData.moving = false;
-            }
-        }
-    });
-    
-    // Animate trap doors
-    trapDoors.forEach(trapDoor => {
-        const userData = trapDoor.userData;
-        const door = trapDoor.children[0];
-        const currentRotation = door.rotation.x;
-        const diff = userData.targetRotation - currentRotation;
-        if (Math.abs(diff) > 0.01) {
-            door.rotation.x += diff * 0.1;
-            door.position.z = Math.sin(door.rotation.x) * 1;
-            door.position.y = -Math.abs(Math.sin(door.rotation.x)) * 0.5;
-        } else {
-            door.rotation.x = userData.targetRotation;
-        }
-    });
+// Animation loop function moved to RenderLoop module
 
-    // Update prop relationships periodically - use frame counting for reliability
-    if (frameCount % 6 === 0) { // Every 6 frames (~100ms at 60fps)
-        updateAllPropRelationships();
-    }
-
-    // Apply physics to props and actors - optimize by only processing active objects
-    const allObjects = [...props, ...actors];
-    
-    // Performance optimization: Filter objects that need physics updates
-    const activeObjects = allObjects.filter(prop => {
-        return objectVelocities.has(prop) || // Has velocity
-               propPlatformRelations.has(prop) || // On platform
-               propTrapDoorRelations.has(prop) || // Over trap door
-               propRotatingStageRelations.has(prop) || // On rotating stage
-               prop.userData.hidden; // Hidden state needs checking
-    });
-    
-    performanceStats.activeObjects = activeObjects.length;
-    
-    activeObjects.forEach(prop => {
-        // Check if prop should be hidden by trap door first
-        if (propTrapDoorRelations.has(prop)) {
-            const trapDoor = propTrapDoorRelations.get(prop);
-            if (trapDoor.userData.open && trapDoor.visible) {
-                prop.visible = false;
-                prop.userData.hidden = true;
-                return; // Skip other physics if hidden
-            }
-        }
-        
-        // Restore hidden props if conditions change
-        if (prop.userData.hidden) {
-            const stillOverTrapDoor = propTrapDoorRelations.has(prop) && 
-                                     propTrapDoorRelations.get(prop).userData.open;
-            if (!stillOverTrapDoor) {
-                prop.visible = true;
-                prop.userData.hidden = false;
-            } else {
-                return; // Still hidden, skip other physics
-            }
-        }
-        
-        // Platform physics - elevation
-        let baseY = prop.userData.originalY;
-        if (propPlatformRelations.has(prop)) {
-            const platform = propPlatformRelations.get(prop);
-            // Platform is 0.5 units tall, positioned at y=0.25, so top is at 0.5
-            baseY = platform.position.y + 0.25 + prop.userData.originalY;
-        }
-        
-        // Apply elevation smoothly
-        const yDiff = baseY - prop.position.y;
-        if (Math.abs(yDiff) > 0.01) {
-            prop.position.y += yDiff * 0.1;
-        }
-        
-        // Apply velocity if object has momentum
-        if (objectVelocities.has(prop)) {
-            const vel = objectVelocities.get(prop);
-            if (Math.abs(vel.x) > 0.001 || Math.abs(vel.z) > 0.001) {
-                const speed = Math.sqrt(vel.x * vel.x + vel.z * vel.z);
-                const newX = prop.position.x + vel.x;
-                const newZ = prop.position.z + vel.z;
-                
-                // Play movement sound for fast-moving objects
-                if (speed > 0.1) {
-                    audioManager.playMovementSound(prop, speed);
-                }
-                
-                if (!checkAllCollisions(prop, newX, newZ, speed)) {
-                    prop.position.x = newX;
-                    prop.position.z = newZ;
-                    
-                    // Apply friction to slow down
-                    const friction = getObjectFriction(prop);
-                    vel.x *= (1 - friction * 0.1);
-                    vel.z *= (1 - friction * 0.1);
-                    
-                    // Stop if too slow
-                    if (Math.abs(vel.x) < 0.001 && Math.abs(vel.z) < 0.001) {
-                        vel.x = 0;
-                        vel.z = 0;
-                    }
-                } else {
-                    // Bounce off with reduced velocity
-                    vel.x *= -0.3;
-                    vel.z *= -0.3;
-                }
-            }
-        }
-        
-        // Rotating stage physics - rotation (works even on platforms)
-        if (propRotatingStageRelations.has(prop) && 
-            rotatingStage.userData.rotating && 
-            rotatingStage.visible) {
-            const stageCenter = rotatingStage.position;
-            const angle = rotatingStage.userData.rotationSpeed;
-            
-            // Calculate new position after rotation
-            const dx = prop.position.x - stageCenter.x;
-            const dz = prop.position.z - stageCenter.z;
-            const radius = Math.sqrt(dx*dx + dz*dz);
-            
-            const newX = stageCenter.x + (dx * Math.cos(angle) - dz * Math.sin(angle));
-            const newZ = stageCenter.z + (dx * Math.sin(angle) + dz * Math.cos(angle));
-            
-            // Calculate velocity from rotation
-            const rotationalVelocity = radius * angle;
-            
-            // Check for collision with all objects before moving
-            if (!checkAllCollisions(prop, newX, newZ, rotationalVelocity)) {
-                prop.position.x = newX;
-                prop.position.z = newZ;
-                
-                // Also rotate the prop itself
-                prop.rotation.y += angle;
-            } else {
-                // Stop rotating stage if collision detected
-                rotatingStage.userData.rotating = false;
-                console.log('Rotation stopped due to collision');
-            }
-        }
-    });
-    
-    if (controls) {
-        controls.update();
-    }
-    
-    // Update 3D audio listener position to match camera
-    audioManager.updateListenerPosition(camera);
-    
-    renderer.render(scene, camera);
-    
-    // Performance monitoring - calculate frame time and FPS
-    const frameEnd = performance.now();
-    performanceStats.frameTime = frameEnd - frameStart;
-    
-    // Update FPS every second
-    if (frameEnd - performanceStats.lastFPSUpdate > 1000) {
-        performanceStats.fps = Math.round(1000 / performanceStats.frameTime);
-        performanceStats.lastFPSUpdate = frameEnd;
-        
-        // Update memory stats
-        performanceStats.memoryStats = resourceManager.getMemoryStats();
-        
-        // Log performance stats every 5 seconds for monitoring
-        if (frameCount % 300 === 0) {
-            console.log('Performance Stats:', {
-                fps: performanceStats.fps,
-                frameTime: `${performanceStats.frameTime.toFixed(2)}ms`,
-                activeObjects: performanceStats.activeObjects,
-                totalObjects: props.length + actors.length,
-                collisionChecks: performanceStats.collisionChecks,
-                memory: performanceStats.memoryStats
-            });
-        }
-    }
-}
-
-// Performance optimized animation functions
-function updateLightingAnimations(time) {
-    // Only animate lights when specific presets are active
-    if (currentLightingPreset === 'default' || currentLightingPreset === 'dramatic') {
-        lights.forEach((light, index) => {
-            light.intensity = 0.8 + Math.sin(time + index) * 0.2;
-        });
-    }
-}
-
-function updateMarkerAnimations(time) {
-    // Only animate visible markers to avoid unnecessary work
-    stageMarkers.forEach((marker, i) => {
-        if (marker.visible) {
-            marker.children[1].material.opacity = 0.3 + Math.sin(time * 3 + i) * 0.2;
-        }
-    });
-}
+// Animation functions moved to RenderLoop module
 
 // Enhanced Save/Load System with Browser Storage and Smart Features
 class SceneManager {
@@ -4597,6 +4310,7 @@ function removeObjectProperly(object) {
 
 // Create global resource manager
 const resourceManager = new ResourceManager();
+window.resourceManager = resourceManager;
 
 // Create global scene manager
 const sceneManager = new SceneManager();
@@ -4661,4 +4375,5 @@ function debugTextureUpload() {
 window.debugTextureUpload = debugTextureUpload;
 
 init();
-animate();
+// Start the animation loop using RenderLoop module
+window.stageRenderLoop.start();

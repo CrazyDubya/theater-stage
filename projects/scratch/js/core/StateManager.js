@@ -76,7 +76,7 @@ class StageState {
         // System managers
         this.managers = {
             command: null,
-            scene: null,
+            threeScene: null,
             texture: null,
             audio: null,
             resource: null
