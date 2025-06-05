@@ -1,70 +1,25 @@
-// =============================================================================
-// 3D Theater Stage - Modular Architecture
-// State management now handled by StateManager.js
-// =============================================================================
-
-// Global state access (will be set up by ModuleLoader)
-// Note: stageState is defined in StateManager.js, we just reference it here
-
-// Legacy global variable getters for gradual migration
-// These will be replaced with direct stageState access over time
 let scene, camera, renderer, controls;
-let stage, lights, stageMarkers, props, actors;
-let currentLightingPreset, moveablePlatforms, rotatingStage, trapDoors;
-let curtainLeft, curtainRight, curtainTop, curtainState, sceneryPanels;
-let placementMode, placementMarker, selectedPropType, selectedActorType, selectedSceneryPanel;
-let nextActorId, nextPropId;
-let propPlatformRelations, propRotatingStageRelations, propTrapDoorRelations, objectVelocities;
-let frameCount, lastFrameTime, animationTime, performanceStats;
+let stage, lights = [];
+let stageMarkers = [];
+let props = [];
+let actors = [];
+let currentLightingPreset = 'default';
+let moveablePlatforms = [];
+let rotatingStage = null;
+let trapDoors = [];
+let curtainLeft, curtainRight, curtainTop;
+let curtainState = 'closed';
+let sceneryPanels = [];
+let placementMode = null; // 'prop' or 'actor'
+let placementMarker = null;
+let selectedPropType = 'cube'; // default prop type
+let nextActorId = 1;
+let nextPropId = 1;
 
-// Initialize state references once modules are loaded
-function initializeStateReferences() {
-    if (window.stageState) {
-        const stageState = window.stageState;
-        
-        // Set up legacy global references for gradual migration
-        scene = stageState.core.scene;
-        camera = stageState.core.camera;
-        renderer = stageState.core.renderer;
-        controls = stageState.core.controls;
-        
-        stage = stageState.stage.stage;
-        lights = stageState.stage.lights;
-        stageMarkers = stageState.stage.stageMarkers;
-        moveablePlatforms = stageState.stage.moveablePlatforms;
-        rotatingStage = stageState.stage.rotatingStage;
-        trapDoors = stageState.stage.trapDoors;
-        sceneryPanels = stageState.stage.sceneryPanels;
-        curtainLeft = stageState.stage.curtains.left;
-        curtainRight = stageState.stage.curtains.right;
-        curtainTop = stageState.stage.curtains.top;
-        curtainState = stageState.stage.curtains.state;
-        
-        props = stageState.objects.props;
-        actors = stageState.objects.actors;
-        nextActorId = stageState.objects.nextActorId;
-        nextPropId = stageState.objects.nextPropId;
-        
-        placementMode = stageState.ui.placementMode;
-        placementMarker = stageState.ui.placementMarker;
-        selectedPropType = stageState.ui.selectedPropType;
-        selectedActorType = stageState.ui.selectedActorType;
-        selectedSceneryPanel = stageState.ui.selectedSceneryPanel;
-        currentLightingPreset = stageState.ui.currentLightingPreset;
-        
-        propPlatformRelations = stageState.physics.propPlatformRelations;
-        propRotatingStageRelations = stageState.physics.propRotatingStageRelations;
-        propTrapDoorRelations = stageState.physics.propTrapDoorRelations;
-        objectVelocities = stageState.physics.objectVelocities;
-        
-        frameCount = stageState.performance.frameCount;
-        lastFrameTime = stageState.performance.lastFrameTime;
-        animationTime = stageState.performance.animationTime;
-        performanceStats = stageState.performance.stats;
-        
-        console.log('State references initialized');
-    }
-}
+// Physics tracking
+let propPlatformRelations = new Map(); // prop -> platform
+let propRotatingStageRelations = new Set(); // props on rotating stage
+let propTrapDoorRelations = new Map(); // prop -> trapdoor
 
 // Scene serializer for save/load functionality
 class SceneSerializer {
@@ -212,27 +167,15 @@ class SceneSerializer {
 
     // Clear current scene
     clearScene() {
-        // Properly dispose all actors
-        actors.forEach(actor => {
-            scene.remove(actor);
-            resourceManager.disposeObject(actor);
-        });
+        // Remove all actors
+        actors.forEach(actor => scene.remove(actor));
         actors = [];
         nextActorId = 1;
         
-        // Properly dispose all props
-        props.forEach(prop => {
-            scene.remove(prop);
-            resourceManager.disposeObject(prop);
-        });
+        // Remove all props
+        props.forEach(prop => scene.remove(prop));
         props = [];
         nextPropId = 1;
-        
-        // Clear relationships and velocities
-        propPlatformRelations.clear();
-        propRotatingStageRelations.clear();
-        propTrapDoorRelations.clear();
-        objectVelocities.clear();
         
         // Reset stage elements to defaults
         curtainState = 'closed';
@@ -423,40 +366,19 @@ function updateCurtainPositions() {
 }
 
 function init() {
-    console.log('Initializing 3D Theater Stage...');
-    
-    // Wait for state manager to be available
-    if (!window.stageState) {
-        console.log('Waiting for StateManager...');
-        setTimeout(init, 50);
-        return;
-    }
-    
-    console.log('StateManager found, initializing...');
-    
-    // Initialize state references
-    initializeStateReferences();
-    
-    // Create Three.js objects and store in state
-    const sceneObj = new THREE.Scene();
-    sceneObj.background = new THREE.Color(0x001122);
-    sceneObj.fog = new THREE.Fog(0x001122, 10, 100);
-    window.stageState.core.scene = sceneObj;
-    scene = sceneObj;
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x001122);
+    scene.fog = new THREE.Fog(0x001122, 10, 100);
 
-    const cameraObj = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    cameraObj.position.set(0, 5, 20);
-    cameraObj.lookAt(0, 0, 0);
-    window.stageState.core.camera = cameraObj;
-    camera = cameraObj;
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 5, 20);
+    camera.lookAt(0, 0, 0);
 
-    const rendererObj = new THREE.WebGLRenderer({ antialias: true });
-    rendererObj.setSize(window.innerWidth, window.innerHeight);
-    rendererObj.shadowMap.enabled = true;
-    rendererObj.shadowMap.type = THREE.PCFSoftShadowMap;
-    document.body.appendChild(rendererObj.domElement);
-    window.stageState.core.renderer = rendererObj;
-    renderer = rendererObj;
+    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(renderer.domElement);
 
     createStage();
     createLighting();
@@ -888,7 +810,6 @@ function createSceneryPanels() {
         const isBackdrop = index === 0;
         panelGroup.position.x = isBackdrop ? -30 : 30; // Backdrop from left, midstage from right
         panelGroup.position.z = data.defaultZ;
-        panelGroup.visible = true; // Ensure panel is visible
         panelGroup.userData = {
             type: 'scenery',
             name: data.name,
@@ -1167,6 +1088,7 @@ function setupUI() {
         `;
         
         button.addEventListener('click', () => {
+            // Update active tab
             Object.keys(tabButtons).forEach(k => {
                 tabButtons[k].style.background = k === key ? 'rgba(255,255,255,0.1)' : 'transparent';
                 tabPanels[k].style.display = k === key ? 'block' : 'none';
@@ -1178,7 +1100,7 @@ function setupUI() {
         tabContainer.appendChild(button);
     });
     
-    // Create content container
+    // Create tab panels
     const contentContainer = document.createElement('div');
     contentContainer.style.cssText = `
         padding: 15px;
@@ -1186,588 +1108,498 @@ function setupUI() {
         overflow-y: auto;
     `;
     
-    // Create all tab panels
-    const objectsPanel = createObjectsPanel();
-    const stagePanel = createStagePanel();
-    const sceneryPanel = createSceneryPanel();
-    const controlsPanel = createControlsPanel();
+    // Objects Tab Panel
+    const objectsPanel = document.createElement('div');
+    objectsPanel.style.display = 'block';
+    
+    // Stage Tab Panel
+    const stagePanel = document.createElement('div');
+    stagePanel.style.display = 'none';
+    
+    // Scenery Tab Panel
+    const sceneryPanel = document.createElement('div');
+    sceneryPanel.style.display = 'none';
+    
+    // Controls Tab Panel
+    const controlsPanel = document.createElement('div');
+    controlsPanel.style.display = 'none';
     
     tabPanels.objects = objectsPanel;
     tabPanels.stage = stagePanel;
     tabPanels.scenery = sceneryPanel;
     tabPanels.controls = controlsPanel;
-    
-    // Initially hide all but objects panel
-    objectsPanel.style.display = 'block';
-    stagePanel.style.display = 'none';
-    sceneryPanel.style.display = 'none';
-    controlsPanel.style.display = 'none';
-    
-    // Add panels to content container
-    contentContainer.appendChild(objectsPanel);
-    contentContainer.appendChild(stagePanel);
-    contentContainer.appendChild(sceneryPanel);
-    contentContainer.appendChild(controlsPanel);
-    
-    // Assemble UI
-    uiContainer.appendChild(tabContainer);
-    uiContainer.appendChild(contentContainer);
-    
-    document.body.appendChild(toggleButton);
-    document.body.appendChild(uiContainer);
-}
 
-function createObjectsPanel() {
-    return UIFactory.createPanel([
-        UIFactory.createLabel('Props'),
-        createPropSelector(),
-        UIFactory.createButton('Place Prop', () => {
-            placementMode = 'prop';
-            placementMarker.visible = true;
-        }),
-        '10px', // Spacer
-        UIFactory.createLabel('Actors'),
-        createActorSelector(),
-        UIFactory.createButton('Place Actor', () => {
-            placementMode = 'actor';
-            placementMarker.visible = true;
-        })
-    ]);
-}
+    // === OBJECTS TAB CONTENT ===
+    lightingSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
+    lightingSelect.innerHTML = `
+        <option value="default">Default</option>
+        <option value="day">Day</option>
+        <option value="night">Night</option>
+        <option value="sunset">Sunset</option>
+        <option value="dramatic">Dramatic</option>
+    `;
+    lightingSelect.addEventListener('change', (e) => applyLightingPreset(e.target.value));
 
-function createStagePanel() {
-    const panel = document.createElement('div');
+    // Prop selector
+    const propSelect = document.createElement('select');
+    propSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
     
-    // Lighting section
-    const lightingLabel = createLabel('Lighting');
-    const lightingSelect = createLightingSelector();
-    
-    // Camera section
-    const cameraLabel = createLabel('Camera View');
-    const cameraSelect = createCameraSelector();
-    
-    // Stage elements section
-    const elementsLabel = createLabel('Stage Elements');
-    const markerToggle = createButton('Toggle Markers', toggleMarkers);
-    const curtainButton = createButton('Toggle Curtains', toggleCurtains);
-    const platformButton = createButton('Move Platforms', movePlatforms);
-    
-    // Special effects
-    const effectsLabel = createLabel('Special Effects');
-    const showRotatingButton = createButton('Show/Hide Rotating Stage', toggleRotatingStageVisibility);
-    const rotateButton = createButton('Start/Stop Rotation', rotateCenter);
-    const showTrapDoorsButton = createButton('Show/Hide Trap Doors', toggleTrapDoorsVisibility);
-    const trapButton = createButton('Toggle Trap Doors', toggleTrapDoors);
-    
-    // Assemble panel
-    panel.appendChild(lightingLabel);
-    panel.appendChild(lightingSelect);
-    panel.appendChild(createSpacer());
-    panel.appendChild(cameraLabel);
-    panel.appendChild(cameraSelect);
-    panel.appendChild(createSpacer());
-    panel.appendChild(elementsLabel);
-    panel.appendChild(markerToggle);
-    panel.appendChild(curtainButton);
-    panel.appendChild(platformButton);
-    panel.appendChild(createSpacer());
-    panel.appendChild(effectsLabel);
-    panel.appendChild(showRotatingButton);
-    panel.appendChild(rotateButton);
-    panel.appendChild(showTrapDoorsButton);
-    panel.appendChild(trapButton);
-    
-    return panel;
-}
-
-function createSceneryPanel() {
-    const panel = document.createElement('div');
-    
-    // Scenery position
-    const positionLabel = createLabel('Scenery Position');
-    const backdropSelect = createBackdropSelector();
-    const midstageSelect = createMidstageSelector();
-    
-    // Texture controls
-    const textureLabel = createLabel('Textures');
-    const panelSelect = createPanelSelector();
-    const defaultTextureSelect = createDefaultTextureSelector();
-    const uploadButton = createButton('Upload Image', handleTextureUpload);
-    
-    // Texture scale
-    const scaleLabel = createLabel('Texture Scale');
-    const scaleSlider = createScaleSlider();
-    
-    // Assemble panel
-    panel.appendChild(positionLabel);
-    panel.appendChild(backdropSelect);
-    panel.appendChild(midstageSelect);
-    panel.appendChild(createSpacer());
-    panel.appendChild(textureLabel);
-    panel.appendChild(panelSelect);
-    panel.appendChild(defaultTextureSelect);
-    panel.appendChild(uploadButton);
-    panel.appendChild(createSpacer());
-    panel.appendChild(scaleLabel);
-    panel.appendChild(scaleSlider);
-    
-    return panel;
-}
-
-function createControlsPanel() {
-    const panel = document.createElement('div');
-    
-    // Save/Load section
-    const saveLoadLabel = createLabel('Save/Load Scene');
-    const saveButton = createButton('Save Scene', saveScene);
-    const loadButton = createButton('Load Scene', loadScene);
-    const exportButton = createButton('Export to File', () => sceneManager.exportToFile());
-    
-    // Undo/Redo section
-    const undoRedoLabel = createLabel('Undo/Redo');
-    const { undoButton, redoButton } = createUndoRedoButtons();
-    
-    // Physics section
-    const physicsLabel = createLabel('Physics Test');
-    const pushButton = createButton('Push Mode', () => {
-        placementMode = 'push';
-        placementMarker.visible = true;
-        alert('Click on an object to push it! Lighter objects move more.');
-    });
-    
-    // Audio section
-    const audioLabel = createLabel('Audio System');
-    const { audioInitButton, volumeControls } = createAudioControls();
-    
-    // Assemble panel
-    panel.appendChild(saveLoadLabel);
-    const saveLoadDiv = document.createElement('div');
-    saveLoadDiv.style.cssText = 'display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-bottom: 5px;';
-    saveLoadDiv.appendChild(saveButton);
-    saveLoadDiv.appendChild(loadButton);
-    panel.appendChild(saveLoadDiv);
-    panel.appendChild(exportButton);
-    
-    panel.appendChild(createSpacer());
-    panel.appendChild(undoRedoLabel);
-    const undoRedoDiv = document.createElement('div');
-    undoRedoDiv.appendChild(undoButton);
-    undoRedoDiv.appendChild(document.createTextNode(' '));
-    undoRedoDiv.appendChild(redoButton);
-    panel.appendChild(undoRedoDiv);
-    
-    panel.appendChild(createSpacer());
-    panel.appendChild(physicsLabel);
-    panel.appendChild(pushButton);
-    
-    panel.appendChild(createSpacer());
-    panel.appendChild(audioLabel);
-    panel.appendChild(audioInitButton);
-    panel.appendChild(volumeControls);
-    
-    return panel;
-}
-
-// Legacy helper functions - now using UIFactory
-const createLabel = (text) => UIFactory.createLabel(text);
-const createButton = (text, onClick) => UIFactory.createButton(text, onClick);
-const createSpacer = () => UIFactory.createSpacer();
-
-function createPropSelector() {
     // Group props by category
     const categories = {};
     Object.entries(PROP_CATALOG).forEach(([key, prop]) => {
         if (!categories[prop.category]) {
             categories[prop.category] = [];
         }
-        categories[prop.category].push({ value: key, label: prop.name });
+        categories[prop.category].push({ key, ...prop });
     });
     
-    return UIFactory.createSelect(
-        categories,
-        () => selectedPropType = event.target.value,
-        { grouped: true }
-    );
-}
-
-function createActorSelector() {
-    const actors = Object.entries(ACTOR_TYPES).map(([key, actor]) => ({
-        value: key,
-        label: actor.name
-    }));
+    // Build options
+    Object.entries(categories).forEach(([category, props]) => {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = category.charAt(0).toUpperCase() + category.slice(1);
+        props.forEach(prop => {
+            const option = document.createElement('option');
+            option.value = prop.key;
+            option.textContent = prop.name;
+            optgroup.appendChild(option);
+        });
+        propSelect.appendChild(optgroup);
+    });
     
-    return UIFactory.createSelect(
-        actors,
-        () => selectedActorType = event.target.value
-    );
-}
-
-function createLightingSelector() {
-    const presets = [
-        { value: 'normal', label: 'Normal (Bright)' },
-        { value: 'dramatic', label: 'Dramatic (Dim Sides)' },
-        { value: 'evening', label: 'Evening (Warm)' },
-        { value: 'concert', label: 'Concert (Cool)' },
-        { value: 'spotlight', label: 'Spotlight (Center Only)' }
-    ];
+    propSelect.addEventListener('change', (e) => {
+        selectedPropType = e.target.value;
+    });
     
-    return UIFactory.createSelect(
-        presets,
-        () => applyLightingPreset(event.target.value)
-    );
-}
-
-function createCameraSelector() {
-    const select = document.createElement('select');
-    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
+    const propButton = document.createElement('button');
+    propButton.textContent = 'Place Prop';
+    propButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    propButton.addEventListener('click', () => {
+        placementMode = 'prop';
+        placementMarker.visible = true;
+    });
     
-    const presets = [
-        { value: 'audience', label: 'Audience View' },
-        { value: 'overhead', label: 'Overhead' },
-        { value: 'backstage', label: 'Backstage' },
-        { value: 'stage-left', label: 'Stage Left' },
-        { value: 'stage-right', label: 'Stage Right' },
-        { value: 'close-up', label: 'Close-up Center' }
-    ];
+    // Actor type selector
+    const actorSelect = document.createElement('select');
+    actorSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
     
-    presets.forEach(preset => {
+    // Build actor options
+    Object.entries(ACTOR_TYPES).forEach(([key, actor]) => {
         const option = document.createElement('option');
-        option.value = preset.value;
-        option.textContent = preset.label;
-        select.appendChild(option);
+        option.value = key;
+        option.textContent = actor.name;
+        actorSelect.appendChild(option);
     });
     
-    select.addEventListener('change', () => {
-        setCameraPreset(select.value);
+    actorSelect.addEventListener('change', (e) => {
+        selectedActorType = e.target.value;
     });
     
-    return select;
-}
+    const actorButton = document.createElement('button');
+    actorButton.textContent = 'Place Actor';
+    actorButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    actorButton.addEventListener('click', () => {
+        placementMode = 'actor';
+        placementMarker.visible = true;
+    });
 
-function createBackdropSelector() {
-    const label = document.createElement('div');
-    label.innerHTML = '<strong>Backdrop Position:</strong>';
-    label.style.cssText = 'margin-bottom: 5px;';
-    
-    const container = document.createElement('div');
-    container.appendChild(label);
-    
-    const select = document.createElement('select');
-    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
-    
-    const positions = [
-        { value: 0, label: 'Hidden' },
-        { value: 0.25, label: '1/4 In' },
-        { value: 0.5, label: '1/2 In' },
-        { value: 0.75, label: '3/4 In' },
-        { value: 1, label: 'Fully In' }
-    ];
-    
-    positions.forEach(pos => {
-        const option = document.createElement('option');
-        option.value = pos.value;
-        option.textContent = pos.label;
-        select.appendChild(option);
-    });
-    
-    select.addEventListener('change', () => {
-        moveSceneryPanel(0, parseFloat(select.value));
-    });
-    
-    container.appendChild(select);
-    return container;
-}
+    const markerToggle = document.createElement('button');
+    markerToggle.textContent = 'Toggle Markers';
+    markerToggle.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    markerToggle.addEventListener('click', toggleMarkers);
 
-function createMidstageSelector() {
-    const label = document.createElement('div');
-    label.innerHTML = '<strong>Midstage Position:</strong>';
-    label.style.cssText = 'margin-bottom: 5px;';
-    
-    const container = document.createElement('div');
-    container.appendChild(label);
-    
-    const select = document.createElement('select');
-    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
-    
-    const positions = [
-        { value: 0, label: 'Hidden' },
-        { value: 0.25, label: '1/4 In' },
-        { value: 0.5, label: '1/2 In' },
-        { value: 0.75, label: '3/4 In' },
-        { value: 1, label: 'Fully In' }
-    ];
-    
-    positions.forEach(pos => {
-        const option = document.createElement('option');
-        option.value = pos.value;
-        option.textContent = pos.label;
-        select.appendChild(option);
-    });
-    
-    select.addEventListener('change', () => {
-        moveSceneryPanel(1, parseFloat(select.value));
-    });
-    
-    container.appendChild(select);
-    return container;
-}
+    const curtainButton = document.createElement('button');
+    curtainButton.textContent = 'Toggle Curtains';
+    curtainButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    curtainButton.addEventListener('click', toggleCurtains);
 
-function createPanelSelector() {
-    const select = document.createElement('select');
-    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
-    
-    const option1 = document.createElement('option');
-    option1.value = '0';
-    option1.textContent = 'Backdrop Panel';
-    select.appendChild(option1);
-    
-    const option2 = document.createElement('option');
-    option2.value = '1';
-    option2.textContent = 'Midstage Panel';
-    select.appendChild(option2);
-    
-    select.addEventListener('change', () => {
-        selectedSceneryPanel = parseInt(select.value);
-        if (window.stageState) {
-            window.stageState.ui.selectedSceneryPanel = selectedSceneryPanel;
-        }
-        console.log('Panel selection changed to:', selectedSceneryPanel);
-    });
-    
-    return select;
-}
+    const platformButton = document.createElement('button');
+    platformButton.textContent = 'Move Platforms';
+    platformButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    platformButton.addEventListener('click', movePlatforms);
 
-function createDefaultTextureSelector() {
-    const select = document.createElement('select');
-    select.style.cssText = 'width: 100%; margin: 5px 0; padding: 5px;';
-    
-    const textures = [
-        { value: 'none', label: 'None (Color Only)' },
-        { value: 'forest', label: 'Forest Scene' },
-        { value: 'castle', label: 'Castle Wall' },
-        { value: 'city', label: 'City Skyline' },
-        { value: 'stars', label: 'Starry Night' }
-    ];
-    
-    textures.forEach(texture => {
-        const option = document.createElement('option');
-        option.value = texture.value;
-        option.textContent = texture.label;
-        select.appendChild(option);
-    });
-    
-    select.addEventListener('change', () => {
-        applyDefaultTexture(select.value);
-    });
-    
-    return select;
-}
+    const rotateButton = document.createElement('button');
+    rotateButton.textContent = 'Start/Stop Rotation';
+    rotateButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    rotateButton.addEventListener('click', rotateCenter);
 
-function createScaleSlider() {
-    const slider = document.createElement('input');
-    slider.type = 'range';
-    slider.min = '0.1';
-    slider.max = '3';
-    slider.step = '0.1';
-    slider.value = '1';
-    slider.style.cssText = 'width: 100%; margin: 5px 0;';
-    
-    slider.addEventListener('input', () => {
-        if (selectedSceneryPanel !== null) {
-            adjustTextureScale(selectedSceneryPanel, parseFloat(slider.value));
-        }
-    });
-    
-    return slider;
-}
+    const trapButton = document.createElement('button');
+    trapButton.textContent = 'Toggle Trap Doors';
+    trapButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    trapButton.addEventListener('click', toggleTrapDoors);
 
-function createUndoRedoButtons() {
-    const undoButton = UIFactory.createButton('Undo', () => {
-        commandManager.undo();
-        updateUndoRedoButtons();
-    }, { small: true });
-    
-    const redoButton = UIFactory.createButton('Redo', () => {
-        commandManager.redo();
-        updateUndoRedoButtons();
-    }, { small: true });
-    
-    // Make these buttons globally accessible for updates
-    window.updateUndoRedoButtons = () => {
-        undoButton.disabled = !commandManager.canUndo();
-        redoButton.disabled = !commandManager.canRedo();
-    };
-    
-    // Initial state
-    updateUndoRedoButtons();
-    
-    return { undoButton, redoButton };
-}
+    const showRotatingButton = document.createElement('button');
+    showRotatingButton.textContent = 'Show/Hide Rotating Stage';
+    showRotatingButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    showRotatingButton.addEventListener('click', toggleRotatingStageVisibility);
 
-function createAudioControls() {
-    const audioInitButton = UIFactory.createButton('Initialize Audio', initializeAudio);
+    const showTrapDoorsButton = document.createElement('button');
+    showTrapDoorsButton.textContent = 'Show/Hide Trap Doors';
+    showTrapDoorsButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    showTrapDoorsButton.addEventListener('click', toggleTrapDoorsVisibility);
+
+    // Scenery controls
+    const sceneryLabel = document.createElement('div');
+    sceneryLabel.innerHTML = '<strong>Scenery Panels</strong>';
+    sceneryLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
     
-    const volumeControls = document.createElement('div');
-    volumeControls.innerHTML = `
-        <div style="margin: 5px 0;">
-            <label>Master Volume:</label><br>
-            <input type="range" id="master-volume" min="0" max="1" step="0.1" value="0.5" style="width: 100%;">
-        </div>
-        <div style="margin: 5px 0;">
-            <label>Ambience Volume:</label><br>
-            <input type="range" id="ambience-volume" min="0" max="1" step="0.1" value="0.3" style="width: 100%;">
-        </div>
+    const backdropSelect = document.createElement('select');
+    backdropSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
+    backdropSelect.innerHTML = `
+        <option value="0">Backdrop: Off</option>
+        <option value="0.25">Backdrop: 1/4</option>
+        <option value="0.5">Backdrop: 1/2</option>
+        <option value="0.75">Backdrop: 3/4</option>
+        <option value="1">Backdrop: Full</option>
+    `;
+    backdropSelect.addEventListener('change', (e) => moveSceneryPanel(0, parseFloat(e.target.value)));
+    
+    const midstageSelect = document.createElement('select');
+    midstageSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
+    midstageSelect.innerHTML = `
+        <option value="0">Midstage: Off</option>
+        <option value="0.25">Midstage: 1/4</option>
+        <option value="0.5">Midstage: 1/2</option>
+        <option value="0.75">Midstage: 3/4</option>
+        <option value="1">Midstage: Full</option>
+    `;
+    midstageSelect.addEventListener('change', (e) => moveSceneryPanel(1, parseFloat(e.target.value)));
+
+    // Texture controls
+    const textureLabel = document.createElement('div');
+    textureLabel.innerHTML = '<strong>Scenery Textures</strong>';
+    textureLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const panelSelect = document.createElement('select');
+    panelSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
+    panelSelect.innerHTML = `
+        <option value="0">Backdrop Panel</option>
+        <option value="1">Midstage Panel</option>
     `;
     
-    return { audioInitButton, volumeControls };
-}
-
-function handleTextureUpload() {
-    console.log('Texture upload started - panel:', selectedSceneryPanel);
+    const defaultTextureSelect = document.createElement('select');
+    defaultTextureSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
+    defaultTextureSelect.innerHTML = `
+        <option value="">Select Default Texture...</option>
+        <option value="brick">Brick Wall</option>
+        <option value="wood">Wood Planks</option>
+        <option value="sky">Sky Gradient</option>
+    `;
+    defaultTextureSelect.addEventListener('change', (e) => {
+        if (e.target.value) {
+            const panelIndex = parseInt(panelSelect.value);
+            const texture = textureManager.getDefaultTexture(e.target.value);
+            textureManager.applyTextureToPanel(panelIndex, texture);
+            console.log(`Applied ${e.target.value} texture to panel ${panelIndex}`);
+        }
+    });
     
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*';
-    
-    input.onchange = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
+    const uploadButton = document.createElement('button');
+    uploadButton.textContent = 'Upload Image';
+    uploadButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    uploadButton.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
         
-        try {
-            console.log('Loading texture from file:', file.name);
-            const texture = await textureManager.loadCustomTexture(file);
-            const panelIndex = selectedSceneryPanel || 0;
+        input.onchange = async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
             
-            // Debug: Check if panel exists and is visible
-            const panel = sceneryPanels[panelIndex];
-            console.log('Panel info:', {
-                index: panelIndex,
-                panel: panel,
-                position: panel ? panel.position : null,
-                visible: panel ? panel.visible : null,
-                children: panel ? panel.children.length : 0
-            });
-            
-            // Make sure the panel is visible and in view
-            if (panel) {
-                moveSceneryPanel(panelIndex, 1.0); // Move to full position
-                
-                // For immediate visibility, also set the panel position directly
-                panel.position.x = 0; // Center position for full visibility
-                panel.userData.currentPosition = 1.0;
-                panel.userData.targetPosition = 1.0;
-                panel.userData.moving = false;
-            }
-            
-            const success = textureManager.applyTextureToPanel(panelIndex, texture);
-            if (success) {
+            try {
+                const texture = await textureManager.loadCustomTexture(file);
+                const panelIndex = parseInt(panelSelect.value);
+                textureManager.applyTextureToPanel(panelIndex, texture);
                 console.log(`Applied custom texture to panel ${panelIndex}`);
                 alert('Texture applied successfully!');
-            } else {
-                alert('Failed to apply texture to panel');
+            } catch (error) {
+                console.error('Texture loading failed:', error);
+                alert('Failed to load texture: ' + error.message);
             }
-        } catch (error) {
-            console.error('Texture loading failed:', error);
-            alert('Failed to load texture: ' + error.message);
-        }
-    };
+        };
+        
+        input.click();
+    });
     
-    input.click();
-}
-
-function applyDefaultTexture(textureType) {
-    const panelIndex = selectedSceneryPanel || 0;
+    const textureScaleLabel = document.createElement('div');
+    textureScaleLabel.textContent = 'Texture Scale:';
+    textureScaleLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
     
-    if (textureType === 'none') {
-        // Remove texture and restore original color
+    const scaleSlider = document.createElement('input');
+    scaleSlider.type = 'range';
+    scaleSlider.min = '0.1';
+    scaleSlider.max = '5';
+    scaleSlider.step = '0.1';
+    scaleSlider.value = '1';
+    scaleSlider.style.cssText = 'margin: 5px 0; width: 150px;';
+    scaleSlider.addEventListener('input', (e) => {
+        const scale = parseFloat(e.target.value);
+        const panelIndex = parseInt(panelSelect.value);
         const panel = sceneryPanels[panelIndex];
-        if (panel && panel.children[0]) {
-            const mesh = panel.children[0];
-            mesh.material.map = null;
-            // Restore original colors: blue for backdrop (0), green for midstage (1)
-            mesh.material.color.setHex(panelIndex === 0 ? 0x4169e1 : 0x228b22);
-            mesh.material.needsUpdate = true;
+        if (panel && panel.children[0].material.map) {
+            panel.children[0].material.map.repeat.set(scale, scale);
         }
-        return;
+    });
+
+    // Save/Load controls
+    const saveLoadLabel = document.createElement('div');
+    saveLoadLabel.innerHTML = '<strong>Save/Load Scene</strong>';
+    saveLoadLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const saveButton = document.createElement('button');
+    saveButton.textContent = 'Save Scene';
+    saveButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    saveButton.addEventListener('click', saveScene);
+    
+    const loadButton = document.createElement('button');
+    loadButton.textContent = 'Load Scene';
+    loadButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    loadButton.addEventListener('click', loadScene);
+    
+    // Physics test button
+    const physicsLabel = document.createElement('div');
+    physicsLabel.innerHTML = '<strong>Physics Test</strong>';
+    physicsLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const pushButton = document.createElement('button');
+    pushButton.textContent = 'Push Mode';
+    pushButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    pushButton.addEventListener('click', () => {
+        placementMode = 'push';
+        placementMarker.visible = true;
+        alert('Click on an object to push it! Lighter objects move more.');
+    });
+    
+    // Undo/Redo controls
+    const undoRedoLabel = document.createElement('div');
+    undoRedoLabel.innerHTML = '<strong>Undo/Redo</strong>';
+    undoRedoLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const undoButton = document.createElement('button');
+    undoButton.textContent = 'Undo (Ctrl+Z)';
+    undoButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    undoButton.addEventListener('click', () => {
+        if (commandManager.undo()) {
+            updateUndoRedoButtons();
+        }
+    });
+    
+    const redoButton = document.createElement('button');
+    redoButton.textContent = 'Redo (Ctrl+Y)';
+    redoButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    redoButton.addEventListener('click', () => {
+        if (commandManager.redo()) {
+            updateUndoRedoButtons();
+        }
+    });
+    
+    function updateUndoRedoButtons() {
+        undoButton.disabled = !commandManager.canUndo();
+        redoButton.disabled = !commandManager.canRedo();
+        undoButton.style.opacity = commandManager.canUndo() ? '1' : '0.5';
+        redoButton.style.opacity = commandManager.canRedo() ? '1' : '0.5';
     }
     
-    const texture = textureManager.getDefaultTexture(textureType);
-    if (texture) {
-        textureManager.applyTextureToPanel(panelIndex, texture);
-        console.log(`Applied ${textureType} texture to panel ${panelIndex}`);
-    }
-}
+    // Initialize button states
+    updateUndoRedoButtons();
+    
+    // Store reference for global access
+    window.updateUndoRedoButtons = updateUndoRedoButtons;
+    
+    // Audio controls
+    const audioLabel = document.createElement('div');
+    audioLabel.innerHTML = '<strong>Audio System</strong>';
+    audioLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const audioInitButton = document.createElement('button');
+    audioInitButton.textContent = 'Enable Audio';
+    audioInitButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    audioInitButton.addEventListener('click', async () => {
+        const success = await audioManager.init();
+        if (success) {
+            audioInitButton.textContent = 'Audio Enabled ✓';
+            audioInitButton.disabled = true;
+            audioInitButton.style.opacity = '0.5';
+            volumeControls.style.display = 'block';
+        } else {
+            alert('Failed to initialize audio system');
+        }
+    });
+    
+    const volumeControls = document.createElement('div');
+    volumeControls.style.display = 'none';
+    
+    // Master volume
+    const masterVolumeLabel = document.createElement('div');
+    masterVolumeLabel.textContent = 'Master Volume:';
+    masterVolumeLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
+    
+    const masterVolumeSlider = document.createElement('input');
+    masterVolumeSlider.type = 'range';
+    masterVolumeSlider.min = '0';
+    masterVolumeSlider.max = '1';
+    masterVolumeSlider.step = '0.1';
+    masterVolumeSlider.value = '1';
+    masterVolumeSlider.style.cssText = 'margin: 5px 0; width: 120px;';
+    masterVolumeSlider.addEventListener('input', (e) => {
+        audioManager.setMasterVolume(parseFloat(e.target.value));
+    });
+    
+    // Effects volume
+    const effectsVolumeLabel = document.createElement('div');
+    effectsVolumeLabel.textContent = 'Effects Volume:';
+    effectsVolumeLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
+    
+    const effectsVolumeSlider = document.createElement('input');
+    effectsVolumeSlider.type = 'range';
+    effectsVolumeSlider.min = '0';
+    effectsVolumeSlider.max = '1';
+    effectsVolumeSlider.step = '0.1';
+    effectsVolumeSlider.value = '0.8';
+    effectsVolumeSlider.style.cssText = 'margin: 5px 0; width: 120px;';
+    effectsVolumeSlider.addEventListener('input', (e) => {
+        audioManager.setCategoryVolume('effects', parseFloat(e.target.value));
+    });
+    
+    // Ambient volume
+    const ambientVolumeLabel = document.createElement('div');
+    ambientVolumeLabel.textContent = 'Ambient Volume:';
+    ambientVolumeLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
+    
+    const ambientVolumeSlider = document.createElement('input');
+    ambientVolumeSlider.type = 'range';
+    ambientVolumeSlider.min = '0';
+    ambientVolumeSlider.max = '1';
+    ambientVolumeSlider.step = '0.1';
+    ambientVolumeSlider.value = '0.3';
+    ambientVolumeSlider.style.cssText = 'margin: 5px 0; width: 120px;';
+    ambientVolumeSlider.addEventListener('input', (e) => {
+        audioManager.setCategoryVolume('ambient', parseFloat(e.target.value));
+    });
+    
+    // Test audio button
+    const testAudioButton = document.createElement('button');
+    testAudioButton.textContent = 'Test Audio';
+    testAudioButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    testAudioButton.addEventListener('click', () => {
+        if (audioManager.initialized) {
+            // Play test sounds at different positions
+            audioManager.createPositionalSound('thud', { x: -5, y: 0, z: 0 }, 'effects');
+            setTimeout(() => {
+                audioManager.createPositionalSound('whoosh', { x: 5, y: 0, z: 0 }, 'effects');
+            }, 300);
+            setTimeout(() => {
+                audioManager.createPositionalSound('ambient', { x: 0, y: 0, z: -5 }, 'ambient');
+            }, 600);
+        }
+    });
+    
+    volumeControls.appendChild(masterVolumeLabel);
+    volumeControls.appendChild(masterVolumeSlider);
+    volumeControls.appendChild(effectsVolumeLabel);
+    volumeControls.appendChild(effectsVolumeSlider);
+    volumeControls.appendChild(ambientVolumeLabel);
+    volumeControls.appendChild(ambientVolumeSlider);
+    volumeControls.appendChild(testAudioButton);
 
-function adjustTextureScale(panelIndex, scale) {
-    const panel = sceneryPanels[panelIndex];
-    if (panel && panel.children[0] && panel.children[0].material.map) {
-        panel.children[0].material.map.repeat.set(scale, scale);
-        panel.children[0].material.needsUpdate = true;
-    }
-}
+    const cameraSelect = document.createElement('select');
+    cameraSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
+    cameraSelect.innerHTML = `
+        <option value="audience">Audience View</option>
+        <option value="overhead">Overhead</option>
+        <option value="stage-left">Stage Left</option>
+        <option value="stage-right">Stage Right</option>
+        <option value="close-up">Close Up</option>
+    `;
+    cameraSelect.addEventListener('change', (e) => setCameraPreset(e.target.value));
 
-async function initializeAudio() {
-    const success = await audioManager.init();
-    if (success) {
-        console.log('Audio system initialized successfully');
-        alert('Audio system enabled');
-    } else {
-        console.error('Failed to initialize audio system');
-        alert('Failed to initialize audio system');
-    }
+    uiContainer.innerHTML = '<div style="margin-bottom: 10px;"><strong>Controls</strong></div>';
+    uiContainer.appendChild(document.createTextNode('Lighting: '));
+    uiContainer.appendChild(lightingSelect);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(document.createTextNode('Camera: '));
+    uiContainer.appendChild(cameraSelect);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(document.createTextNode('Prop Type: '));
+    uiContainer.appendChild(propSelect);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(propButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(document.createTextNode('Actor Type: '));
+    uiContainer.appendChild(actorSelect);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(actorButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(markerToggle);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(curtainButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(platformButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(rotateButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(trapButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(showRotatingButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(showTrapDoorsButton);
+    uiContainer.appendChild(sceneryLabel);
+    uiContainer.appendChild(backdropSelect);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(midstageSelect);
+    uiContainer.appendChild(textureLabel);
+    uiContainer.appendChild(panelSelect);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(defaultTextureSelect);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(uploadButton);
+    uiContainer.appendChild(textureScaleLabel);
+    uiContainer.appendChild(scaleSlider);
+    uiContainer.appendChild(saveLoadLabel);
+    uiContainer.appendChild(saveButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(loadButton);
+    uiContainer.appendChild(physicsLabel);
+    uiContainer.appendChild(pushButton);
+    uiContainer.appendChild(undoRedoLabel);
+    uiContainer.appendChild(undoButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(redoButton);
+    uiContainer.appendChild(audioLabel);
+    uiContainer.appendChild(audioInitButton);
+    uiContainer.appendChild(volumeControls);
+
+    document.body.appendChild(toggleButton);
+    document.body.appendChild(uiContainer);
 }
 
 function applyLightingPreset(preset) {
     currentLightingPreset = preset;
     
     switch(preset) {
-        case 'normal':
-            scene.background = new THREE.Color(0x001122);
-            scene.fog = new THREE.Fog(0x001122, 10, 100);
-            lights.forEach(light => {
-                light.intensity = 1;
-                light.color.setHex(0xffffff);
-            });
+        case 'day':
+            scene.background = new THREE.Color(0x87CEEB);
+            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+            lights.forEach(light => light.intensity = 0.6);
+            break;
+        case 'night':
+            scene.background = new THREE.Color(0x000033);
+            scene.fog = new THREE.Fog(0x000033, 10, 80);
+            lights.forEach(light => light.intensity = 1.2);
+            break;
+        case 'sunset':
+            scene.background = new THREE.Color(0xFF6B35);
+            scene.fog = new THREE.Fog(0xFF6B35, 15, 90);
+            lights[0].color.setHex(0xFFB700);
+            lights[1].color.setHex(0xFFB700);
             break;
         case 'dramatic':
             scene.background = new THREE.Color(0x000000);
             scene.fog = new THREE.Fog(0x000000, 5, 50);
             lights.forEach((light, i) => {
-                light.intensity = i === 2 ? 1.5 : 0.3; // Center light bright, sides dim
-                light.color.setHex(0xffffff);
-            });
-            break;
-        case 'evening':
-            scene.background = new THREE.Color(0xFF6B35);
-            scene.fog = new THREE.Fog(0xFF6B35, 15, 90);
-            lights.forEach(light => {
-                light.intensity = 0.8;
-                light.color.setHex(0xFFB700); // Warm golden color
-            });
-            break;
-        case 'concert':
-            scene.background = new THREE.Color(0x000033);
-            scene.fog = new THREE.Fog(0x000033, 10, 80);
-            lights.forEach((light, i) => {
-                light.intensity = 1.2;
-                light.color.setHex(0x4169e1); // Cool blue color
-            });
-            break;
-        case 'spotlight':
-            scene.background = new THREE.Color(0x000000);
-            scene.fog = new THREE.Fog(0x000000, 5, 30);
-            lights.forEach((light, i) => {
-                if (i === 2) { // Center spotlight only
-                    light.intensity = 2.0;
-                    light.color.setHex(0xffffff);
-                } else {
-                    light.intensity = 0.1; // Very dim side lights
-                    light.color.setHex(0xffffff);
-                }
+                light.intensity = i === 2 ? 1.5 : 0.3;
             });
             break;
         default:
-            // Default case (same as normal)
             scene.background = new THREE.Color(0x001122);
             scene.fog = new THREE.Fog(0x001122, 10, 100);
             lights.forEach(light => {
@@ -1783,21 +1615,21 @@ const PROP_CATALOG = {
     cube: {
         name: 'Cube',
         category: 'basic',
-        create: () => resourceManager.getGeometry('box', { width: 1, height: 1, depth: 1 }),
+        create: () => new THREE.BoxGeometry(1, 1, 1),
         color: 0x808080,
         y: 0.5
     },
     sphere: {
         name: 'Sphere',
         category: 'basic',
-        create: () => resourceManager.getGeometry('sphere', { radius: 0.5, widthSegments: 16, heightSegments: 16 }),
+        create: () => new THREE.SphereGeometry(0.5, 16, 16),
         color: 0x808080,
         y: 0.5
     },
     cylinder: {
         name: 'Cylinder',
         category: 'basic',
-        create: () => resourceManager.getGeometry('cylinder', { radiusTop: 0.5, radiusBottom: 0.5, height: 1, radialSegments: 16 }),
+        create: () => new THREE.CylinderGeometry(0.5, 0.5, 1, 16),
         color: 0x808080,
         y: 0.5
     },
@@ -2300,8 +2132,8 @@ function addPropAt(x, z) {
     if (result instanceof THREE.Group) {
         propObject = result;
     } else {
-        // Single geometry - wrap in mesh using ResourceManager
-        const material = resourceManager.getMaterial('phong', {
+        // Single geometry - wrap in mesh
+        const material = new THREE.MeshPhongMaterial({
             color: propDef.color || new THREE.Color(Math.random(), Math.random(), Math.random())
         });
         propObject = new THREE.Mesh(result, material);
@@ -2415,6 +2247,8 @@ const ACTOR_TYPES = {
     }
 };
 
+let selectedActorType = 'human_male';
+
 function createDetailedActor(actorType) {
     const type = ACTOR_TYPES[actorType];
     const group = new THREE.Group();
@@ -2449,13 +2283,8 @@ function createDetailedActor(actorType) {
     }
     
     // Create body
-    const bodyGeometry = resourceManager.getGeometry('cylinder', {
-        radiusTop: bodyRadius[0],
-        radiusBottom: bodyRadius[1], 
-        height: bodyHeight * scale,
-        radialSegments: 8
-    });
-    const bodyMaterial = resourceManager.getMaterial('phong', { 
+    const bodyGeometry = new THREE.CylinderGeometry(...bodyRadius, bodyHeight * scale, 8);
+    const bodyMaterial = new THREE.MeshPhongMaterial({ 
         color: type.bodyColor,
         shininess: type.build === 'mechanical' ? 80 : 10
     });
@@ -2467,26 +2296,14 @@ function createDetailedActor(actorType) {
     const headSize = type.build === 'small' ? 0.25 : type.build === 'tall' ? 0.4 : 0.35;
     let headGeometry;
     if (type.build === 'mechanical') {
-        headGeometry = resourceManager.getGeometry('box', {
-            width: headSize * 2,
-            height: headSize * 2,
-            depth: headSize * 2
-        });
+        headGeometry = new THREE.BoxGeometry(headSize * 2, headSize * 2, headSize * 2);
     } else if (type.category === 'fantasy') {
-        headGeometry = resourceManager.getGeometry('cone', {
-            radius: headSize,
-            height: headSize * 1.5,
-            radialSegments: 8
-        });
+        headGeometry = new THREE.ConeGeometry(headSize, headSize * 1.5, 8);
     } else {
-        headGeometry = resourceManager.getGeometry('sphere', {
-            radius: headSize * scale,
-            widthSegments: 16,
-            heightSegments: 16
-        });
+        headGeometry = new THREE.SphereGeometry(headSize * scale, 16, 16);
     }
     
-    const headMaterial = resourceManager.getMaterial('phong', { 
+    const headMaterial = new THREE.MeshPhongMaterial({ 
         color: type.skinColor,
         shininess: type.build === 'mechanical' ? 60 : 5
     });
@@ -2496,12 +2313,8 @@ function createDetailedActor(actorType) {
     
     // Create eyes (unless robot)
     if (type.build !== 'mechanical') {
-        const eyeGeometry = resourceManager.getGeometry('sphere', {
-            radius: 0.04 * scale,
-            widthSegments: 8,
-            heightSegments: 8
-        });
-        const eyeMaterial = resourceManager.getMaterial('basic', { 
+        const eyeGeometry = new THREE.SphereGeometry(0.04 * scale, 8, 8);
+        const eyeMaterial = new THREE.MeshBasicMaterial({ 
             color: type.category === 'fantasy' ? 0xff0000 : 0x000000 
         });
         
@@ -2517,12 +2330,8 @@ function createDetailedActor(actorType) {
         group.add(rightEye);
     } else {
         // Robot eyes (glowing rectangles)
-        const eyeGeometry = resourceManager.getGeometry('box', {
-            width: 0.1 * scale,
-            height: 0.05 * scale,
-            depth: 0.02
-        });
-        const eyeMaterial = resourceManager.getMaterial('basic', { 
+        const eyeGeometry = new THREE.BoxGeometry(0.1 * scale, 0.05 * scale, 0.02);
+        const eyeMaterial = new THREE.MeshBasicMaterial({ 
             color: 0x00ffff,
             emissive: 0x004444
         });
@@ -2539,13 +2348,8 @@ function createDetailedActor(actorType) {
     }
     
     // Create arms
-    const armGeometry = resourceManager.getGeometry('cylinder', {
-        radiusTop: 0.08 * scale,
-        radiusBottom: 0.08 * scale,
-        height: 1.2 * scale,
-        radialSegments: 6
-    });
-    const armMaterial = resourceManager.getMaterial('phong', { 
+    const armGeometry = new THREE.CylinderGeometry(0.08 * scale, 0.08 * scale, 1.2 * scale, 6);
+    const armMaterial = new THREE.MeshPhongMaterial({ 
         color: type.bodyColor,
         shininess: type.build === 'mechanical' ? 80 : 10
     });
@@ -2562,13 +2366,8 @@ function createDetailedActor(actorType) {
     group.add(rightArm);
     
     // Create legs
-    const legGeometry = resourceManager.getGeometry('cylinder', {
-        radiusTop: 0.1 * scale,
-        radiusBottom: 0.12 * scale,
-        height: 1.4 * scale,
-        radialSegments: 6
-    });
-    const legMaterial = resourceManager.getMaterial('phong', { 
+    const legGeometry = new THREE.CylinderGeometry(0.1 * scale, 0.12 * scale, 1.4 * scale, 6);
+    const legMaterial = new THREE.MeshPhongMaterial({ 
         color: type.bodyColor,
         shininess: type.build === 'mechanical' ? 80 : 10
     });
@@ -2587,13 +2386,8 @@ function createDetailedActor(actorType) {
     // Add special features based on type
     if (type.category === 'fantasy') {
         // Add antenna for alien
-        const antennaGeometry = resourceManager.getGeometry('cylinder', {
-            radiusTop: 0.02,
-            radiusBottom: 0.02,
-            height: 0.3,
-            radialSegments: 4
-        });
-        const antennaMaterial = resourceManager.getMaterial('phong', { color: type.skinColor });
+        const antennaGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 4);
+        const antennaMaterial = new THREE.MeshPhongMaterial({ color: type.skinColor });
         const antenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
         antenna.position.y = bodyHeight * scale + headSize * scale * 1.5;
         group.add(antenna);
@@ -2921,7 +2715,8 @@ const OBJECT_PHYSICS = {
     cylinder: { mass: 12, friction: 0.6 }
 };
 
-// Velocity tracking for momentum (now managed by StateManager)
+// Velocity tracking for momentum
+let objectVelocities = new Map();
 
 // Texture management system
 class TextureManager {
@@ -2975,78 +2770,34 @@ class TextureManager {
     
     loadCustomTexture(file) {
         return new Promise((resolve, reject) => {
-            console.log('Starting to load texture file:', file.name, 'type:', file.type, 'size:', file.size);
-            
             const reader = new FileReader();
             reader.onload = (e) => {
-                console.log('FileReader loaded, data URL length:', e.target.result.length);
-                
-                const texture = this.loader.load(
-                    e.target.result, 
-                    (loadedTexture) => {
-                        // Texture loaded successfully
-                        loadedTexture.wrapS = loadedTexture.wrapT = THREE.RepeatWrapping;
-                        loadedTexture.needsUpdate = true;
-                        console.log('Texture loaded successfully:', {
-                            texture: loadedTexture,
-                            image: loadedTexture.image,
-                            width: loadedTexture.image?.width,
-                            height: loadedTexture.image?.height
-                        });
-                        resolve(loadedTexture);
-                    },
-                    (progress) => {
-                        console.log('Texture loading progress:', progress);
-                    },
-                    (error) => {
-                        console.error('Texture loading error:', error);
-                        reject(new Error('Failed to load texture: ' + error.message));
-                    }
+                const texture = this.loader.load(e.target.result, 
+                    () => resolve(texture),
+                    undefined,
+                    () => reject(new Error('Failed to load texture'))
                 );
+                texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
             };
-            reader.onerror = (error) => {
-                console.error('FileReader error:', error);
-                reject(new Error('Failed to read file: ' + error));
-            };
+            reader.onerror = () => reject(new Error('Failed to read file'));
             reader.readAsDataURL(file);
         });
     }
     
     applyTextureToPanel(panelIndex, texture, scale = { x: 1, y: 1 }) {
-        if (panelIndex >= sceneryPanels.length) {
-            console.error('Invalid panel index:', panelIndex);
-            return false;
-        }
+        if (panelIndex >= sceneryPanels.length) return false;
         
         const panel = sceneryPanels[panelIndex];
-        if (!panel || !panel.children[0]) {
-            console.error('Panel or mesh not found:', panelIndex);
-            return false;
-        }
-        
         const mesh = panel.children[0]; // Main panel mesh
-        console.log('Applying texture to panel', panelIndex, 'mesh:', mesh, 'texture:', texture);
         
         // Clone texture to avoid sharing references
         const clonedTexture = texture.clone();
         clonedTexture.repeat.set(scale.x, scale.y);
-        clonedTexture.wrapS = THREE.RepeatWrapping;
-        clonedTexture.wrapT = THREE.RepeatWrapping;
-        clonedTexture.needsUpdate = true;
         
-        // Apply to material and set color to white so texture shows properly
+        // Apply to material
         mesh.material.map = clonedTexture;
-        mesh.material.color.setHex(0xffffff); // Set to white so texture isn't tinted
-        mesh.material.transparent = true;
-        mesh.material.opacity = 1.0; // Make fully opaque to see texture clearly
         mesh.material.needsUpdate = true;
         
-        // Force immediate render update
-        if (renderer) {
-            renderer.render(scene, camera);
-        }
-        
-        console.log('Texture applied to material:', mesh.material);
         return true;
     }
     
@@ -3097,8 +2848,14 @@ class PlaceObjectCommand extends Command {
     undo() {
         if (!this.objectRef) return;
         
-        // Remove from scene and properly dispose
-        removeObjectProperly(this.objectRef);
+        scene.remove(this.objectRef);
+        if (this.objectType === 'prop') {
+            const index = props.indexOf(this.objectRef);
+            if (index > -1) props.splice(index, 1);
+        } else if (this.objectType === 'actor') {
+            const index = actors.indexOf(this.objectRef);
+            if (index > -1) actors.splice(index, 1);
+        }
     }
 }
 
@@ -3607,24 +3364,8 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
     const testPos = { x: newX, y: movingObj.position.y, z: newZ };
     let collisionHandled = false;
     
-    // Performance optimization: Early distance check to reduce collision calculations
-    const maxCheckDistance = 5; // Only check objects within 5 units
-    
-    // Check collision with nearby props only
+    // Check collision with all props
     for (let prop of props) {
-        if (prop === movingObj) continue; // Skip self
-        
-        // Early distance check - skip distant objects
-        const dx = prop.position.x - testPos.x;
-        const dz = prop.position.z - testPos.z;
-        const distanceSquared = dx * dx + dz * dz;
-        
-        if (distanceSquared > maxCheckDistance * maxCheckDistance) {
-            continue; // Skip distant objects
-        }
-        
-        performanceStats.collisionChecks++;
-        
         if (checkObjectCollision(movingObj, testPos, prop)) {
             if (velocity > 0) {
                 // Calculate collision response
@@ -3734,32 +3475,20 @@ function checkPropSceneryCollision(prop, newX, newZ) {
     return false;
 }
 
-// Performance optimization: Cache timing and reduce expensive operations (now managed by StateManager)
-
-function animate(currentTime = performance.now()) {
+function animate() {
     requestAnimationFrame(animate);
     
-    // Cache timing once per frame instead of multiple Date.now() calls
-    const deltaTime = currentTime - window.stageState.performance.lastFrameTime;
-    window.stageState.performance.lastFrameTime = currentTime;
-    window.stageState.performance.animationTime = currentTime * 0.001; // Convert to seconds
-    window.stageState.performance.frameCount++;
+    if (currentLightingPreset === 'default' || currentLightingPreset === 'dramatic') {
+        lights.forEach((light, index) => {
+            light.intensity = 0.8 + Math.sin(Date.now() * 0.001 + index) * 0.2;
+        });
+    }
     
-    // Update local references for performance
-    lastFrameTime = window.stageState.performance.lastFrameTime;
-    animationTime = window.stageState.performance.animationTime;
-    frameCount = window.stageState.performance.frameCount;
-    
-    // Performance monitoring
-    const frameStart = performance.now();
-    window.stageState.performance.stats.collisionChecks = 0;
-    performanceStats.collisionChecks = 0;
-    
-    // Optimize lighting animations - only when needed and using cached time
-    updateLightingAnimations(animationTime);
-    
-    // Optimize marker animations - only visible markers, cached time
-    updateMarkerAnimations(animationTime);
+    stageMarkers.forEach((marker, i) => {
+        if (marker.visible) {
+            marker.children[1].material.opacity = 0.3 + Math.sin(Date.now() * 0.003 + i) * 0.2;
+        }
+    });
     
     // Animate platforms
     moveablePlatforms.forEach(platform => {
@@ -3836,26 +3565,14 @@ function animate(currentTime = performance.now()) {
         }
     });
 
-    // Update prop relationships periodically - use frame counting for reliability
-    if (frameCount % 6 === 0) { // Every 6 frames (~100ms at 60fps)
+    // Update prop relationships periodically
+    if (Date.now() % 100 < 16) { // Every ~100ms
         updateAllPropRelationships();
     }
 
-    // Apply physics to props and actors - optimize by only processing active objects
+    // Apply physics to props and actors
     const allObjects = [...props, ...actors];
-    
-    // Performance optimization: Filter objects that need physics updates
-    const activeObjects = allObjects.filter(prop => {
-        return objectVelocities.has(prop) || // Has velocity
-               propPlatformRelations.has(prop) || // On platform
-               propTrapDoorRelations.has(prop) || // Over trap door
-               propRotatingStageRelations.has(prop) || // On rotating stage
-               prop.userData.hidden; // Hidden state needs checking
-    });
-    
-    performanceStats.activeObjects = activeObjects.length;
-    
-    activeObjects.forEach(prop => {
+    allObjects.forEach(prop => {
         // Check if prop should be hidden by trap door first
         if (propTrapDoorRelations.has(prop)) {
             const trapDoor = propTrapDoorRelations.get(prop);
@@ -3968,697 +3685,65 @@ function animate(currentTime = performance.now()) {
     audioManager.updateListenerPosition(camera);
     
     renderer.render(scene, camera);
-    
-    // Performance monitoring - calculate frame time and FPS
-    const frameEnd = performance.now();
-    performanceStats.frameTime = frameEnd - frameStart;
-    
-    // Update FPS every second
-    if (frameEnd - performanceStats.lastFPSUpdate > 1000) {
-        performanceStats.fps = Math.round(1000 / performanceStats.frameTime);
-        performanceStats.lastFPSUpdate = frameEnd;
-        
-        // Update memory stats
-        performanceStats.memoryStats = resourceManager.getMemoryStats();
-        
-        // Log performance stats every 5 seconds for monitoring
-        if (frameCount % 300 === 0) {
-            console.log('Performance Stats:', {
-                fps: performanceStats.fps,
-                frameTime: `${performanceStats.frameTime.toFixed(2)}ms`,
-                activeObjects: performanceStats.activeObjects,
-                totalObjects: props.length + actors.length,
-                collisionChecks: performanceStats.collisionChecks,
-                memory: performanceStats.memoryStats
-            });
-        }
-    }
 }
 
-// Performance optimized animation functions
-function updateLightingAnimations(time) {
-    // Only animate lights when specific presets are active
-    if (currentLightingPreset === 'default' || currentLightingPreset === 'dramatic') {
-        lights.forEach((light, index) => {
-            light.intensity = 0.8 + Math.sin(time + index) * 0.2;
-        });
-    }
-}
-
-function updateMarkerAnimations(time) {
-    // Only animate visible markers to avoid unnecessary work
-    stageMarkers.forEach((marker, i) => {
-        if (marker.visible) {
-            marker.children[1].material.opacity = 0.3 + Math.sin(time * 3 + i) * 0.2;
-        }
-    });
-}
-
-// Enhanced Save/Load System with Browser Storage and Smart Features
-class SceneManager {
-    constructor() {
-        this.storageKey = 'theater-stage-scenes';
-        this.autoSaveKey = 'theater-stage-autosave';
-        this.currentSceneName = null;
-        this.autoSaveInterval = null;
-        this.setupAutoSave();
-    }
-    
-    // Get all saved scenes from localStorage
-    getSavedScenes() {
-        try {
-            const scenes = localStorage.getItem(this.storageKey);
-            return scenes ? JSON.parse(scenes) : {};
-        } catch (error) {
-            console.error('Error reading saved scenes:', error);
-            return {};
-        }
-    }
-    
-    // Save scene to localStorage with metadata
-    saveScene(name = null, description = '') {
-        if (!name) {
-            name = prompt('Enter a name for this scene:', this.currentSceneName || 'My Scene');
-            if (!name) return false;
-        }
-        
-        if (!description && !this.currentSceneName) {
-            description = prompt('Enter a description (optional):', '') || '';
-        }
-        
-        try {
-            const sceneData = {
-                name: name,
-                description: description,
-                data: sceneSerializer.exportScene(name, description),
-                timestamp: new Date().toISOString(),
-                thumbnail: this.generateThumbnail(),
-                stats: {
-                    props: props.length,
-                    actors: actors.length,
-                    lightingPreset: currentLightingPreset
-                }
-            };
-            
-            const savedScenes = this.getSavedScenes();
-            savedScenes[name] = sceneData;
-            
-            localStorage.setItem(this.storageKey, JSON.stringify(savedScenes));
-            this.currentSceneName = name;
-            
-            console.log(`Scene "${name}" saved successfully!`);
-            this.showNotification(`Scene "${name}" saved!`, 'success');
-            return true;
-        } catch (error) {
-            console.error('Error saving scene:', error);
-            this.showNotification('Failed to save scene', 'error');
-            return false;
-        }
-    }
-    
-    // Auto-save current scene
-    autoSave() {
-        if (props.length === 0 && actors.length === 0) return; // Don't auto-save empty scenes
-        
-        try {
-            const autoSaveData = {
-                data: sceneSerializer.exportScene('AutoSave', 'Automatically saved scene'),
-                timestamp: new Date().toISOString(),
-                stats: {
-                    props: props.length,
-                    actors: actors.length,
-                    lightingPreset: currentLightingPreset
-                }
-            };
-            
-            localStorage.setItem(this.autoSaveKey, JSON.stringify(autoSaveData));
-            console.log('Auto-saved scene');
-        } catch (error) {
-            console.error('Auto-save failed:', error);
-        }
-    }
-    
-    // Setup auto-save every 30 seconds
-    setupAutoSave() {
-        this.autoSaveInterval = setInterval(() => {
-            this.autoSave();
-        }, 30000); // 30 seconds
-    }
-    
-    // Generate scene thumbnail (simplified)
-    generateThumbnail() {
-        return {
-            cameraPosition: {
-                x: camera.position.x,
-                y: camera.position.y,
-                z: camera.position.z
-            },
-            objectCount: props.length + actors.length,
-            lighting: currentLightingPreset
-        };
-    }
-    
-    // Show a nice notification
-    showNotification(message, type = 'info') {
-        const notification = UIFactory.createNotification(message, type);
-        notification.style.top = '70px'; // Adjust for our UI
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    document.body.removeChild(notification);
-                }
-            }, 300);
-        }, 3000);
-    }
-    
-    // Create a smart load dialog
-    showLoadDialog() {
-        const savedScenes = this.getSavedScenes();
-        const autoSave = this.getAutoSave();
-        
-        if (Object.keys(savedScenes).length === 0 && !autoSave) {
-            this.showNotification('No saved scenes found', 'info');
-            this.loadFromFile(); // Fallback to file upload
-            return;
-        }
-        
-        // Create load dialog
-        const dialog = document.createElement('div');
-        dialog.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.8);
-            z-index: 10001;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        `;
-        
-        const content = document.createElement('div');
-        content.style.cssText = `
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        `;
-        
-        content.innerHTML = `
-            <h2 style="margin-top: 0; color: #333;">Load Scene</h2>
-            <div id="scene-list"></div>
-            <div style="margin-top: 20px; display: flex; gap: 10px;">
-                <button id="load-from-file" style="padding: 10px 20px; cursor: pointer;">Load from File</button>
-                <button id="cancel-load" style="padding: 10px 20px; cursor: pointer; background: #ccc;">Cancel</button>
-            </div>
-        `;
-        
-        const sceneList = content.querySelector('#scene-list');
-        
-        // Add auto-save option
-        if (autoSave) {
-            this.createSceneItem(sceneList, 'AutoSave', autoSave, true);
-        }
-        
-        // Add saved scenes
-        Object.entries(savedScenes).forEach(([name, sceneData]) => {
-            this.createSceneItem(sceneList, name, sceneData, false);
-        });
-        
-        // Event listeners
-        content.querySelector('#load-from-file').addEventListener('click', () => {
-            document.body.removeChild(dialog);
-            this.loadFromFile();
-        });
-        
-        content.querySelector('#cancel-load').addEventListener('click', () => {
-            document.body.removeChild(dialog);
-        });
-        
-        dialog.appendChild(content);
-        document.body.appendChild(dialog);
-    }
-    
-    // Create a scene item in the load dialog
-    createSceneItem(container, name, sceneData, isAutoSave) {
-        const item = document.createElement('div');
-        item.style.cssText = `
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            margin: 10px 0;
-            cursor: pointer;
-            transition: background 0.2s;
-            ${isAutoSave ? 'background: #f0f8ff;' : ''}
-        `;
-        
-        const date = new Date(sceneData.timestamp).toLocaleString();
-        const stats = sceneData.stats || {};
-        
-        item.innerHTML = `
-            <div style="font-weight: bold; color: #333;">${name} ${isAutoSave ? '(Auto-saved)' : ''}</div>
-            <div style="color: #666; font-size: 14px; margin: 5px 0;">${sceneData.description || 'No description'}</div>
-            <div style="color: #999; font-size: 12px;">
-                ${date} • ${stats.props || 0} props, ${stats.actors || 0} actors • ${stats.lightingPreset || 'default'} lighting
-            </div>
-        `;
-        
-        item.addEventListener('mouseover', () => {
-            item.style.background = isAutoSave ? '#e6f3ff' : '#f5f5f5';
-        });
-        
-        item.addEventListener('mouseout', () => {
-            item.style.background = isAutoSave ? '#f0f8ff' : 'white';
-        });
-        
-        item.addEventListener('click', () => {
-            this.loadScene(sceneData.data);
-            this.currentSceneName = isAutoSave ? null : name;
-            document.body.removeChild(item.closest('.dialog-overlay') || item.closest('div[style*="position: fixed"]'));
-        });
-        
-        container.appendChild(item);
-    }
-    
-    // Get auto-save data
-    getAutoSave() {
-        try {
-            const autoSave = localStorage.getItem(this.autoSaveKey);
-            return autoSave ? JSON.parse(autoSave) : null;
-        } catch (error) {
-            console.error('Error reading auto-save:', error);
-            return null;
-        }
-    }
-    
-    // Load scene from data
-    loadScene(sceneJson) {
-        try {
-            const result = sceneSerializer.importScene(sceneJson);
-            if (result.success) {
-                console.log(`Scene loaded: ${result.name}`);
-                this.showNotification(`Scene "${result.name}" loaded!`, 'success');
-                return true;
-            } else {
-                this.showNotification(`Failed to load scene: ${result.error}`, 'error');
-                return false;
-            }
-        } catch (error) {
-            console.error('Load error:', error);
-            this.showNotification('Error loading scene', 'error');
-            return false;
-        }
-    }
-    
-    // Fallback to file upload
-    loadFromFile() {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.json';
-        
-        input.onchange = (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.loadScene(e.target.result);
-            };
-            reader.readAsText(file);
-        };
-        
-        input.click();
-    }
-    
-    // Export scene to file (for sharing)
-    exportToFile(name = null) {
-        if (!name) name = this.currentSceneName || 'My Scene';
-        
-        const sceneJson = sceneSerializer.exportScene(name, '');
-        const blob = new Blob([sceneJson], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${name.replace(/\s+/g, '_')}_scene.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        this.showNotification('Scene exported to file!', 'success');
-    }
-    
-    // Delete saved scene
-    deleteScene(name) {
-        if (confirm(`Are you sure you want to delete "${name}"?`)) {
-            const savedScenes = this.getSavedScenes();
-            delete savedScenes[name];
-            localStorage.setItem(this.storageKey, JSON.stringify(savedScenes));
-            this.showNotification(`Scene "${name}" deleted`, 'info');
-        }
-    }
-    
-    // Quick save (Ctrl+S)
-    quickSave() {
-        if (this.currentSceneName) {
-            this.saveScene(this.currentSceneName);
-        } else {
-            this.saveScene();
-        }
-    }
-}
-
-// Memory Management System
-class ResourceManager {
-    constructor() {
-        this.geometries = new Map();
-        this.materials = new Map();
-        this.textures = new Map();
-        this.eventListeners = new WeakMap();
-        this.disposedObjects = new Set();
-    }
-    
-    // Reuse geometries instead of creating new ones
-    getGeometry(type, params = {}) {
-        const key = `${type}_${JSON.stringify(params)}`;
-        if (!this.geometries.has(key)) {
-            this.geometries.set(key, this.createGeometry(type, params));
-            console.log(`Created new geometry: ${key}`);
-        }
-        return this.geometries.get(key);
-    }
-    
-    // Create geometry based on type
-    createGeometry(type, params) {
-        switch (type) {
-            case 'box':
-                return new THREE.BoxGeometry(
-                    params.width || 1, 
-                    params.height || 1, 
-                    params.depth || 1
-                );
-            case 'sphere':
-                return new THREE.SphereGeometry(
-                    params.radius || 0.5, 
-                    params.widthSegments || 16, 
-                    params.heightSegments || 16
-                );
-            case 'cylinder':
-                return new THREE.CylinderGeometry(
-                    params.radiusTop || 1,
-                    params.radiusBottom || 1,
-                    params.height || 1,
-                    params.radialSegments || 16
-                );
-            case 'plane':
-                return new THREE.PlaneGeometry(
-                    params.width || 1,
-                    params.height || 1
-                );
-            default:
-                return new THREE.BoxGeometry(1, 1, 1);
-        }
-    }
-    
-    // Reuse materials instead of creating new ones
-    getMaterial(type, params = {}) {
-        const key = `${type}_${JSON.stringify(params)}`;
-        if (!this.materials.has(key)) {
-            this.materials.set(key, this.createMaterial(type, params));
-            console.log(`Created new material: ${key}`);
-        }
-        return this.materials.get(key);
-    }
-    
-    // Create material based on type
-    createMaterial(type, params) {
-        switch (type) {
-            case 'phong':
-                return new THREE.MeshPhongMaterial({
-                    color: params.color || 0x808080,
-                    shininess: params.shininess || 30,
-                    transparent: params.transparent || false,
-                    opacity: params.opacity || 1
-                });
-            case 'basic':
-                return new THREE.MeshBasicMaterial({
-                    color: params.color || 0x808080,
-                    transparent: params.transparent || false,
-                    opacity: params.opacity || 1
-                });
-            case 'lambert':
-                return new THREE.MeshLambertMaterial({
-                    color: params.color || 0x808080,
-                    transparent: params.transparent || false,
-                    opacity: params.opacity || 1
-                });
-            default:
-                return new THREE.MeshPhongMaterial({ color: params.color || 0x808080 });
-        }
-    }
-    
-    // Proper cleanup when objects are removed
-    disposeObject(object) {
-        if (this.disposedObjects.has(object)) {
-            console.warn('Object already disposed:', object);
-            return;
-        }
-        
-        // Mark as disposed to prevent double disposal
-        this.disposedObjects.add(object);
-        
-        // Remove from scene
-        if (object.parent) {
-            object.parent.remove(object);
-        }
-        
-        // Dispose geometry if it's not shared
-        if (object.geometry && !this.isSharedGeometry(object.geometry)) {
-            object.geometry.dispose();
-        }
-        
-        // Dispose materials if they're not shared
-        if (object.material) {
-            if (Array.isArray(object.material)) {
-                object.material.forEach(mat => {
-                    if (!this.isSharedMaterial(mat)) {
-                        this.disposeMaterial(mat);
-                    }
-                });
-            } else if (!this.isSharedMaterial(object.material)) {
-                this.disposeMaterial(object.material);
-            }
-        }
-        
-        // Recursively dispose children
-        if (object.children && object.children.length > 0) {
-            const children = [...object.children]; // Copy array to avoid modification during iteration
-            children.forEach(child => this.disposeObject(child));
-        }
-        
-        console.log('Disposed object:', object.type || 'Unknown');
-    }
-    
-    // Check if geometry is shared (managed by this system)
-    isSharedGeometry(geometry) {
-        for (let managedGeometry of this.geometries.values()) {
-            if (managedGeometry === geometry) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    // Check if material is shared (managed by this system)
-    isSharedMaterial(material) {
-        for (let managedMaterial of this.materials.values()) {
-            if (managedMaterial === material) {
-                return true;
-            }
-        }
-        return false;
-    }
-    
-    // Dispose material and its textures
-    disposeMaterial(material) {
-        if (material.map) material.map.dispose();
-        if (material.normalMap) material.normalMap.dispose();
-        if (material.bumpMap) material.bumpMap.dispose();
-        if (material.envMap) material.envMap.dispose();
-        material.dispose();
-    }
-    
-    // Event listener management
-    addEventListenerManaged(element, event, handler) {
-        element.addEventListener(event, handler);
-        if (!this.eventListeners.has(element)) {
-            this.eventListeners.set(element, []);
-        }
-        this.eventListeners.get(element).push({event, handler});
-    }
-    
-    // Remove specific event listener
-    removeEventListenerManaged(element, event, handler) {
-        if (this.eventListeners.has(element)) {
-            const listeners = this.eventListeners.get(element);
-            const index = listeners.findIndex(l => l.event === event && l.handler === handler);
-            if (index !== -1) {
-                listeners.splice(index, 1);
-                element.removeEventListener(event, handler);
-            }
-        }
-    }
-    
-    // Clean up all managed resources
-    cleanup() {
-        console.log('Starting resource cleanup...');
-        
-        // Dispose geometries
-        this.geometries.forEach((geo, key) => {
-            console.log(`Disposing geometry: ${key}`);
-            geo.dispose();
-        });
-        this.geometries.clear();
-        
-        // Dispose materials
-        this.materials.forEach((mat, key) => {
-            console.log(`Disposing material: ${key}`);
-            this.disposeMaterial(mat);
-        });
-        this.materials.clear();
-        
-        // Dispose textures
-        this.textures.forEach((tex, key) => {
-            console.log(`Disposing texture: ${key}`);
-            tex.dispose();
-        });
-        this.textures.clear();
-        
-        // Remove event listeners
-        this.eventListeners.forEach((listeners, element) => {
-            listeners.forEach(({event, handler}) => {
-                element.removeEventListener(event, handler);
-            });
-        });
-        
-        this.disposedObjects.clear();
-        
-        console.log('Resource cleanup complete');
-    }
-    
-    // Get memory usage statistics
-    getMemoryStats() {
-        return {
-            geometries: this.geometries.size,
-            materials: this.materials.size,
-            textures: this.textures.size,
-            managedEventListeners: 'WeakMap (cannot count)',
-            disposedObjects: this.disposedObjects.size
-        };
-    }
-}
-
-// UIFactory is now loaded from js/ui/UIFactory.js
-
-// Helper function to properly remove and dispose objects
-function removeObjectProperly(object) {
-    if (!object) return;
-    
-    // Remove from appropriate arrays
-    if (object.userData.type === 'prop') {
-        const index = props.indexOf(object);
-        if (index > -1) props.splice(index, 1);
-        
-        // Clean up relationships
-        propPlatformRelations.delete(object);
-        propRotatingStageRelations.delete(object);
-        propTrapDoorRelations.delete(object);
-        objectVelocities.delete(object);
-    } else if (object.userData.type === 'actor') {
-        const index = actors.indexOf(object);
-        if (index > -1) actors.splice(index, 1);
-        
-        // Clean up relationships
-        objectVelocities.delete(object);
-    }
-    
-    // Remove from scene and dispose using ResourceManager
-    scene.remove(object);
-    resourceManager.disposeObject(object);
-}
-
-// Create global resource manager
-const resourceManager = new ResourceManager();
-
-// Create global scene manager
-const sceneManager = new SceneManager();
-
-// Updated save/load functions
+// Save/Load functions
 function saveScene() {
-    sceneManager.saveScene();
+    const sceneName = prompt('Enter a name for this scene:', 'My Scene');
+    if (!sceneName) return;
+    
+    const sceneDescription = prompt('Enter a description (optional):', '');
+    
+    // Export the scene
+    const sceneJson = sceneSerializer.exportScene(sceneName, sceneDescription);
+    
+    // Create a download link
+    const blob = new Blob([sceneJson], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${sceneName.replace(/\s+/g, '_')}_scene.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    console.log('Scene saved successfully!');
 }
 
 function loadScene() {
-    sceneManager.showLoadDialog();
-}
-
-// Add keyboard shortcuts
-document.addEventListener('keydown', (event) => {
-    if (event.ctrlKey || event.metaKey) {
-        switch (event.key) {
-            case 's':
-                event.preventDefault();
-                sceneManager.quickSave();
-                break;
-            case 'o':
-                event.preventDefault();
-                sceneManager.showLoadDialog();
-                break;
-        }
-    }
-});
-
-// Debug function to test texture upload
-function debugTextureUpload() {
-    console.log('=== TEXTURE DEBUG INFO ===');
-    console.log('Number of scenery panels:', sceneryPanels.length);
+    // Create file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
     
-    sceneryPanels.forEach((panel, index) => {
-        console.log(`Panel ${index}:`, {
-            name: panel.userData.name,
-            position: panel.position,
-            visible: panel.visible,
-            currentPosition: panel.userData.currentPosition,
-            targetPosition: panel.userData.targetPosition,
-            moving: panel.userData.moving,
-            hasChildren: panel.children.length,
-            mesh: panel.children[0],
-            material: panel.children[0]?.material,
-            hasTexture: panel.children[0]?.material?.map !== null
-        });
-    });
+    input.onchange = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const result = sceneSerializer.importScene(e.target.result);
+                if (result.success) {
+                    console.log(`Scene loaded: ${result.name}`);
+                    if (result.description) {
+                        console.log(`Description: ${result.description}`);
+                    }
+                    alert(`Scene "${result.name}" loaded successfully!`);
+                } else {
+                    alert(`Failed to load scene: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Error loading scene: ${error.message}`);
+                console.error('Load error:', error);
+            }
+        };
+        reader.readAsText(file);
+    };
     
-    // Force backdrop to visible position for testing
-    if (sceneryPanels[0]) {
-        const backdrop = sceneryPanels[0];
-        backdrop.position.x = 0;
-        backdrop.userData.currentPosition = 1.0;
-        backdrop.userData.targetPosition = 1.0;
-        backdrop.userData.moving = false;
-        console.log('Forced backdrop to center position');
-    }
+    input.click();
 }
-
-// Make debug function available globally
-window.debugTextureUpload = debugTextureUpload;
 
 init();
 animate();
