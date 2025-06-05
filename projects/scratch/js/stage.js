@@ -279,10 +279,9 @@ class SceneSerializer {
             if (idNum >= nextActorId) nextActorId = idNum + 1;
             
             // Create actor at position
-            addActorAt(data.position.x, data.position.z);
+            const actor = window.threeObjectFactory.addActorAt(data.position.x, data.position.z, data.actorType || selectedActorType);
             
-            // Get the last added actor
-            const actor = actors[actors.length - 1];
+            if (!actor) continue; // Skip if actor creation failed
             
             // Restore properties
             actor.position.set(data.position.x, data.position.y, data.position.z);
@@ -305,10 +304,9 @@ class SceneSerializer {
             
             // Set the prop type and create it
             selectedPropType = data.type;
-            addPropAt(data.position.x, data.position.z);
+            const prop = window.threeObjectFactory.addPropAt(data.position.x, data.position.z, data.type);
             
-            // Get the last added prop
-            const prop = props[props.length - 1];
+            if (!prop) continue; // Skip if prop creation failed
             
             // Restore properties
             prop.position.set(data.position.x, data.position.y, data.position.z);
@@ -440,6 +438,9 @@ async function init() {
         
         // Build all stage elements using StageBuilder
         await window.threeStageBuilder.initialize();
+        
+        // Initialize object creation system
+        await window.threeObjectFactory.initialize();
         
         // Update local references after stage creation
         stage = window.stageState.stage.stage;
@@ -917,9 +918,10 @@ const createButton = (text, onClick) => UIFactory.createButton(text, onClick);
 const createSpacer = () => UIFactory.createSpacer();
 
 function createPropSelector() {
-    // Group props by category
+    // Group props by category using ObjectFactory
     const categories = {};
-    Object.entries(PROP_CATALOG).forEach(([key, prop]) => {
+    const propCatalog = window.threeObjectFactory.getPropCatalog();
+    Object.entries(propCatalog).forEach(([key, prop]) => {
         if (!categories[prop.category]) {
             categories[prop.category] = [];
         }
@@ -934,7 +936,8 @@ function createPropSelector() {
 }
 
 function createActorSelector() {
-    const actors = Object.entries(ACTOR_TYPES).map(([key, actor]) => ({
+    const actorTypes = window.threeObjectFactory.getActorTypes();
+    const actors = Object.entries(actorTypes).map(([key, actor]) => ({
         value: key,
         label: actor.name
     }));
@@ -1320,8 +1323,7 @@ function applyLightingPreset(preset) {
     }
 }
 
-// Prop catalog definitions
-const PROP_CATALOG = {
+// Object creation moved to ObjectFactory module
     // Basic shapes
     cube: {
         name: 'Cube',
@@ -2591,12 +2593,10 @@ class PlaceObjectCommand extends Command {
         if (this.objectType === 'prop') {
             const oldPropType = selectedPropType;
             selectedPropType = this.objectData.propType;
-            addPropAt(this.position.x, this.position.z);
+            this.objectRef = window.threeObjectFactory.addPropAt(this.position.x, this.position.z, this.objectData.propType);
             selectedPropType = oldPropType;
-            this.objectRef = props[props.length - 1];
         } else if (this.objectType === 'actor') {
-            addActorAt(this.position.x, this.position.z);
-            this.objectRef = actors[actors.length - 1];
+            this.objectRef = window.threeObjectFactory.addActorAt(this.position.x, this.position.z);
         }
     }
     
