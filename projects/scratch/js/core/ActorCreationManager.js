@@ -156,11 +156,16 @@ class ActorCreationManager {
                 const advancedTypes = window.advancedActorSystemV2.getAvailableActors();
                 Object.entries(advancedTypes).forEach(([key, type]) => {
                     if (!allTypes[key]) { // Don't override higher priority types
+                        // Special handling for ReadyPlayerMe avatars
+                        const icon = type.type === 'readyplayerme' ? '🎭' : '🚀';
+                        const label = type.type === 'readyplayerme' ? 'ReadyPlayerMe' : 'Advanced';
+                        
                         allTypes[key] = {
                             ...type,
-                            name: `🚀 ${type.name}`,
+                            name: `${icon} ${type.name}`,
                             source: 'advanced',
-                            priority: 3
+                            priority: 3,
+                            category: type.type === 'readyplayerme' ? 'Professional' : 'Advanced'
                         };
                     }
                 });

@@ -2105,6 +2105,70 @@ function debugTextureUpload() {
 // Make debug function available globally
 window.debugTextureUpload = debugTextureUpload;
 
+// ReadyPlayerMe testing function
+window.testReadyPlayerMe = async function() {
+    console.log('🧪 Starting ReadyPlayerMe integration test...');
+    
+    if (!window.advancedActorSystemV2) {
+        console.error('❌ AdvancedActorSystemV2 not available');
+        return false;
+    }
+    
+    try {
+        const result = await window.advancedActorSystemV2.testReadyPlayerMe();
+        
+        if (result.success && result.actor) {
+            // Add to scene for visual verification
+            window.stageState.core.scene.add(result.actor);
+            window.stageState.objects.actors.push(result.actor);
+            
+            console.log('🎉 ReadyPlayerMe test SUCCESSFUL - actor added to scene');
+            console.log('💡 Tip: Use window.addCustomRPMAvatar("Name", "avatar_id") to add more');
+            
+            return true;
+        } else {
+            console.log('⚠️ ReadyPlayerMe test completed with fallback');
+            return false;
+        }
+    } catch (error) {
+        console.error('💥 ReadyPlayerMe test failed:', error);
+        return false;
+    }
+};
+
+// Helper function to add custom ReadyPlayerMe avatars
+window.addCustomRPMAvatar = function(name, avatarId, metadata = {}) {
+    if (!window.advancedActorSystemV2) {
+        console.error('❌ AdvancedActorSystemV2 not available');
+        return false;
+    }
+    
+    try {
+        const key = window.advancedActorSystemV2.addCustomAvatar(name, avatarId, metadata);
+        console.log(`✅ Custom avatar added! Use actor type: "${key}"`);
+        console.log(`🎭 Create with: window.actorCreationManager.createActor("${key}", {x: 0, y: 0, z: 0})`);
+        return key;
+    } catch (error) {
+        console.error('❌ Failed to add custom avatar:', error);
+        return false;
+    }
+};
+
+// Helper function to get ReadyPlayerMe creation URL  
+window.getRPMCreationURL = function() {
+    if (!window.advancedActorSystemV2) {
+        console.error('❌ AdvancedActorSystemV2 not available');
+        return null;
+    }
+    
+    const url = window.advancedActorSystemV2.getAvatarCreationURL();
+    console.log('🎨 Create your avatar at:', url);
+    console.log('💡 After creation, copy the GLB URL and extract the avatar ID');
+    console.log('📝 Then use: window.addCustomRPMAvatar("MyAvatar", "avatar_id_here")');
+    
+    return url;
+};
+
 // Wait for all modules to load, then initialize
 window.addEventListener('load', async () => {
     console.log('=== STAGE APPLICATION STARTING ===');
