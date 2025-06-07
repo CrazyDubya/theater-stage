@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimal UI Test</title>
+    <style>
+        body { margin: 0; background: #111; color: white; font-family: Arial, sans-serif; }
+        #console { position: fixed; bottom: 0; left: 0; right: 0; height: 200px; 
+                   background: rgba(0,0,0,0.9); overflow-y: auto; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div id="console"></div>
+    
+    <script>
+        function log(msg) {
+            const console = document.getElementById('console');
+            console.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + msg + '</div>';
+            console.scrollTop = console.scrollHeight;
+        }
+        
+        log('=== STARTING MINIMAL TEST ===');
+        
+        // Test each step manually
+        window.addEventListener('load', async () => {
+            try {
+                log('Page loaded, testing components...');
+                
+                // Test if THREE.js loaded
+                log('THREE.js: ' + (typeof THREE !== 'undefined' ? 'OK' : 'MISSING'));
+                
+                // Load and test UIFactory manually
+                log('Testing UIFactory...');
+                const script1 = document.createElement('script');
+                script1.src = 'js/ui/UIFactory.js';
+                script1.onload = () => {
+                    log('UIFactory loaded: ' + (typeof window.UIFactory !== 'undefined'));
+                    
+                    // Test UIFactory methods
+                    try {
+                        const testLabel = window.UIFactory.createLabel('Test');
+                        log('UIFactory.createLabel: ' + (testLabel ? 'OK' : 'FAILED'));
+                        
+                        const testButton = window.UIFactory.createButton('Test', () => {});
+                        log('UIFactory.createButton: ' + (testButton ? 'OK' : 'FAILED'));
+                        
+                        const testSelect = window.UIFactory.createSelect([{value:'test',label:'Test'}], () => {});
+                        log('UIFactory.createSelect: ' + (testSelect ? 'OK' : 'FAILED'));
+                        
+                        // Test actual DOM insertion
+                        document.body.appendChild(testLabel);
+                        document.body.appendChild(testButton);
+                        document.body.appendChild(testSelect);
+                        log('DOM elements added successfully');
+                        
+                    } catch (error) {
+                        log('UIFactory test error: ' + error.message);
+                    }
+                };
+                script1.onerror = () => log('Failed to load UIFactory');
+                document.head.appendChild(script1);
+                
+            } catch (error) {
+                log('Test error: ' + error.message);
+            }
+        });
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</body>
+</html>

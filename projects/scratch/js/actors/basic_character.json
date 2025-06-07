@@ -1,0 +1,16 @@
+{
+  "name": "basic_character",
+  "displayName": "Basic Character",
+  "file": "models/vrm/basic_character.vrm",
+  "url": "models/vrm/basic_character.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "female",
+    "style": "casual",
+    "actorType": "young_female",
+    "source": "local-file"
+  },
+  "size": "87 KB",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

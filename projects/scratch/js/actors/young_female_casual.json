@@ -1,0 +1,16 @@
+{
+  "name": "young_female_casual",
+  "displayName": "Young Female Casual",
+  "file": "models/vrm/young_female_casual.vrm",
+  "url": "models/vrm/young_female_casual.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "male",
+    "style": "casual",
+    "actorType": "young_male",
+    "source": "local-file"
+  },
+  "size": "10 MB",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

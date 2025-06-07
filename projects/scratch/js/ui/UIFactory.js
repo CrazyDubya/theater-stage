@@ -45,6 +45,12 @@ class UIFactory {
         // Handle grouped options or simple options
         if (options.grouped) {
             // Items is an object with category keys
+            // Safety check for items
+            if (!items || typeof items !== 'object') {
+                console.warn('UIFactory.createSelect: grouped items is not an object:', items);
+                items = {};
+            }
+            
             Object.entries(items).forEach(([category, categoryItems]) => {
                 const optgroup = document.createElement('optgroup');
                 optgroup.label = category.charAt(0).toUpperCase() + category.slice(1);
@@ -61,6 +67,17 @@ class UIFactory {
             });
         } else {
             // Simple array of options
+            // Safety check for items
+            if (!items || !Array.isArray(items)) {
+                console.warn('UIFactory.createSelect: items is not an array:', items);
+                // If it's an object, convert to array of keys
+                if (typeof items === 'object') {
+                    items = Object.keys(items);
+                } else {
+                    items = [];
+                }
+            }
+            
             items.forEach(item => {
                 const option = this.createOption(
                     typeof item === 'string' ? item : item.value,

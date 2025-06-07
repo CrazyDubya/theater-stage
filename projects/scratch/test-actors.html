@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Actor System Test</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+        }
+        #console {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 400px;
+            height: 300px;
+            background: rgba(0,0,0,0.9);
+            color: #00ff00;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 10px;
+            overflow-y: auto;
+            border-radius: 5px;
+            z-index: 100;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #45a049; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        Actor System Test
+        <br><button onclick="testActors()">Test Actor Creation</button>
+        <br><button onclick="clearConsole()">Clear Console</button>
+    </div>
+    <div id="console"></div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Main stage file that has ResourceManager -->
+    <script src="js/stage.js"></script>
+    
+    <script>
+        // Override console.log to show in our div
+        const consoleDiv = document.getElementById('console');
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function logToDiv(type, ...args) {
+            const timestamp = new Date().toLocaleTimeString();
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            
+            const color = type === 'error' ? '#ff0000' : type === 'warn' ? '#ffaa00' : '#00ff00';
+            consoleDiv.innerHTML += `<div style="color: ${color}">[${timestamp}] ${type.toUpperCase()}: ${message}</div>`;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+        
+        console.log = (...args) => {
+            originalLog(...args);
+            logToDiv('log', ...args);
+        };
+        
+        console.error = (...args) => {
+            originalError(...args);
+            logToDiv('error', ...args);
+        };
+        
+        console.warn = (...args) => {
+            originalWarn(...args);
+            logToDiv('warn', ...args);
+        };
+        
+        function clearConsole() {
+            consoleDiv.innerHTML = '';
+        }
+        
+        // Initialize the theater system
+        let scene, camera, renderer, controls;
+        
+        async function init() {
+            console.log('🎬 INITIALIZING ACTOR TEST SYSTEM');
+            
+            try {
+                // Basic Three.js setup
+                scene = new THREE.Scene();
+                camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                renderer.setClearColor(0x001122);
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                document.body.appendChild(renderer.domElement);
+                
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                camera.position.set(0, 5, 10);
+                controls.update();
+                
+                // Add basic lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 5);
+                directionalLight.castShadow = true;
+                scene.add(directionalLight);
+                
+                // Create a simple stage
+                const stageGeometry = new THREE.PlaneGeometry(20, 20);
+                const stageMaterial = new THREE.MeshLambertMaterial({ color: 0x8b4513 });
+                const stage = new THREE.Mesh(stageGeometry, stageMaterial);
+                stage.rotation.x = -Math.PI / 2;
+                stage.receiveShadow = true;
+                scene.add(stage);
+                
+                // Wait for systems to load
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                console.log('🔍 Available systems:', {
+                    stageState: !!window.stageState,
+                    resourceManager: !!window.resourceManager,
+                    enhancedActorSystem: !!window.enhancedActorSystem,
+                    sceneManager: !!window.threeSceneManager
+                });
+                
+                // Initialize core systems in order
+                if (window.threeSceneManager && window.threeSceneManager.initialize) {
+                    console.log('📦 Initializing SceneManager...');
+                    await window.threeSceneManager.initialize();
+                }
+                
+                if (window.threeStageBuilder && window.threeStageBuilder.initialize) {
+                    console.log('🏗️ Initializing StageBuilder...');
+                    await window.threeStageBuilder.initialize();
+                }
+                
+                if (window.threeObjectFactory && window.threeObjectFactory.initialize) {
+                    console.log('🏭 Initializing ObjectFactory...');
+                    await window.threeObjectFactory.initialize();
+                }
+                
+                if (window.enhancedActorSystem && window.enhancedActorSystem.initialize) {
+                    console.log('🎨 Initializing EnhancedActorSystem...');
+                    await window.enhancedActorSystem.initialize();
+                } else {
+                    console.error('❌ Enhanced Actor System not found');
+                }
+                
+                console.log('✅ All systems initialized');
+                
+            } catch (error) {
+                console.error('❌ Initialization failed:', error);
+                console.error('Error stack:', error.stack);
+            }
+        }
+        
+        async function testActors() {
+            console.log('🎭 TESTING ACTOR CREATION');
+            
+            if (!window.enhancedActorSystem || !window.enhancedActorSystem.isInitialized) {
+                console.error('❌ Enhanced actor system not ready');
+                return;
+            }
+            
+            const actorTypes = ['human_male', 'human_female', 'child', 'elderly'];
+            let successCount = 0;
+            
+            for (let i = 0; i < actorTypes.length; i++) {
+                const actorType = actorTypes[i];
+                const x = (i - 1.5) * 3;
+                const z = 0;
+                
+                try {
+                    console.log(`\n🎨 Creating ${actorType} at (${x}, ${z})`);
+                    const actor = window.enhancedActorSystem.createEnhancedActor(actorType);
+                    
+                    if (actor && actor.children.length > 0) {
+                        actor.position.set(x, 0.1, z);
+                        actor.castShadow = true;
+                        actor.receiveShadow = true;
+                        scene.add(actor);
+                        
+                        console.log(`✅ ${actorType} created successfully with ${actor.children.length} parts`);
+                        successCount++;
+                    } else {
+                        console.error(`❌ ${actorType} creation failed - no geometry`);
+                    }
+                } catch (error) {
+                    console.error(`❌ ${actorType} creation threw error:`, error.message);
+                }
+            }
+            
+            console.log(`\n🏁 FINAL RESULT: ${successCount}/${actorTypes.length} actors created successfully`);
+            
+            if (successCount === 0) {
+                console.error('🚨 COMPLETE FAILURE - NO ACTORS CREATED');
+            } else if (successCount < actorTypes.length) {
+                console.warn('⚠️ PARTIAL SUCCESS - Some actors failed');
+            } else {
+                console.log('🎉 COMPLETE SUCCESS - All actors created');
+            }
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Start the system
+        init().then(() => {
+            animate();
+            console.log('🎬 System ready - click "Test Actor Creation" button');
+        });
+    </script>
+</body>
+</html>

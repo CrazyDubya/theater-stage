@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UI Diagnosis</title>
+    <style>
+        body { margin: 0; background: #111; color: white; font-family: monospace; }
+        #output { 
+            position: fixed; 
+            top: 0; left: 0; right: 0; bottom: 0; 
+            overflow-y: auto; 
+            padding: 20px; 
+            background: #000;
+            font-size: 12px;
+        }
+        .error { color: #ff4444; }
+        .warning { color: #ffaa44; }
+        .info { color: #44ff44; }
+        .debug { color: #4444ff; }
+    </style>
+</head>
+<body>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            output.appendChild(div);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        // Override console methods
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        console.log = function(...args) {
+            log(args.join(' '), 'info');
+            originalLog.apply(console, args);
+        };
+        
+        console.error = function(...args) {
+            log('ERROR: ' + args.join(' '), 'error');
+            originalError.apply(console, args);
+        };
+        
+        console.warn = function(...args) {
+            log('WARN: ' + args.join(' '), 'warning');
+            originalWarn.apply(console, args);
+        };
+        
+        // Catch unhandled errors
+        window.addEventListener('error', (e) => {
+            log('UNHANDLED ERROR: ' + e.message + ' at ' + e.filename + ':' + e.lineno, 'error');
+        });
+        
+        log('Starting diagnosis...', 'debug');
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Load modules in order -->
+    <script src="js/core/StateManager.js"></script>
+    <script src="js/core/SceneManager.js"></script>
+    <script src="js/core/StageBuilder.js"></script>
+    <script src="js/core/ObjectFactory.js"></script>
+    <script src="js/core/PhysicsEngine.js"></script>
+    <script src="js/core/AudioSystem.js"></script>
+    <script src="js/core/TextureManager.js"></script>
+    <script src="js/core/UIManager.js"></script>
+    <script src="js/core/RenderLoop.js"></script>
+    <script src="js/ui/UIFactory.js"></script>
+    <script src="js/stage.js"></script>
+</body>
+</html>

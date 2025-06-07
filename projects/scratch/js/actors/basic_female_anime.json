@@ -1,0 +1,16 @@
+{
+  "name": "basic_female_anime",
+  "displayName": "Basic Female Anime",
+  "file": "models/vrm/basic_female_anime.vrm",
+  "url": "models/vrm/basic_female_anime.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "male",
+    "style": "anime",
+    "actorType": "young_male",
+    "source": "local-file"
+  },
+  "size": "0 B",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

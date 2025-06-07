@@ -142,10 +142,10 @@ class ThreeObjectFactory {
             }
         };
         
-        // Actor types with detailed characteristics
-        this.actorTypes = {
+        // Legacy actor types (kept for compatibility)
+        this.legacyActorTypes = {
             human_male: {
-                name: 'Male Actor',
+                name: 'Male Actor (Legacy)',
                 category: 'human',
                 bodyColor: 0x4169e1,
                 skinColor: 0xffdbac,
@@ -153,7 +153,7 @@ class ThreeObjectFactory {
                 build: 'normal'
             },
             human_female: {
-                name: 'Female Actor',
+                name: 'Female Actor (Legacy)',
                 category: 'human',
                 bodyColor: 0xdc143c,
                 skinColor: 0xffe4c4,
@@ -161,7 +161,7 @@ class ThreeObjectFactory {
                 build: 'slender'
             },
             child: {
-                name: 'Child Actor',
+                name: 'Child Actor (Legacy)',
                 category: 'human',
                 bodyColor: 0x32cd32,
                 skinColor: 0xffefd5,
@@ -169,7 +169,7 @@ class ThreeObjectFactory {
                 build: 'small'
             },
             elderly: {
-                name: 'Elderly Actor',
+                name: 'Elderly Actor (Legacy)',
                 category: 'human',
                 bodyColor: 0x8b4513,
                 skinColor: 0xf5deb3,
@@ -177,7 +177,7 @@ class ThreeObjectFactory {
                 build: 'stocky'
             },
             robot: {
-                name: 'Robot Actor',
+                name: 'Robot Actor (Legacy)',
                 category: 'artificial',
                 bodyColor: 0x708090,
                 skinColor: 0xc0c0c0,
@@ -185,7 +185,7 @@ class ThreeObjectFactory {
                 build: 'mechanical'
             },
             alien: {
-                name: 'Alien Actor',
+                name: 'Alien Actor (Legacy)',
                 category: 'fantasy',
                 bodyColor: 0x9370db,
                 skinColor: 0x98fb98,
@@ -241,30 +241,40 @@ class ThreeObjectFactory {
         return new Promise((resolve, reject) => {
             const checkDependencies = () => {
                 if (typeof THREE === 'undefined') {
+                    console.log('ObjectFactory waiting for: THREE');
                     setTimeout(checkDependencies, 50);
                     return;
                 }
                 
                 if (!window.stageState?.core?.scene) {
+                    console.log('ObjectFactory waiting for: window.stageState.core.scene', {
+                        stageState: !!window.stageState,
+                        core: !!window.stageState?.core,
+                        scene: !!window.stageState?.core?.scene
+                    });
                     setTimeout(checkDependencies, 50);
                     return;
                 }
                 
                 if (!window.resourceManager) {
+                    console.log('ObjectFactory waiting for: window.resourceManager');
                     setTimeout(checkDependencies, 50);
                     return;
                 }
                 
                 if (!window.checkAllCollisions) {
+                    console.log('ObjectFactory waiting for: window.checkAllCollisions');
                     setTimeout(checkDependencies, 50);
                     return;
                 }
                 
                 if (!window.updatePropRelationships) {
+                    console.log('ObjectFactory waiting for: window.updatePropRelationships');
                     setTimeout(checkDependencies, 50);
                     return;
                 }
                 
+                console.log('ObjectFactory: All dependencies satisfied!');
                 resolve();
             };
             
@@ -337,21 +347,109 @@ class ThreeObjectFactory {
     /**
      * Create an actor at specified position with collision detection
      */
-    addActorAt(x, z, actorType = null) {
+    async addActorAt(x, z, actorType = null) {
         const selectedType = actorType || this.stageState.ui.selectedActorType;
-        const actorGroup = this.createDetailedActor(selectedType);
+        
+        console.log(`🎭 ACTOR CREATION START: type=${selectedType}, position=(${x}, ${z})`);
+        console.log(`🔍 Systems available:`, {
+            vrm: !!(window.vrmActorSystem && window.vrmActorSystem.isInitialized),
+            enhanced: !!(window.enhancedActorSystem && window.enhancedActorSystem.isInitialized),
+            legacy: true
+        });
+        
+        // Try VRM actor system first (highest quality)
+        let actorGroup = null;
+        if (window.vrmActorSystem && window.vrmActorSystem.isInitialized) {
+            console.log(`🤖 Attempting VRM actor creation...`);
+            // Map actor types to actual VRM models we have
+            const vrmModelMap = {
+                // Direct VRM matches (use actual VRM file names)
+                'sample_constraint': 'sample_constraint',
+                'young_female_casual': 'young_female_casual',
+                'alicia_solid': 'alicia_solid',
+                'fantasy_knight': 'fantasy_knight',
+                'fantasy_wizard': 'fantasy_wizard',
+                'child_character': 'child_character',
+                'elderly_character': 'elderly_character',
+                
+                // Legacy to VRM mapping (use available VRM files)
+                'human_male': 'young_female_casual',  // Only working VRM we have
+                'human_female': 'sample_constraint',  // Working 10MB VRM
+                'young_female': 'sample_constraint',
+                'young_male': 'young_female_casual',
+                'child': 'child_character',
+                'child_girl': 'child_character',
+                'elderly': 'elderly_character',
+                'elderly_female': 'elderly_character',
+                'knight': 'fantasy_knight',
+                'wizard': 'fantasy_wizard'
+            };
+            
+            const vrmModel = vrmModelMap[selectedType] || 'sample_constraint';
+            try {
+                actorGroup = await window.vrmActorSystem.createVRMActor(vrmModel, { x, y: 0.1, z });
+                
+                if (actorGroup) {
+                    console.log(`✅ VRM actor created: ${selectedType} -> ${vrmModel}`);
+                } else {
+                    console.log(`❌ VRM actor creation returned null`);
+                }
+            } catch (error) {
+                console.warn(`❌ VRM actor creation failed: ${error.message}, falling back to enhanced system`);
+            }
+        } else {
+            console.log(`⚠️ VRM system not available, skipping to enhanced system`);
+        }
+        
+        // Fallback to enhanced actor system (PRIMARY SYSTEM)
+        if (!actorGroup) {
+            console.log(`🎨 Creating enhanced actor (this should be the main path)...`);
+            try {
+                if (window.enhancedActorSystem && window.enhancedActorSystem.isInitialized) {
+                    actorGroup = window.enhancedActorSystem.createEnhancedActor(selectedType);
+                    if (actorGroup) {
+                        console.log(`✅ Enhanced actor created: ${selectedType}`);
+                        // CRITICAL: Make sure the actor has proper position and scale
+                        actorGroup.position.set(x, 0, z);
+                        actorGroup.scale.set(1, 1, 1);
+                    } else {
+                        console.log(`❌ Enhanced actor creation returned null`);
+                    }
+                } else {
+                    console.log(`⚠️ Enhanced system not available, using legacy fallback`);
+                    actorGroup = this.createDetailedActor(selectedType);
+                    if (actorGroup) {
+                        console.log(`✅ Legacy actor created: ${selectedType}`);
+                    }
+                }
+            } catch (error) {
+                console.error(`❌ Enhanced actor creation failed:`, error);
+                console.log(`🔧 Trying legacy fallback...`);
+                actorGroup = this.createDetailedActor(selectedType);
+            }
+        }
+        
         
         if (!actorGroup) {
-            console.error(`Failed to create actor of type: ${selectedType}`);
+            console.error(`💥 COMPLETE FAILURE: Could not create actor of type: ${selectedType}`);
             return null;
         }
         
-        // Position and properties
-        actorGroup.position.set(x, 0, z);
+        // Position and properties - actors should be on stage surface, not sinking through
+        actorGroup.position.set(x, 0.1, z); // Slightly above stage surface
         actorGroup.castShadow = true;
         actorGroup.receiveShadow = true;
         
         const actorId = this.stageState.getNextActorId();
+        
+        // Get actor name from appropriate source
+        let actorName = selectedType;
+        if (window.enhancedActorSystem?.isInitialized && window.enhancedActorSystem.actorTypes[selectedType]) {
+            actorName = window.enhancedActorSystem.actorTypes[selectedType].name;
+        } else if (this.legacyActorTypes[selectedType]) {
+            actorName = this.legacyActorTypes[selectedType].name;
+        }
+        
         actorGroup.userData = { 
             type: 'actor',
             actorType: selectedType,
@@ -359,7 +457,7 @@ class ThreeObjectFactory {
             draggable: true,
             originalY: 0,
             hidden: false,
-            name: `${this.actorTypes[selectedType].name} (actor_${actorId})`
+            name: `${actorName} (actor_${actorId})`
         };
         
         // Try to place actor with collision detection
@@ -411,9 +509,9 @@ class ThreeObjectFactory {
      * Create detailed actor based on type
      */
     createDetailedActor(actorType) {
-        const type = this.actorTypes[actorType];
+        const type = this.legacyActorTypes[actorType];
         if (!type) {
-            console.error(`Unknown actor type: ${actorType}`);
+            console.error(`Unknown legacy actor type: ${actorType}`);
             return null;
         }
         
@@ -1080,7 +1178,50 @@ class ThreeObjectFactory {
      * Get actor types for UI
      */
     getActorTypes() {
-        return this.actorTypes;
+        // Combine VRM actors, enhanced actor types, and legacy fallbacks
+        let combinedTypes = {};
+        
+        // Add VRM actors if available (highest priority)
+        if (window.vrmActorSystem && window.vrmActorSystem.isInitialized) {
+            const vrmActors = window.vrmActorSystem.getAvailableActors();
+            Object.entries(vrmActors).forEach(([key, vrm]) => {
+                combinedTypes[key] = {
+                    name: `🎭 ${vrm.name}`,  // VRM actors get special icon
+                    category: 'vrm',
+                    source: 'vrm',
+                    ...vrm
+                };
+            });
+        }
+        
+        // Add enhanced actor types if available
+        if (window.enhancedActorSystem && window.enhancedActorSystem.isInitialized) {
+            const enhancedTypes = window.enhancedActorSystem.getActorTypes();
+            Object.entries(enhancedTypes).forEach(([key, actor]) => {
+                // Only add if not already covered by VRM
+                if (!combinedTypes[key]) {
+                    combinedTypes[key] = {
+                        ...actor,
+                        name: `⭐ ${actor.name}`,  // Enhanced actors get star icon
+                        source: 'enhanced'
+                    };
+                }
+            });
+        }
+        
+        // Add legacy types for fallback
+        Object.entries(this.legacyActorTypes).forEach(([key, actor]) => {
+            // Only add if not already covered by VRM or enhanced
+            if (!combinedTypes[key]) {
+                combinedTypes[key] = {
+                    ...actor,
+                    name: `📦 ${actor.name}`,  // Legacy actors get box icon
+                    source: 'legacy'
+                };
+            }
+        });
+        
+        return combinedTypes;
     }
 
     /**

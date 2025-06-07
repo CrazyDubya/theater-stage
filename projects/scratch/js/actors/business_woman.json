@@ -1,0 +1,16 @@
+{
+  "name": "business_woman",
+  "displayName": "Business Woman",
+  "file": "models/vrm/business_woman.vrm",
+  "url": "models/vrm/business_woman.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "male",
+    "style": "business",
+    "actorType": "young_male",
+    "source": "local-file"
+  },
+  "size": "0 B",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

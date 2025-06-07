@@ -1,0 +1,16 @@
+{
+  "name": "fantasy_wizard",
+  "displayName": "Fantasy Wizard",
+  "file": "models/vrm/fantasy_wizard.vrm",
+  "url": "models/vrm/fantasy_wizard.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "male",
+    "style": "fantasy",
+    "actorType": "wizard",
+    "source": "local-file"
+  },
+  "size": "0 B",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module Debug Test</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: Arial, sans-serif; background: #222; color: white; }
+        #info { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div id="info">Module Debug Test - Check console for output</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Load modules one by one -->
+    <script src="js/core/StateManager.js"></script>
+    <script src="js/core/SceneManager.js"></script>
+    <script src="js/core/RenderLoop.js"></script>
+    
+    <script>
+        console.log('=== MODULE DEBUG TEST ===');
+        
+        window.addEventListener('load', async () => {
+            console.log('Page loaded, checking modules...');
+            
+            console.log('Available modules:', {
+                stageState: !!window.stageState,
+                threeSceneManager: !!window.threeSceneManager,
+                stageRenderLoop: !!window.stageRenderLoop,
+                THREE: !!window.THREE
+            });
+            
+            if (window.stageState && window.threeSceneManager && window.stageRenderLoop) {
+                console.log('All required modules found, initializing...');
+                
+                try {
+                    await window.threeSceneManager.initialize();
+                    console.log('SceneManager initialized');
+                    
+                    // Add a simple cube to test
+                    const geometry = new THREE.BoxGeometry();
+                    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+                    const cube = new THREE.Mesh(geometry, material);
+                    
+                    window.stageState.core.scene.add(cube);
+                    window.stageState.core.camera.position.z = 5;
+                    
+                    console.log('Test cube added, starting render loop...');
+                    window.stageRenderLoop.start();
+                    
+                    // Make cube rotate
+                    window.stageRenderLoop.addRenderCallback(() => {
+                        cube.rotation.x += 0.01;
+                        cube.rotation.y += 0.01;
+                    });
+                    
+                    console.log('Debug test complete - should see rotating cube');
+                    
+                } catch (error) {
+                    console.error('Initialization failed:', error);
+                }
+            } else {
+                console.error('Missing required modules');
+            }
+        });
+    </script>
+</body>
+</html>

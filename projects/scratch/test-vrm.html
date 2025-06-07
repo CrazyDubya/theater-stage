@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VRM Actor Test</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+        button {
+            display: block;
+            margin: 5px 0;
+            padding: 8px 12px;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #005a9a;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        VRM Actor Test • Loading VRM system...
+    </div>
+    <div id="controls">
+        <button onclick="testVRMLoad()">Load VRM Actor</button>
+        <button onclick="testFallback()">Test Fallback</button>
+        <button onclick="showStatus()">Show Status</button>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <!-- Use working v0.6.7 CDN build -->
+    <script src="https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.6.7/lib/three-vrm.js"></script>
+    
+    <!-- Core Components -->
+    <script src="js/core/StateManager.js"></script>
+    <script src="js/core/SceneManager.js"></script>
+    <script src="js/core/StageBuilder.js"></script>
+    <script src="js/core/ObjectFactory.js"></script>
+    <script src="js/core/EnhancedActorSystem.js"></script>
+    <script src="js/core/VRMActorSystem.js"></script>
+    <script src="js/core/RenderLoop.js"></script>
+    
+    <script>
+        let vrmActor = null;
+        
+        async function initVRMTest() {
+            console.log('🎭 Starting VRM Test...');
+            
+            try {
+                // Check what's actually available
+                console.log('Available globals:', Object.keys(window).filter(k => 
+                    k.includes('stage') || k.includes('scene') || k.includes('vrm') || k.includes('State')));
+                
+                // Initialize what exists
+                if (window.stageState?.initialize) {
+                    await window.stageState.initialize();
+                } else {
+                    console.log('Creating basic scene for VRM test...');
+                    // Create minimal scene for testing
+                    window.scene = new THREE.Scene();
+                    window.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                    window.renderer = new THREE.WebGLRenderer();
+                    window.renderer.setSize(window.innerWidth, window.innerHeight);
+                    window.renderer.shadowMap.enabled = true;
+                    document.body.appendChild(window.renderer.domElement);
+                    
+                    // Add basic lighting
+                    const light = new THREE.DirectionalLight(0xffffff, 1);
+                    light.position.set(5, 5, 5);
+                    window.scene.add(light);
+                    window.scene.add(new THREE.AmbientLight(0x404040, 0.4));
+                    
+                    // Position camera
+                    window.camera.position.set(0, 1.6, 3);
+                    window.camera.lookAt(0, 1, 0);
+                    
+                    // Start render loop
+                    function animate() {
+                        requestAnimationFrame(animate);
+                        window.renderer.render(window.scene, window.camera);
+                    }
+                    animate();
+                }
+                
+                // Initialize VRM system
+                if (window.vrmActorSystem?.initialize) {
+                    await window.vrmActorSystem.initialize();
+                }
+                
+                document.getElementById('info').innerHTML = '✅ VRM Test Ready • Basic scene created';
+                console.log('✅ VRM Test ready');
+                
+            } catch (error) {
+                console.error('❌ VRM Test failed:', error);
+                document.getElementById('info').innerHTML = '❌ VRM Test Failed • ' + error.message;
+            }
+        }
+        
+        async function testVRMLoad() {
+            console.log('🎭 Testing VRM actor creation...');
+            document.getElementById('info').innerHTML = '⏳ Loading VRM actor...';
+            
+            try {
+                if (!window.vrmActorSystem) {
+                    throw new Error('VRM Actor System not loaded');
+                }
+                
+                // Try to create a VRM actor
+                vrmActor = await window.vrmActorSystem.createVRMActor('sample_constraint', {
+                    x: 0, y: 0, z: 0
+                });
+                
+                if (vrmActor) {
+                    console.log('✅ VRM Actor created:', vrmActor);
+                    
+                    // Add to our basic scene
+                    if (window.scene) {
+                        window.scene.add(vrmActor);
+                    }
+                    
+                    document.getElementById('info').innerHTML = '✅ VRM Actor Loaded • Check scene';
+                } else {
+                    console.log('⚠️ VRM Actor creation returned null - using fallback');
+                    document.getElementById('info').innerHTML = '⚠️ VRM fallback used • Enhanced actor created';
+                }
+                
+            } catch (error) {
+                console.error('❌ VRM Actor creation failed:', error);
+                document.getElementById('info').innerHTML = '❌ VRM Actor Failed • ' + error.message;
+            }
+        }
+        
+        async function testFallback() {
+            console.log('🔄 Testing VRM fallback system...');
+            
+            const fallbackActor = window.vrmActorSystem.createFallbackActor('sample_constraint', {
+                x: 2, y: 0, z: 0
+            });
+            
+            console.log('✅ Fallback actor created:', fallbackActor);
+            document.getElementById('info').innerHTML = '✅ Fallback Actor Created • Enhanced system working';
+        }
+        
+        function showStatus() {
+            const status = {
+                vrmInitialized: window.vrmActorSystem?.isInitialized || false,
+                vrmFallbackMode: window.vrmActorSystem?.fallbackMode || false,
+                enhancedInitialized: window.enhancedActorSystem?.isInitialized || false,
+                vrmLibrarySize: Object.keys(window.vrmActorSystem?.vrmLibrary || {}).length,
+                sceneObjects: window.stageState?.core?.scene?.children?.length || 0
+            };
+            
+            console.log('📊 System Status:', status);
+            document.getElementById('info').innerHTML = `📊 Status: VRM=${status.vrmInitialized} Fallback=${status.vrmFallbackMode} Enhanced=${status.enhancedInitialized} Library=${status.vrmLibrarySize} Objects=${status.sceneObjects}`;
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', initVRMTest);
+    </script>
+</body>
+</html>

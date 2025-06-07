@@ -603,8 +603,8 @@ class ThreeStageBuilder {
                 this.createSolidPanel(panelGroup, data, resourceManager);
             }
             
-            // Position panel based on type
-            const startX = data.name === 'backdrop' ? -30 : 30;
+            // Position panel based on type - start at hidden positions
+            const startX = data.name === 'backdrop' ? -25 : 25;
             panelGroup.position.set(startX, data.height / 2, data.defaultZ);
             panelGroup.userData = {
                 type: 'sceneryPanel',
@@ -689,16 +689,37 @@ class ThreeStageBuilder {
         const curtainState = window.stageState.stage.curtains.state;
         const curtainLeft = window.stageState.stage.curtains.left;
         const curtainRight = window.stageState.stage.curtains.right;
+        const curtainTop = window.stageState.stage.curtains.top;
         
-        if (!curtainLeft || !curtainRight) return;
+        if (!curtainLeft || !curtainRight || !curtainTop) return;
+        
+        // Set target positions based on state
+        let leftTarget, rightTarget, topTarget;
         
         if (curtainState === 'open') {
-            curtainLeft.position.x = -25;
-            curtainRight.position.x = 25;
+            // Pull curtains to the sides and raise front curtain
+            leftTarget = -25;
+            rightTarget = 25;
+            topTarget = 25; // Raise the front curtain
         } else {
-            curtainLeft.position.x = -2;
-            curtainRight.position.x = 2;
+            // Close curtains and lower front curtain
+            leftTarget = -2;
+            rightTarget = 2;
+            topTarget = 20; // Lower the front curtain
         }
+        
+        // Store target positions for animation
+        curtainLeft.userData = curtainLeft.userData || {};
+        curtainRight.userData = curtainRight.userData || {};
+        curtainTop.userData = curtainTop.userData || {};
+        
+        curtainLeft.userData.targetX = leftTarget;
+        curtainRight.userData.targetX = rightTarget;
+        curtainTop.userData.targetY = topTarget;
+        
+        curtainLeft.userData.animating = true;
+        curtainRight.userData.animating = true;
+        curtainTop.userData.animating = true;
     }
 
     /**
@@ -710,6 +731,77 @@ class ThreeStageBuilder {
         window.stageState.stage.curtains.state = newState;
         this.updateCurtainPositions();
         console.log(`Curtains ${newState}`);
+    }
+
+    /**
+     * Apply lighting preset
+     */
+    applyLightingPreset(preset) {
+        const scene = window.stageState.core.scene;
+        const lights = window.stageState.stage.lights;
+        
+        if (!scene || !lights) return;
+        
+        // Update state
+        window.stageState.ui.currentLightingPreset = preset;
+        
+        switch(preset) {
+            case 'normal':
+                scene.background = new THREE.Color(0x001122);
+                scene.fog = new THREE.Fog(0x001122, 10, 100);
+                lights.forEach(light => {
+                    light.intensity = 1;
+                    light.color.setHex(0xffffff);
+                });
+                break;
+            case 'dramatic':
+                scene.background = new THREE.Color(0x000000);
+                scene.fog = new THREE.Fog(0x000000, 5, 50);
+                lights.forEach((light, i) => {
+                    light.intensity = i === 2 ? 1.5 : 0.3; // Center light bright, sides dim
+                    light.color.setHex(0xffffff);
+                });
+                break;
+            case 'evening':
+                scene.background = new THREE.Color(0xFF6B35);
+                scene.fog = new THREE.Fog(0xFF6B35, 15, 90);
+                lights.forEach(light => {
+                    light.intensity = 0.8;
+                    light.color.setHex(0xFFB700); // Warm golden color
+                });
+                break;
+            case 'concert':
+                scene.background = new THREE.Color(0x000033);
+                scene.fog = new THREE.Fog(0x000033, 10, 80);
+                lights.forEach((light, i) => {
+                    light.intensity = 1.2;
+                    light.color.setHex(0x4169e1); // Cool blue color
+                });
+                break;
+            case 'spotlight':
+                scene.background = new THREE.Color(0x000000);
+                scene.fog = new THREE.Fog(0x000000, 5, 30);
+                lights.forEach((light, i) => {
+                    if (i === 2) { // Center spotlight only
+                        light.intensity = 2.0;
+                        light.color.setHex(0xffffff);
+                    } else {
+                        light.intensity = 0.1; // Very dim side lights
+                        light.color.setHex(0xffffff);
+                    }
+                });
+                break;
+            default:
+                // Default case (same as normal)
+                scene.background = new THREE.Color(0x001122);
+                scene.fog = new THREE.Fog(0x001122, 10, 100);
+                lights.forEach(light => {
+                    light.intensity = 1;
+                    light.color.setHex(0xffffff);
+                });
+        }
+        
+        console.log(`Applied lighting preset: ${preset}`);
     }
 
     /**

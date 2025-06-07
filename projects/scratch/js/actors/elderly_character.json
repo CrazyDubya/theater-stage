@@ -1,0 +1,16 @@
+{
+  "name": "elderly_character",
+  "displayName": "Elderly Character",
+  "file": "models/vrm/elderly_character.vrm",
+  "url": "models/vrm/elderly_character.vrm",
+  "metadata": {
+    "age": "elderly",
+    "gender": "female",
+    "style": "casual",
+    "actorType": "elderly_female",
+    "source": "local-file"
+  },
+  "size": "0 B",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

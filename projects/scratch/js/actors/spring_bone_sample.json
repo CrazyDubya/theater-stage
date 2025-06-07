@@ -1,0 +1,16 @@
+{
+  "name": "spring_bone_sample",
+  "displayName": "Spring Bone Sample",
+  "file": "models/vrm/spring_bone_sample.vrm",
+  "url": "models/vrm/spring_bone_sample.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "female",
+    "style": "casual",
+    "actorType": "young_female",
+    "source": "local-file"
+  },
+  "size": "0 B",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

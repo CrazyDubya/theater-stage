@@ -1,0 +1,73 @@
+{
+  "version": "2.0.0",
+  "generated": "2025-06-07T18:34:22.583Z",
+  "totalActors": 1,
+  "failedDownloads": 11,
+  "actorTypes": {
+    "young_female": 1
+  },
+  "actors": {
+    "young_female_casual": {
+      "name": "young_female_casual",
+      "displayName": "Young Female Casual",
+      "file": "models/vrm/young_female_casual.vrm",
+      "url": "./models/vrm/young_female_casual.vrm",
+      "metadata": {
+        "gender": "female",
+        "style": "casual",
+        "age": "young",
+        "source": "pixiv-sample",
+        "actorType": "young_female"
+      },
+      "size": "10 MB",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    }
+  },
+  "failed": [
+    {
+      "name": "basic_female_anime",
+      "error": "HTTP 404: https://github.com/vrm-c/vrm-specification/raw/master/samples/AliciaSolid.vrm"
+    },
+    {
+      "name": "spring_bone_sample",
+      "error": "HTTP 404: https://pixiv.github.io/three-vrm/packages/three-vrm/examples/models/VRM1_SpringBone_Sample.vrm"
+    },
+    {
+      "name": "vroid_sample_a",
+      "error": "HTTP 404: https://booth.pm/downloadables/1654844/download"
+    },
+    {
+      "name": "vroid_sample_b",
+      "error": "HTTP 404: https://booth.pm/downloadables/1654845/download"
+    },
+    {
+      "name": "sample_character_a",
+      "error": "HTTP 404: https://github.com/madjin/vrm-samples/raw/master/CharacterA.vrm"
+    },
+    {
+      "name": "sample_character_b",
+      "error": "HTTP 404: https://github.com/madjin/vrm-samples/raw/master/CharacterB.vrm"
+    },
+    {
+      "name": "elderly_character",
+      "error": "HTTP 404: https://github.com/vrm-samples/elderly/raw/master/elderly.vrm"
+    },
+    {
+      "name": "child_character",
+      "error": "HTTP 404: https://github.com/vrm-samples/child/raw/master/child.vrm"
+    },
+    {
+      "name": "business_woman",
+      "error": "HTTP 404: https://github.com/vrm-samples/business/raw/master/businesswoman.vrm"
+    },
+    {
+      "name": "fantasy_knight",
+      "error": "HTTP 404: https://github.com/vrm-samples/fantasy/raw/master/knight.vrm"
+    },
+    {
+      "name": "fantasy_wizard",
+      "error": "HTTP 404: https://github.com/vrm-samples/fantasy/raw/master/wizard.vrm"
+    }
+  ]
+}

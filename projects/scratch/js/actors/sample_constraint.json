@@ -1,0 +1,16 @@
+{
+  "name": "sample_constraint",
+  "displayName": "Sample Constraint",
+  "file": "models/vrm/sample_constraint.vrm",
+  "url": "models/vrm/sample_constraint.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "female",
+    "style": "casual",
+    "actorType": "young_female",
+    "source": "local-file"
+  },
+  "size": "10 MB",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

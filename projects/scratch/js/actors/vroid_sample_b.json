@@ -1,0 +1,16 @@
+{
+  "name": "vroid_sample_b",
+  "displayName": "Vroid Sample B",
+  "file": "models/vrm/vroid_sample_b.vrm",
+  "url": "models/vrm/vroid_sample_b.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "female",
+    "style": "casual",
+    "actorType": "young_female",
+    "source": "local-file"
+  },
+  "size": "0 B",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

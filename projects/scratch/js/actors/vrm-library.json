@@ -1,0 +1,271 @@
+{
+  "version": "3.0.0",
+  "generated": "2025-06-07T18:44:28.550Z",
+  "totalActors": 16,
+  "actorTypes": {
+    "young_female": 9,
+    "young_male": 3,
+    "child_girl": 1,
+    "elderly_female": 1,
+    "knight": 1,
+    "wizard": 1
+  },
+  "actors": {
+    "alicia_solid": {
+      "name": "alicia_solid",
+      "displayName": "Alicia Solid",
+      "file": "models/vrm/alicia_solid.vrm",
+      "url": "models/vrm/alicia_solid.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "female",
+        "style": "anime",
+        "actorType": "young_female",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "basic_character": {
+      "name": "basic_character",
+      "displayName": "Basic Character",
+      "file": "models/vrm/basic_character.vrm",
+      "url": "models/vrm/basic_character.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "female",
+        "style": "casual",
+        "actorType": "young_female",
+        "source": "local-file"
+      },
+      "size": "87 KB",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "basic_female_anime": {
+      "name": "basic_female_anime",
+      "displayName": "Basic Female Anime",
+      "file": "models/vrm/basic_female_anime.vrm",
+      "url": "models/vrm/basic_female_anime.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "male",
+        "style": "anime",
+        "actorType": "young_male",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "business_woman": {
+      "name": "business_woman",
+      "displayName": "Business Woman",
+      "file": "models/vrm/business_woman.vrm",
+      "url": "models/vrm/business_woman.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "male",
+        "style": "business",
+        "actorType": "young_male",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "child_character": {
+      "name": "child_character",
+      "displayName": "Child Character",
+      "file": "models/vrm/child_character.vrm",
+      "url": "models/vrm/child_character.vrm",
+      "metadata": {
+        "age": "child",
+        "gender": "female",
+        "style": "casual",
+        "actorType": "child_girl",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "elderly_character": {
+      "name": "elderly_character",
+      "displayName": "Elderly Character",
+      "file": "models/vrm/elderly_character.vrm",
+      "url": "models/vrm/elderly_character.vrm",
+      "metadata": {
+        "age": "elderly",
+        "gender": "female",
+        "style": "casual",
+        "actorType": "elderly_female",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "fantasy_knight": {
+      "name": "fantasy_knight",
+      "displayName": "Fantasy Knight",
+      "file": "models/vrm/fantasy_knight.vrm",
+      "url": "models/vrm/fantasy_knight.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "male",
+        "style": "fantasy",
+        "actorType": "knight",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "fantasy_wizard": {
+      "name": "fantasy_wizard",
+      "displayName": "Fantasy Wizard",
+      "file": "models/vrm/fantasy_wizard.vrm",
+      "url": "models/vrm/fantasy_wizard.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "male",
+        "style": "fantasy",
+        "actorType": "wizard",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "sample_character_a": {
+      "name": "sample_character_a",
+      "displayName": "Sample Character A",
+      "file": "models/vrm/sample_character_a.vrm",
+      "url": "models/vrm/sample_character_a.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "female",
+        "style": "casual",
+        "actorType": "young_female",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "sample_character_b": {
+      "name": "sample_character_b",
+      "displayName": "Sample Character B",
+      "file": "models/vrm/sample_character_b.vrm",
+      "url": "models/vrm/sample_character_b.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "female",
+        "style": "casual",
+        "actorType": "young_female",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "sample_constraint": {
+      "name": "sample_constraint",
+      "displayName": "Sample Constraint",
+      "file": "models/vrm/sample_constraint.vrm",
+      "url": "models/vrm/sample_constraint.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "female",
+        "style": "casual",
+        "actorType": "young_female",
+        "source": "local-file"
+      },
+      "size": "10 MB",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "sample_girl": {
+      "name": "sample_girl",
+      "displayName": "Sample Girl",
+      "file": "models/vrm/sample_girl.vrm",
+      "url": "models/vrm/sample_girl.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "female",
+        "style": "casual",
+        "actorType": "young_female",
+        "source": "local-file"
+      },
+      "size": "126 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "spring_bone_sample": {
+      "name": "spring_bone_sample",
+      "displayName": "Spring Bone Sample",
+      "file": "models/vrm/spring_bone_sample.vrm",
+      "url": "models/vrm/spring_bone_sample.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "female",
+        "style": "casual",
+        "actorType": "young_female",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "vroid_sample_a": {
+      "name": "vroid_sample_a",
+      "displayName": "Vroid Sample A",
+      "file": "models/vrm/vroid_sample_a.vrm",
+      "url": "models/vrm/vroid_sample_a.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "female",
+        "style": "casual",
+        "actorType": "young_female",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "vroid_sample_b": {
+      "name": "vroid_sample_b",
+      "displayName": "Vroid Sample B",
+      "file": "models/vrm/vroid_sample_b.vrm",
+      "url": "models/vrm/vroid_sample_b.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "female",
+        "style": "casual",
+        "actorType": "young_female",
+        "source": "local-file"
+      },
+      "size": "0 B",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    },
+    "young_female_casual": {
+      "name": "young_female_casual",
+      "displayName": "Young Female Casual",
+      "file": "models/vrm/young_female_casual.vrm",
+      "url": "models/vrm/young_female_casual.vrm",
+      "metadata": {
+        "age": "young",
+        "gender": "male",
+        "style": "casual",
+        "actorType": "young_male",
+        "source": "local-file"
+      },
+      "size": "10 MB",
+      "type": "vrm_actor",
+      "version": "1.0.0"
+    }
+  }
+}

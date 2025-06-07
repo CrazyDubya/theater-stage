@@ -1,0 +1,22 @@
+{
+  "dependencies": {
+    "@pixiv/three-vrm": "^3.4.1",
+    "three": "^0.169.0"
+  },
+  "name": "scratch",
+  "version": "1.0.0",
+  "description": "An interactive 3D theater stage environment built with Three.js, designed for AI actor performances and theatrical simulations.",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build/bundle.js",
+    "download-vrms": "node build/download-vrms.js",
+    "download-full-vrm-set": "node build/download-full-vrm-set.js",
+    "update-vrm-library": "node build/update-vrm-library.js",
+    "serve": "python3 -m http.server 8080",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module"
+}

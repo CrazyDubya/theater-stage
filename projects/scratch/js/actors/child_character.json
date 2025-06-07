@@ -1,0 +1,16 @@
+{
+  "name": "child_character",
+  "displayName": "Child Character",
+  "file": "models/vrm/child_character.vrm",
+  "url": "models/vrm/child_character.vrm",
+  "metadata": {
+    "age": "child",
+    "gender": "female",
+    "style": "casual",
+    "actorType": "child_girl",
+    "source": "local-file"
+  },
+  "size": "0 B",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

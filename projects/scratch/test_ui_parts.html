@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UI Parts Test</title>
+    <style>body { background: #111; color: white; padding: 20px; }</style>
+</head>
+<body>
+    <h1>Testing UI Component Creation</h1>
+    <div id="test-area"></div>
+    
+    <script src="js/ui/UIFactory.js"></script>
+    
+    <script>
+        const testArea = document.getElementById('test-area');
+        
+        console.log('UIFactory available:', !!window.UIFactory);
+        
+        // Test 1: Simple select
+        console.log('=== Test 1: Simple Select ===');
+        try {
+            const simpleSelect = window.UIFactory.createSelect(
+                [{ value: 'test1', label: 'Test 1' }, { value: 'test2', label: 'Test 2' }],
+                (e) => console.log('Selected:', e.target.value)
+            );
+            testArea.appendChild(simpleSelect);
+            testArea.appendChild(document.createElement('br'));
+            console.log('Simple select created successfully');
+        } catch (error) {
+            console.error('Simple select failed:', error);
+        }
+        
+        // Test 2: Grouped select
+        console.log('=== Test 2: Grouped Select ===');
+        try {
+            const groupedCategories = {
+                'basic': [
+                    { value: 'cube', label: 'Cube' },
+                    { value: 'sphere', label: 'Sphere' }
+                ],
+                'furniture': [
+                    { value: 'chair', label: 'Chair' },
+                    { value: 'table', label: 'Table' }
+                ]
+            };
+            
+            const groupedSelect = window.UIFactory.createSelect(
+                groupedCategories,
+                (e) => console.log('Selected:', e.target.value),
+                { grouped: true }
+            );
+            testArea.appendChild(groupedSelect);
+            testArea.appendChild(document.createElement('br'));
+            console.log('Grouped select created successfully');
+        } catch (error) {
+            console.error('Grouped select failed:', error);
+        }
+        
+        // Test 3: Label and Button
+        console.log('=== Test 3: Label and Button ===');
+        try {
+            const label = window.UIFactory.createLabel('Test Label');
+            const button = window.UIFactory.createButton('Test Button', () => alert('Clicked!'));
+            
+            testArea.appendChild(label);
+            testArea.appendChild(button);
+            testArea.appendChild(document.createElement('br'));
+            console.log('Label and button created successfully');
+        } catch (error) {
+            console.error('Label/button failed:', error);
+        }
+        
+        // Test 4: Manual panel creation
+        console.log('=== Test 4: Manual Panel ===');
+        try {
+            const panel = document.createElement('div');
+            panel.style.cssText = 'padding: 15px; color: white; border: 1px solid #666; margin: 10px 0;';
+            
+            const panelLabel = window.UIFactory.createLabel('Panel Test');
+            const panelSelect = window.UIFactory.createSelect(
+                [{ value: 'option1', label: 'Option 1' }],
+                () => {}
+            );
+            const panelButton = window.UIFactory.createButton('Panel Button', () => {});
+            
+            panel.appendChild(panelLabel);
+            panel.appendChild(panelSelect);
+            panel.appendChild(panelButton);
+            
+            testArea.appendChild(panel);
+            console.log('Manual panel created successfully');
+        } catch (error) {
+            console.error('Manual panel failed:', error);
+        }
+        
+        console.log('All tests completed');
+    </script>
+</body>
+</html>

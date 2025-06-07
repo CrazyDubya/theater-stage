@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>UI Debug</title>
+    <style>
+        body { 
+            margin: 0; 
+            background: #111; 
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        #debug {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            width: 300px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="debug">
+        <h3>Debug Log:</h3>
+        <div id="debugContent"></div>
+    </div>
+    
+    <script>
+        function debugLog(message) {
+            const content = document.getElementById('debugContent');
+            const time = new Date().toLocaleTimeString();
+            content.innerHTML += `<div>[${time}] ${message}</div>`;
+            content.scrollTop = content.scrollHeight;
+            console.log(`[DEBUG] ${message}`);
+        }
+        
+        // Override console.error to catch errors
+        const originalError = console.error;
+        console.error = function(...args) {
+            debugLog('ERROR: ' + args.join(' '));
+            originalError.apply(console, args);
+        };
+        
+        debugLog('Starting debug session...');
+    </script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <script>
+        debugLog('THREE.js loaded: ' + (typeof THREE !== 'undefined'));
+    </script>
+    
+    <!-- Load modules one by one -->
+    <script src="js/core/StateManager.js"></script>
+    <script>
+        debugLog('StateManager loaded: ' + (typeof window.stageState !== 'undefined'));
+    </script>
+    
+    <script src="js/ui/UIFactory.js"></script>
+    <script>
+        debugLog('UIFactory loaded: ' + (typeof window.UIFactory !== 'undefined'));
+    </script>
+    
+    <script src="js/core/SceneManager.js"></script>
+    <script>
+        debugLog('SceneManager loaded: ' + (typeof window.threeSceneManager !== 'undefined'));
+    </script>
+    
+    <script src="js/core/StageBuilder.js"></script>
+    <script>
+        debugLog('StageBuilder loaded: ' + (typeof window.threeStageBuilder !== 'undefined'));
+    </script>
+    
+    <script src="js/core/ObjectFactory.js"></script>
+    <script>
+        debugLog('ObjectFactory loaded: ' + (typeof window.threeObjectFactory !== 'undefined'));
+        if (window.threeObjectFactory) {
+            debugLog('PropCatalog available: ' + (typeof window.threeObjectFactory.getPropCatalog === 'function'));
+        }
+    </script>
+    
+    <script src="js/core/PhysicsEngine.js"></script>
+    <script>
+        debugLog('PhysicsEngine loaded: ' + (typeof window.stagePhysicsEngine !== 'undefined'));
+    </script>
+    
+    <script src="js/core/AudioSystem.js"></script>
+    <script>
+        debugLog('AudioSystem loaded: ' + (typeof window.stageAudioSystem !== 'undefined'));
+    </script>
+    
+    <script src="js/core/TextureManager.js"></script>
+    <script>
+        debugLog('TextureManager loaded: ' + (typeof window.stageTextureManager !== 'undefined'));
+    </script>
+    
+    <script src="js/core/UIManager.js"></script>
+    <script>
+        debugLog('UIManager loaded: ' + (typeof window.stageUIManager !== 'undefined'));
+    </script>
+    
+    <script src="js/core/RenderLoop.js"></script>
+    <script>
+        debugLog('RenderLoop loaded: ' + (typeof window.stageRenderLoop !== 'undefined'));
+    </script>
+    
+    <script>
+        // Test UI creation step by step
+        setTimeout(async () => {
+            debugLog('=== Testing UI Creation ===');
+            
+            try {
+                // Test UIFactory
+                debugLog('Testing UIFactory.createLabel...');
+                const testLabel = window.UIFactory.createLabel('Test Label');
+                debugLog('Label created: ' + (testLabel !== null));
+                
+                debugLog('Testing UIFactory.createButton...');
+                const testButton = window.UIFactory.createButton('Test Button', () => {});
+                debugLog('Button created: ' + (testButton !== null));
+                
+                debugLog('Testing UIFactory.createSelect...');
+                const testSelect = window.UIFactory.createSelect(
+                    [{ value: 'test', label: 'Test Item' }],
+                    () => {}
+                );
+                debugLog('Select created: ' + (testSelect !== null));
+                
+                // Test ObjectFactory
+                if (window.threeObjectFactory) {
+                    debugLog('Testing ObjectFactory.getPropCatalog...');
+                    try {
+                        const catalog = window.threeObjectFactory.getPropCatalog();
+                        debugLog('Catalog retrieved: ' + (catalog !== null));
+                        debugLog('Catalog keys: ' + Object.keys(catalog).length);
+                    } catch (error) {
+                        debugLog('Catalog error: ' + error.message);
+                    }
+                }
+                
+                // Test UIManager initialization
+                debugLog('Testing UIManager initialization...');
+                try {
+                    await window.stageState.initialize();
+                    debugLog('StateManager initialized');
+                    
+                    await window.threeObjectFactory.initialize();
+                    debugLog('ObjectFactory initialized');
+                    
+                    await window.stageUIManager.initialize();
+                    debugLog('UIManager initialized');
+                    
+                    debugLog('Panels created: ' + window.stageUIManager.panels.size);
+                    
+                    window.stageUIManager.panels.forEach((panel, id) => {
+                        debugLog(`Panel ${id}: children=${panel.element.children.length}, display=${panel.element.style.display}`);
+                    });
+                    
+                } catch (error) {
+                    debugLog('Initialization error: ' + error.message);
+                    debugLog('Error stack: ' + error.stack);
+                }
+                
+            } catch (error) {
+                debugLog('Test error: ' + error.message);
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

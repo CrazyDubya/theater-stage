@@ -87,7 +87,18 @@ class StageRenderLoop {
         // Update animations
         this.updateLightingAnimations(animationTime);
         this.updateMarkerAnimations(animationTime);
+        this.updateCurtainAnimations(deltaTime);
         this.updateStageAnimations();
+        
+        // Update hair physics if modern hair system is available
+        if (window.modernHairSystem && window.modernHairSystem.isInitialized) {
+            window.modernHairSystem.updateHairPhysics(deltaTime * 0.001); // Convert to seconds
+        }
+        
+        // Update VRM animations if system is available
+        if (window.vrmActorSystem && window.vrmActorSystem.isInitialized) {
+            window.vrmActorSystem.updateVRMAnimations(deltaTime * 0.001); // Convert to seconds
+        }
         
         // Update physics and relationships
         if (this.frameCounter % this.performanceSettings.relationshipUpdateInterval === 0) {
@@ -185,25 +196,21 @@ class StageRenderLoop {
                 let targetX;
                 
                 if (userData.isBackdrop) {
-                    // Backdrop slides from left (-30 to 0)
-                    const positions = {
-                        0: -30,
-                        0.25: -18,
-                        0.5: -10,
-                        0.75: -5,
-                        1: 0
-                    };
-                    targetX = positions[userData.targetPosition];
+                    // Backdrop slides from left using new corrected positioning
+                    // 0% = -25, 25% = -18.75, 50% = -12.5, 75% = -6.25, 100% = 0
+                    if (userData.targetPosition === 0) {
+                        targetX = -25;
+                    } else {
+                        targetX = -25 + (userData.targetPosition * 25);
+                    }
                 } else {
-                    // Midstage slides from right (30 to 0)
-                    const positions = {
-                        0: 30,
-                        0.25: 18,
-                        0.5: 10,
-                        0.75: 5,
-                        1: 0
-                    };
-                    targetX = positions[userData.targetPosition];
+                    // Midstage slides from right using new corrected positioning  
+                    // 0% = +25, 25% = +18.75, 50% = +12.5, 75% = +6.25, 100% = 0
+                    if (userData.targetPosition === 0) {
+                        targetX = 25;
+                    } else {
+                        targetX = 25 - (userData.targetPosition * 25);
+                    }
                 }
                 
                 const diff = targetX - panel.position.x;
@@ -244,13 +251,9 @@ class StageRenderLoop {
      * Update object relationships (platform, rotating stage, trap door associations)
      */
     updateAllObjectRelationships() {
-        const allObjects = [...window.stageState.props, ...window.stageState.actors];
-        
-        allObjects.forEach(obj => {
-            if (!obj.userData.hidden && window.updatePropRelationships) {
-                window.updatePropRelationships(obj);
-            }
-        });
+        if (window.stagePhysicsEngine) {
+            window.stagePhysicsEngine.updateAllObjectRelationships();
+        }
     }
 
     /**
@@ -494,6 +497,52 @@ class StageRenderLoop {
             frameTime: window.stageState.performance.stats.frameTime,
             activeObjects: window.stageState.performance.stats.activeObjects
         };
+    }
+
+    /**
+     * Update curtain animations for smooth opening/closing
+     */
+    updateCurtainAnimations(deltaTime) {
+        const curtains = window.stageState?.stage?.curtains;
+        if (!curtains) return;
+        
+        const animationSpeed = 0.03; // Smooth animation speed
+        
+        // Animate left curtain
+        if (curtains.left?.userData?.animating) {
+            const left = curtains.left;
+            const diff = left.userData.targetX - left.position.x;
+            if (Math.abs(diff) > 0.1) {
+                left.position.x += diff * animationSpeed;
+            } else {
+                left.position.x = left.userData.targetX;
+                left.userData.animating = false;
+            }
+        }
+        
+        // Animate right curtain
+        if (curtains.right?.userData?.animating) {
+            const right = curtains.right;
+            const diff = right.userData.targetX - right.position.x;
+            if (Math.abs(diff) > 0.1) {
+                right.position.x += diff * animationSpeed;
+            } else {
+                right.position.x = right.userData.targetX;
+                right.userData.animating = false;
+            }
+        }
+        
+        // Animate top curtain (front curtain)
+        if (curtains.top?.userData?.animating) {
+            const top = curtains.top;
+            const diff = top.userData.targetY - top.position.y;
+            if (Math.abs(diff) > 0.1) {
+                top.position.y += diff * animationSpeed;
+            } else {
+                top.position.y = top.userData.targetY;
+                top.userData.animating = false;
+            }
+        }
     }
 
     /**

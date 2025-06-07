@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head><title>ObjectFactory Test</title></head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/core/StateManager.js"></script>
+    <script src="js/core/ObjectFactory.js"></script>
+    <script>
+        window.addEventListener('load', async () => {
+            console.log('Testing ObjectFactory...');
+            
+            // Mock ResourceManager
+            window.resourceManager = {
+                getGeometry: () => new THREE.BoxGeometry(1,1,1),
+                getMaterial: () => new THREE.MeshPhongMaterial({color: 0x808080})
+            };
+            
+            // Mock checkAllCollisions
+            window.checkAllCollisions = () => false;
+            window.updatePropRelationships = () => {};
+            
+            // Initialize state
+            await window.stageState.initialize();
+            
+            console.log('StateManager initialized:', window.stageState.isInitialized);
+            
+            // Initialize ObjectFactory
+            await window.threeObjectFactory.initialize();
+            
+            console.log('ObjectFactory initialized:', window.threeObjectFactory.isInitialized);
+            
+            // Test getPropCatalog
+            try {
+                const catalog = window.threeObjectFactory.getPropCatalog();
+                console.log('Catalog retrieved:', !!catalog);
+                console.log('Catalog keys:', Object.keys(catalog));
+                console.log('First prop:', Object.values(catalog)[0]);
+            } catch (error) {
+                console.error('Catalog error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

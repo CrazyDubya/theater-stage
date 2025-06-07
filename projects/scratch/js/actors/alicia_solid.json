@@ -1,0 +1,16 @@
+{
+  "name": "alicia_solid",
+  "displayName": "Alicia Solid",
+  "file": "models/vrm/alicia_solid.vrm",
+  "url": "models/vrm/alicia_solid.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "female",
+    "style": "anime",
+    "actorType": "young_female",
+    "source": "local-file"
+  },
+  "size": "0 B",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Theater Test</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        Basic Theater Test • No VRM • Basic Functionality Only
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <!-- Core Components Only (Skip VRM) -->
+    <script src="js/core/StateManager.js"></script>
+    <script src="js/core/SceneManager.js"></script>
+    <script src="js/core/StageBuilder.js"></script>
+    <script src="js/core/ObjectFactory.js"></script>
+    <script src="js/core/PhysicsEngine.js"></script>
+    <script src="js/core/AudioSystem.js"></script>
+    <script src="js/core/TextureManager.js"></script>
+    <script src="js/core/EnhancedActorSystem.js"></script>
+    <!-- Skip VRMActorSystem for now -->
+    <script src="js/core/UIManager.js"></script>
+    <script src="js/core/RenderLoop.js"></script>
+    <script src="js/ui/UIFactory.js"></script>
+    
+    <!-- Basic Theater Test Script -->
+    <script>
+        async function initBasicTheater() {
+            console.log('Starting basic theater test...');
+            
+            // Initialize core modules
+            await window.stageState.initialize();
+            await window.sceneManager.initialize();
+            await window.stageBuilder.initialize();
+            await window.objectFactory.initialize();
+            await window.physicsEngine.initialize();
+            await window.audioSystem.initialize();
+            await window.textureManager.initialize();
+            await window.enhancedActorSystem.initialize();
+            await window.uiManager.initialize();
+            await window.renderLoop.initialize();
+            
+            console.log('Basic theater initialized successfully!');
+            
+            // Test: Add a basic enhanced actor
+            const actor = window.enhancedActorSystem.createEnhancedActor('human_male');
+            if (actor) {
+                console.log('Enhanced actor created successfully');
+            }
+            
+            // Start render loop
+            window.renderLoop.start();
+            
+            document.getElementById('info').innerHTML = 'Basic Theater Test ✅ • Enhanced actors working • No VRM needed';
+        }
+        
+        // Start when page loads
+        window.addEventListener('load', initBasicTheater);
+    </script>
+</body>
+</html>

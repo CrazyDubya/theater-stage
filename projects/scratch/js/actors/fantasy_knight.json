@@ -1,0 +1,16 @@
+{
+  "name": "fantasy_knight",
+  "displayName": "Fantasy Knight",
+  "file": "models/vrm/fantasy_knight.vrm",
+  "url": "models/vrm/fantasy_knight.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "male",
+    "style": "fantasy",
+    "actorType": "knight",
+    "source": "local-file"
+  },
+  "size": "0 B",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}

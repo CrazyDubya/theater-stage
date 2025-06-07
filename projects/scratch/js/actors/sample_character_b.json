@@ -1,0 +1,16 @@
+{
+  "name": "sample_character_b",
+  "displayName": "Sample Character B",
+  "file": "models/vrm/sample_character_b.vrm",
+  "url": "models/vrm/sample_character_b.vrm",
+  "metadata": {
+    "age": "young",
+    "gender": "female",
+    "style": "casual",
+    "actorType": "young_female",
+    "source": "local-file"
+  },
+  "size": "0 B",
+  "type": "vrm_actor",
+  "version": "1.0.0"
+}
