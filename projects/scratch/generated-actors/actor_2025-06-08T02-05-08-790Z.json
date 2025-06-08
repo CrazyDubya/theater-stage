@@ -1,0 +1,83 @@
+{
+  "id": "actor_1749348308788_qa0gqkr3j",
+  "generatedAt": "2025-06-08T02:05:08.788Z",
+  "parameters": {
+    "ethnicity": "african"
+  },
+  "facial": {
+    "faceShape": "oval",
+    "faceWidth": 1.0256237432464492,
+    "faceHeight": 1.01459751723931,
+    "eyeColor": "gray",
+    "eyeSize": 0.07253056423422291,
+    "eyeSpacing": 0.259444509888741,
+    "noseShape": "button",
+    "noseWidth": 0.19802174121624705,
+    "noseLength": 0.20052578327321885,
+    "mouthShape": "full",
+    "mouthWidth": 0.09883998289861101,
+    "lipThickness": 0.04513618077104296,
+    "jawline": 0.43066566823795077,
+    "cheekbones": 0.4381126003111171,
+    "aiEnhanced": true,
+    "correlationApplied": {
+      "ethnicity": "african",
+      "ageGroup": "young",
+      "gender": "female"
+    }
+  },
+  "body": {
+    "height": 1.9021750904085595,
+    "scale": 1,
+    "proportions": {
+      "torso": 0.5272637070123957,
+      "legs": 0.49397034825651454,
+      "arms": 0.46237845705643627,
+      "shoulders": 1.0695791836034065,
+      "hips": 1.0158709175404983
+    },
+    "muscle": {
+      "definition": 0.5,
+      "distribution": {
+        "definition": "low"
+      }
+    },
+    "enhanced": true
+  },
+  "clothing": {
+    "style": "athletic",
+    "colors": [
+      "#ff4500"
+    ],
+    "fit": "regular",
+    "accessories": "hat",
+    "enhanced": true,
+    "neuralCloth": {
+      "fabric": "polyester",
+      "properties": {
+        "stiffness": 0.5,
+        "stretch": 0.15,
+        "drape": 0.5,
+        "weight": "light"
+      },
+      "garmentType": "shirt",
+      "physicsEnabled": true,
+      "simulationQuality": "standard",
+      "constraintPoints": [
+        "collar",
+        "cuffs",
+        "hem"
+      ]
+    }
+  },
+  "metadata": {
+    "version": "2.0.0",
+    "generator": "CLI",
+    "seed": null,
+    "preset": null,
+    "enhanced": true,
+    "clothPhysics": true,
+    "facialAI": true,
+    "quality": "standard"
+  }
+}

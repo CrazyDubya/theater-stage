@@ -1,0 +1,86 @@
+{
+  "id": "actor_1749348338221_05spgjqdm",
+  "generatedAt": "2025-06-08T02:05:38.221Z",
+  "parameters": {
+    "ethnicity": "african",
+    "gender": "female",
+    "ageGroup": "young"
+  },
+  "facial": {
+    "faceShape": "oval",
+    "faceWidth": 1.024488134510841,
+    "faceHeight": 0.9787364462812194,
+    "eyeColor": "gray",
+    "eyeSize": 0.10639061524199564,
+    "eyeSpacing": 0.2530589014524947,
+    "noseShape": "straight",
+    "noseWidth": 0.22597176149006257,
+    "noseLength": 0.18563188096019573,
+    "mouthShape": "wide",
+    "mouthWidth": 0.12965747848688738,
+    "lipThickness": 0.06775842708921893,
+    "jawline": 0.4414769593535823,
+    "cheekbones": 0.4582465067779473,
+    "aiEnhanced": true,
+    "correlationApplied": {
+      "ethnicity": "african",
+      "ageGroup": "young",
+      "gender": "female"
+    }
+  },
+  "body": {
+    "height": 1.5714048039278121,
+    "scale": 1,
+    "proportions": {
+      "torso": 0.5181174608790811,
+      "legs": 0.4956042079802336,
+      "arms": 0.43830056874409645,
+      "shoulders": 1.0242247253635652,
+      "hips": 1.0278751261159145
+    },
+    "muscle": {
+      "definition": 0.5,
+      "distribution": {
+        "definition": "low"
+      }
+    },
+    "enhanced": true
+  },
+  "clothing": {
+    "style": "formal",
+    "colors": [
+      "#2f4f4f"
+    ],
+    "fit": "regular",
+    "accessories": "glasses",
+    "enhanced": true,
+    "neuralCloth": {
+      "fabric": "silk",
+      "properties": {
+        "stiffness": 0.3,
+        "stretch": 0.2,
+        "drape": 0.9,
+        "weight": "light"
+      },
+      "garmentType": "jacket",
+      "physicsEnabled": true,
+      "simulationQuality": "standard",
+      "constraintPoints": [
+        "collar",
+        "cuffs",
+        "hem",
+        "buttons"
+      ]
+    }
+  },
+  "metadata": {
+    "version": "2.0.0",
+    "generator": "CLI",
+    "seed": null,
+    "preset": null,
+    "enhanced": true,
+    "clothPhysics": true,
+    "facialAI": true,
+    "quality": "standard"
+  }
+}

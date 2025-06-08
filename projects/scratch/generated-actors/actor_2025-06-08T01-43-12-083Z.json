@@ -1,0 +1,62 @@
+{
+  "id": "actor_1749346992082_e7hjzmqcw",
+  "generatedAt": "2025-06-08T01:43:12.082Z",
+  "parameters": {
+    "ethnicity": "african",
+    "ageGroup": "young",
+    "gender": "female"
+  },
+  "facial": {
+    "faceShape": "square",
+    "faceWidth": 1.048177503577268,
+    "faceHeight": 0.9877871147769133,
+    "eyeColor": "gray",
+    "eyeSize": 0.08610054981350111,
+    "eyeSpacing": 0.27245537489456195,
+    "noseShape": "button",
+    "noseWidth": 0.17851866291716292,
+    "noseLength": 0.23242407153507938,
+    "mouthShape": "thin",
+    "mouthWidth": 0.11433801892827736,
+    "lipThickness": 0.039863753788047386,
+    "jawline": 0.43989204565069806,
+    "cheekbones": 0.3807072875855205
+  },
+  "body": {
+    "height": 1.6203570389055868,
+    "scale": 1,
+    "proportions": {
+      "torso": 0.5108970155829818,
+      "legs": 0.5221242286058259,
+      "arms": 0.47607482212754004,
+      "shoulders": 1.0122660419944616,
+      "hips": 0.9356174540470069
+    },
+    "muscle": {
+      "definition": 0.5,
+      "distribution": {
+        "definition": "low"
+      }
+    },
+    "enhanced": false
+  },
+  "clothing": {
+    "style": "business",
+    "colors": [
+      "#ffffff"
+    ],
+    "fit": "regular",
+    "accessories": "glasses",
+    "enhanced": false
+  },
+  "metadata": {
+    "version": "2.0.0",
+    "generator": "CLI",
+    "seed": null,
+    "preset": null,
+    "enhanced": false,
+    "clothPhysics": false,
+    "facialAI": false,
+    "quality": "standard"
+  }
+}

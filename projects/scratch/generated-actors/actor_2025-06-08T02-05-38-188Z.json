@@ -1,0 +1,62 @@
+{
+  "id": "actor_1749348338187_z1g0owy2l",
+  "generatedAt": "2025-06-08T02:05:38.187Z",
+  "parameters": {
+    "ethnicity": "african",
+    "gender": "female",
+    "ageGroup": "young"
+  },
+  "facial": {
+    "faceShape": "heart",
+    "faceWidth": 1.0188392033448486,
+    "faceHeight": 1.024869187815191,
+    "eyeColor": "green",
+    "eyeSize": 0.07972138214216588,
+    "eyeSpacing": 0.29078544743444046,
+    "noseShape": "snub",
+    "noseWidth": 0.14677910768259234,
+    "noseLength": 0.20087592231355253,
+    "mouthShape": "full",
+    "mouthWidth": 0.09589430035070921,
+    "lipThickness": 0.043466400545344654,
+    "jawline": 0.41033201741568737,
+    "cheekbones": 0.48924192646108755
+  },
+  "body": {
+    "height": 1.667977852885963,
+    "scale": 1,
+    "proportions": {
+      "torso": 0.5055057087316764,
+      "legs": 0.49701196604475917,
+      "arms": 0.46992461044361755,
+      "shoulders": 0.9841804820664125,
+      "hips": 1.0240812963546821
+    },
+    "muscle": {
+      "definition": 0.5,
+      "distribution": {
+        "definition": "low"
+      }
+    },
+    "enhanced": false
+  },
+  "clothing": {
+    "style": "casual",
+    "colors": [
+      "#ff69b4"
+    ],
+    "fit": "regular",
+    "accessories": "jewelry",
+    "enhanced": false
+  },
+  "metadata": {
+    "version": "2.0.0",
+    "generator": "CLI",
+    "seed": null,
+    "preset": null,
+    "enhanced": false,
+    "clothPhysics": false,
+    "facialAI": false,
+    "quality": "standard"
+  }
+}

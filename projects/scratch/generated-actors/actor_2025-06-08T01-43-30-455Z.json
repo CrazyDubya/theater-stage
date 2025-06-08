@@ -1,0 +1,85 @@
+{
+  "id": "actor_1749347010454_res4fp8lm",
+  "generatedAt": "2025-06-08T01:43:30.454Z",
+  "parameters": {
+    "ethnicity": "african",
+    "ageGroup": "young",
+    "gender": "female"
+  },
+  "facial": {
+    "faceShape": "round",
+    "faceWidth": 0.9548968788680483,
+    "faceHeight": 1.008593650901612,
+    "eyeColor": "green",
+    "eyeSize": 0.10804514420086662,
+    "eyeSpacing": 0.2986690632523698,
+    "noseShape": "button",
+    "noseWidth": 0.18949496164152405,
+    "noseLength": 0.16433874223543893,
+    "mouthShape": "full",
+    "mouthWidth": 0.1354793164774474,
+    "lipThickness": 0.0710051233336768,
+    "jawline": 0.2991830577037068,
+    "cheekbones": 0.3594718195705774,
+    "aiEnhanced": true,
+    "correlationApplied": {
+      "ethnicity": "african",
+      "ageGroup": "young",
+      "gender": "female"
+    }
+  },
+  "body": {
+    "height": 1.9499318352878585,
+    "scale": 1,
+    "proportions": {
+      "torso": 0.5341712425971524,
+      "legs": 0.49223462398210727,
+      "arms": 0.4914515107151048,
+      "shoulders": 1.0406003015454055,
+      "hips": 1.0645053905474866
+    },
+    "muscle": {
+      "definition": 0.5,
+      "distribution": {
+        "definition": "low"
+      }
+    },
+    "enhanced": true
+  },
+  "clothing": {
+    "style": "athletic",
+    "colors": [
+      "#32cd32"
+    ],
+    "fit": "regular",
+    "accessories": "hat",
+    "enhanced": true,
+    "neuralCloth": {
+      "fabric": "spandex",
+      "properties": {
+        "stiffness": 0.2,
+        "stretch": 0.8,
+        "drape": 0.4,
+        "weight": "light"
+      },
+      "garmentType": "shirt",
+      "physicsEnabled": true,
+      "simulationQuality": "standard",
+      "constraintPoints": [
+        "collar",
+        "cuffs",
+        "hem"
+      ]
+    }
+  },
+  "metadata": {
+    "version": "2.0.0",
+    "generator": "CLI",
+    "seed": null,
+    "preset": null,
+    "enhanced": true,
+    "clothPhysics": true,
+    "facialAI": true,
+    "quality": "standard"
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "id": "actor_1749347966858_8deddavvu",
+  "generatedAt": "2025-06-08T01:59:26.858Z",
+  "parameters": {
+    "ethnicity": "asian",
+    "ageGroup": "elderly",
+    "gender": "male"
+  },
+  "facial": {
+    "faceShape": "round",
+    "faceWidth": 0.9781351831838172,
+    "faceHeight": 0.9938167386498605,
+    "eyeColor": "hazel",
+    "eyeSize": 0.052142988031964925,
+    "eyeSpacing": 0.25521791593012655,
+    "noseShape": "straight",
+    "noseWidth": 0.15617312592941548,
+    "noseLength": 0.21811279671193,
+    "mouthShape": "thin",
+    "mouthWidth": 0.1118691600347284,
+    "lipThickness": 0.029394133068583718,
+    "jawline": 0.43568353661438086,
+    "cheekbones": 0.3696063128563587,
+    "aiEnhanced": true,
+    "correlationApplied": {
+      "ethnicity": "asian",
+      "ageGroup": "elderly",
+      "gender": "male"
+    }
+  },
+  "body": {
+    "height": 1.8683893407745973,
+    "scale": 1,
+    "proportions": {
+      "torso": 0.5114169630463683,
+      "legs": 0.4706961871560165,
+      "arms": 0.4823806362682836,
+      "shoulders": 1.0554494395166691,
+      "hips": 1.0631197202440128
+    },
+    "muscle": {
+      "definition": 0.5,
+      "distribution": {
+        "definition": "low"
+      }
+    },
+    "enhanced": true
+  },
+  "clothing": {
+    "style": "formal",
+    "colors": [
+      "#8b0000"
+    ],
+    "fit": "regular",
+    "accessories": "jewelry",
+    "enhanced": true,
+    "neuralCloth": {
+      "fabric": "wool",
+      "properties": {
+        "stiffness": 0.7,
+        "stretch": 0.3,
+        "drape": 0.6,
+        "weight": "heavy"
+      },
+      "garmentType": "jacket",
+      "physicsEnabled": true,
+      "simulationQuality": "standard",
+      "constraintPoints": [
+        "collar",
+        "cuffs",
+        "hem",
+        "buttons"
+      ]
+    }
+  },
+  "metadata": {
+    "version": "2.0.0",
+    "generator": "CLI",
+    "seed": null,
+    "preset": null,
+    "enhanced": true,
+    "clothPhysics": true,
+    "facialAI": true,
+    "quality": "standard"
+  }
+}

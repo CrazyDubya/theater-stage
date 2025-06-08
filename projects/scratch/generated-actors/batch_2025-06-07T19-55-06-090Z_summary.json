@@ -1,0 +1,43 @@
+{
+  "batchId": "2025-06-07T19-55-06-090Z",
+  "generatedAt": "2025-06-07T19:55:06.092Z",
+  "count": 3,
+  "preset": "crowd",
+  "seed": null,
+  "format": "json",
+  "actors": [
+    {
+      "id": "actor_1749326106091_3ffz720bj",
+      "filename": "actor_2025-06-07T19-55-06-090Z_000.json",
+      "parameters": {
+        "gender": "female",
+        "ageGroup": "middle",
+        "build": "stocky",
+        "clothing": "casual_modern",
+        "ethnicity": "european"
+      }
+    },
+    {
+      "id": "actor_1749326106091_hb6js4zlm",
+      "filename": "actor_2025-06-07T19-55-06-090Z_001.json",
+      "parameters": {
+        "gender": "male",
+        "ageGroup": "elderly",
+        "build": "athletic",
+        "clothing": "casual_modern",
+        "ethnicity": "asian"
+      }
+    },
+    {
+      "id": "actor_1749326106092_fa10docjs",
+      "filename": "actor_2025-06-07T19-55-06-090Z_002.json",
+      "parameters": {
+        "gender": "female",
+        "ageGroup": "elderly",
+        "build": "athletic",
+        "clothing": "casual_modern",
+        "ethnicity": "european"
+      }
+    }
+  ]
+}
