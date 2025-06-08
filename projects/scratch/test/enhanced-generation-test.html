@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Generation Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+        }
+
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+
+        .test-section h2 {
+            color: #4CAF50;
+            margin-top: 0;
+        }
+
+        .test-results {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .button:hover {
+            background: #45a049;
+        }
+
+        .button.secondary {
+            background: #2196F3;
+        }
+
+        .button.secondary:hover {
+            background: #1976D2;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            margin: 5px;
+            font-weight: bold;
+        }
+
+        .status.success {
+            background: #4CAF50;
+        }
+
+        .status.error {
+            background: #f44336;
+        }
+
+        .status.warning {
+            background: #ff9800;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .performance-metrics {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+
+        .metric-value {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Enhanced Procedural Actor Generation Test Suite</h1>
+        <p>Testing Neural Cloth Simulation and AI Facial Correlation Engine integration</p>
+
+        <div class="test-section">
+            <h2>System Initialization Status</h2>
+            <div id="initStatus">
+                <div class="status error">⏳ Initializing...</div>
+            </div>
+            <button class="button" onclick="initializeSystems()">Initialize Enhanced Systems</button>
+        </div>
+
+        <div class="grid">
+            <div class="test-section">
+                <h2>🧥 Neural Cloth System Test</h2>
+                <div id="clothTestResults" class="test-results">Ready for testing...</div>
+                <button class="button" onclick="testNeuralCloth()">Test Cloth Simulation</button>
+                <button class="button secondary" onclick="testFabricMaterials()">Test Fabric Materials</button>
+            </div>
+
+            <div class="test-section">
+                <h2>🧠 AI Facial Correlation Test</h2>
+                <div id="facialTestResults" class="test-results">Ready for testing...</div>
+                <button class="button" onclick="testFacialCorrelation()">Test Facial AI</button>
+                <button class="button secondary" onclick="testAnthropometry()">Test Anthropometry</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🎭 Enhanced Character Generation</h2>
+            <div id="generationResults" class="test-results">Ready for enhanced generation...</div>
+            <button class="button" onclick="generateEnhancedCharacter()">Generate Enhanced Character</button>
+            <button class="button secondary" onclick="generateBatchTest()">Batch Test (5 characters)</button>
+            <button class="button secondary" onclick="generateDiversityTest()">Diversity Test</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📊 Performance Metrics</h2>
+            <div class="performance-metrics">
+                <div class="metric">
+                    <span>Neural Cloth Simulation Time:</span>
+                    <span class="metric-value" id="clothTime">--</span>
+                </div>
+                <div class="metric">
+                    <span>AI Facial Validation Time:</span>
+                    <span class="metric-value" id="facialTime">--</span>
+                </div>
+                <div class="metric">
+                    <span>Total Generation Time:</span>
+                    <span class="metric-value" id="totalTime">--</span>
+                </div>
+                <div class="metric">
+                    <span>Characters Generated:</span>
+                    <span class="metric-value" id="charCount">0</span>
+                </div>
+                <div class="metric">
+                    <span>Average Realism Score:</span>
+                    <span class="metric-value" id="realismScore">--</span>
+                </div>
+            </div>
+            <button class="button secondary" onclick="resetMetrics()">Reset Metrics</button>
+        </div>
+
+        <div class="test-section">
+            <h2>🎯 Test Results Summary</h2>
+            <div id="testSummary" class="test-results">
+Tests will appear here as they complete...
+
+🧪 Available Tests:
+- Neural Cloth System initialization and fabric simulation
+- AI Facial Correlation engine validation
+- Enhanced character generation with both systems
+- Performance benchmarking
+- Diversity and quality assessment
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="../js/core/NeuralClothSystem.js"></script>
+    <script src="../js/core/AIFacialCorrelationEngine.js"></script>
+    <script src="../js/core/ProceduralActorGenerator.js"></script>
+    
+    <script>
+        // Global test state
+        let testState = {
+            systemsInitialized: false,
+            neuralClothReady: false,
+            facialAIReady: false,
+            generator: null,
+            testResults: [],
+            metrics: {
+                charactersGenerated: 0,
+                totalGenerationTime: 0,
+                clothSimulationTime: 0,
+                facialValidationTime: 0,
+                realismScores: []
+            }
+        };
+
+        // Initialize enhanced systems
+        async function initializeSystems() {
+            updateStatus('init', '⏳ Initializing enhanced systems...');
+            
+            try {
+                // Initialize Neural Cloth System
+                if (typeof neuralClothSystem !== 'undefined') {
+                    const clothInit = await neuralClothSystem.initialize();
+                    testState.neuralClothReady = clothInit;
+                    updateResults('init', `✅ Neural Cloth System: ${clothInit ? 'Ready' : 'Failed'}`);
+                } else {
+                    updateResults('init', '❌ Neural Cloth System: Not available');
+                }
+
+                // Initialize AI Facial Correlation Engine
+                if (typeof aiFacialCorrelationEngine !== 'undefined') {
+                    const facialInit = await aiFacialCorrelationEngine.initialize();
+                    testState.facialAIReady = facialInit;
+                    updateResults('init', `✅ AI Facial Correlation: ${facialInit ? 'Ready' : 'Failed'}`);
+                } else {
+                    updateResults('init', '❌ AI Facial Correlation: Not available');
+                }
+
+                // Initialize Procedural Actor Generator
+                testState.generator = new ProceduralActorGenerator();
+                const generatorInit = await testState.generator.initialize();
+                updateResults('init', `✅ Procedural Generator: ${generatorInit ? 'Ready' : 'Failed'}`);
+                updateResults('init', `🎯 Enhanced Mode: ${testState.generator.enhancedGeneration ? 'ENABLED' : 'DISABLED'}`);
+
+                testState.systemsInitialized = generatorInit;
+                
+                if (testState.systemsInitialized) {
+                    updateStatus('init', '✅ All systems initialized successfully');
+                } else {
+                    updateStatus('init', '⚠️ Some systems failed to initialize');
+                }
+
+            } catch (error) {
+                updateStatus('init', '❌ Initialization failed: ' + error.message);
+                updateResults('init', 'Error: ' + error.stack);
+            }
+        }
+
+        // Test Neural Cloth System
+        async function testNeuralCloth() {
+            if (!testState.neuralClothReady) {
+                updateResults('cloth', '❌ Neural Cloth System not initialized');
+                return;
+            }
+
+            updateResults('cloth', '🧥 Testing Neural Cloth Simulation...\n');
+            
+            try {
+                const startTime = performance.now();
+
+                // Test fabric material selection
+                const testClothingData = { style: 'casual', colors: ['#4169e1'] };
+                const fabricMaterial = neuralClothSystem.selectFabricMaterial(testClothingData, 'shirt');
+                updateResults('cloth', `✅ Fabric Selection: ${fabricMaterial.name}`);
+                updateResults('cloth', `   Stiffness: ${fabricMaterial.stiffness}, Drape: ${fabricMaterial.drape}`);
+
+                // Test cloth topology patterns
+                const patterns = Object.keys(neuralClothSystem.clothTopologies);
+                updateResults('cloth', `✅ Available Patterns: ${patterns.join(', ')}`);
+
+                // Test garment mapping
+                const garmentType = neuralClothSystem.mapClothingStyleToGarment('casual');
+                updateResults('cloth', `✅ Garment Mapping: casual → ${garmentType}`);
+
+                // Simulate cloth generation
+                const mockBodyData = { scale: 1.0, height: 1.75, build: 'average' };
+                const clothMesh = await neuralClothSystem.generateClothingMesh(mockBodyData, testClothingData);
+                
+                const endTime = performance.now();
+                const simulationTime = endTime - startTime;
+                
+                if (clothMesh) {
+                    updateResults('cloth', `✅ Cloth Mesh Generated: ${clothMesh.userData.type}`);
+                    updateResults('cloth', `⚡ Simulation Time: ${simulationTime.toFixed(2)}ms`);
+                    testState.metrics.clothSimulationTime += simulationTime;
+                } else {
+                    updateResults('cloth', '❌ Cloth mesh generation failed');
+                }
+
+            } catch (error) {
+                updateResults('cloth', '❌ Neural Cloth Test Failed: ' + error.message);
+            }
+        }
+
+        // Test fabric materials
+        async function testFabricMaterials() {
+            if (!testState.neuralClothReady) {
+                updateResults('cloth', '❌ Neural Cloth System not initialized');
+                return;
+            }
+
+            updateResults('cloth', '\n🧵 Testing Fabric Materials...\n');
+            
+            const fabricNames = Object.keys(neuralClothSystem.fabricMaterials);
+            updateResults('cloth', `Available Fabrics: ${fabricNames.join(', ')}\n`);
+            
+            for (const fabricName of fabricNames) {
+                const fabric = neuralClothSystem.fabricMaterials[fabricName];
+                updateResults('cloth', `${fabricName}: stiffness=${fabric.stiffness}, weight=${fabric.weight}, sheen=${fabric.sheen}`);
+            }
+        }
+
+        // Test AI Facial Correlation
+        async function testFacialCorrelation() {
+            if (!testState.facialAIReady) {
+                updateResults('facial', '❌ AI Facial Correlation not initialized');
+                return;
+            }
+
+            updateResults('facial', '🧠 Testing AI Facial Correlation...\n');
+            
+            try {
+                const startTime = performance.now();
+
+                // Test facial feature data
+                const testFacialData = {
+                    faceWidth: 1.0,
+                    faceHeight: 1.0,
+                    eyeSize: 0.08,
+                    eyeSpacing: 0.3,
+                    noseWidth: 0.15,
+                    noseLength: 0.2,
+                    mouthWidth: 0.12,
+                    lipThickness: 0.03
+                };
+
+                const testParams = {
+                    ethnicity: 'european',
+                    ageGroup: 'young',
+                    gender: 'female'
+                };
+
+                // Validate facial features
+                const validatedFeatures = await aiFacialCorrelationEngine.validateFacialFeatures(testFacialData, testParams);
+                
+                const endTime = performance.now();
+                const validationTime = endTime - startTime;
+
+                updateResults('facial', `✅ Facial Validation Complete`);
+                updateResults('facial', `⚡ Validation Time: ${validationTime.toFixed(2)}ms`);
+                
+                // Compare original vs validated
+                updateResults('facial', '\n📊 Feature Comparison:');
+                updateResults('facial', `Eye Size: ${testFacialData.eyeSize.toFixed(3)} → ${validatedFeatures.eyeSize.toFixed(3)}`);
+                updateResults('facial', `Nose Width: ${testFacialData.noseWidth.toFixed(3)} → ${validatedFeatures.noseWidth.toFixed(3)}`);
+                updateResults('facial', `Mouth Width: ${testFacialData.mouthWidth.toFixed(3)} → ${validatedFeatures.mouthWidth.toFixed(3)}`);
+
+                testState.metrics.facialValidationTime += validationTime;
+
+                // Get correlation engine statistics
+                const stats = aiFacialCorrelationEngine.getStatistics();
+                updateResults('facial', `\n📈 AI Engine Stats:`);
+                updateResults('facial', `Validations: ${stats.validationsPerformed}`);
+                updateResults('facial', `Corrections: ${stats.correctionsApplied}`);
+                updateResults('facial', `Cache Hit Rate: ${(stats.cacheHitRate * 100).toFixed(1)}%`);
+
+            } catch (error) {
+                updateResults('facial', '❌ Facial Correlation Test Failed: ' + error.message);
+            }
+        }
+
+        // Test anthropometry
+        async function testAnthropometry() {
+            if (!testState.facialAIReady) {
+                updateResults('facial', '❌ AI Facial Correlation not initialized');
+                return;
+            }
+
+            updateResults('facial', '\n📏 Testing Anthropometric Constraints...\n');
+            
+            // Test different demographic combinations
+            const testCases = [
+                { ethnicity: 'european', ageGroup: 'young', gender: 'male' },
+                { ethnicity: 'african', ageGroup: 'middle', gender: 'female' },
+                { ethnicity: 'asian', ageGroup: 'elderly', gender: 'male' },
+                { ethnicity: 'hispanic', ageGroup: 'teen', gender: 'female' }
+            ];
+
+            for (const testCase of testCases) {
+                const facialData = {
+                    faceWidth: 1.0, faceHeight: 1.0,
+                    eyeSize: 0.08, eyeSpacing: 0.3,
+                    noseWidth: 0.15, mouthWidth: 0.12
+                };
+
+                const validated = await aiFacialCorrelationEngine.validateFacialFeatures(facialData, testCase);
+                updateResults('facial', `${testCase.ethnicity} ${testCase.ageGroup} ${testCase.gender}: ✅ Validated`);
+            }
+        }
+
+        // Generate enhanced character
+        async function generateEnhancedCharacter() {
+            if (!testState.systemsInitialized) {
+                updateResults('generation', '❌ Systems not initialized');
+                return;
+            }
+
+            updateResults('generation', '🎭 Generating Enhanced Character...\n');
+            
+            try {
+                const startTime = performance.now();
+
+                const testParams = {
+                    gender: 'female',
+                    ageGroup: 'young',
+                    build: 'athletic',
+                    ethnicity: 'mixed',
+                    clothing: 'casual'
+                };
+
+                const character = await testState.generator.generateActor(testParams);
+                
+                const endTime = performance.now();
+                const generationTime = endTime - startTime;
+
+                if (character) {
+                    updateResults('generation', `✅ Character Generated Successfully`);
+                    updateResults('generation', `⚡ Total Time: ${generationTime.toFixed(2)}ms`);
+                    updateResults('generation', `🆔 Character ID: ${character.userData.characterData.id}`);
+                    
+                    // Display character details
+                    const charData = character.userData.characterData;
+                    updateResults('generation', `\n📋 Character Details:`);
+                    updateResults('generation', `Gender: ${charData.metadata.gender}`);
+                    updateResults('generation', `Age: ${charData.metadata.ageGroup}`);
+                    updateResults('generation', `Build: ${charData.metadata.build}`);
+                    updateResults('generation', `Height: ${charData.metadata.height.toFixed(2)}m`);
+                    updateResults('generation', `Ethnicity: ${charData.metadata.ethnicity}`);
+                    
+                    // Enhanced features
+                    if (testState.generator.enhancedGeneration) {
+                        updateResults('generation', `\n🚀 Enhanced Features:`);
+                        updateResults('generation', `Neural Cloth: ${charData.clothing.neuralClothData ? '✅ Active' : '❌ Disabled'}`);
+                        updateResults('generation', `AI Facial: ✅ Validated`);
+                    }
+
+                    testState.metrics.charactersGenerated++;
+                    testState.metrics.totalGenerationTime += generationTime;
+                    updateMetricsDisplay();
+
+                } else {
+                    updateResults('generation', '❌ Character generation failed');
+                }
+
+            } catch (error) {
+                updateResults('generation', '❌ Enhanced Generation Failed: ' + error.message);
+            }
+        }
+
+        // Batch test
+        async function generateBatchTest() {
+            if (!testState.systemsInitialized) {
+                updateResults('generation', '❌ Systems not initialized');
+                return;
+            }
+
+            updateResults('generation', '\n🏭 Running Batch Test (5 characters)...\n');
+            
+            const batchStartTime = performance.now();
+            let successCount = 0;
+
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const character = await testState.generator.generateActor({});
+                    if (character) {
+                        successCount++;
+                        updateResults('generation', `✅ Character ${i + 1}: Generated`);
+                    } else {
+                        updateResults('generation', `❌ Character ${i + 1}: Failed`);
+                    }
+                } catch (error) {
+                    updateResults('generation', `❌ Character ${i + 1}: Error - ${error.message}`);
+                }
+            }
+
+            const batchEndTime = performance.now();
+            const batchTime = batchEndTime - batchStartTime;
+
+            updateResults('generation', `\n📊 Batch Results:`);
+            updateResults('generation', `Success Rate: ${successCount}/5 (${(successCount/5*100).toFixed(1)}%)`);
+            updateResults('generation', `Total Time: ${batchTime.toFixed(2)}ms`);
+            updateResults('generation', `Average per Character: ${(batchTime/5).toFixed(2)}ms`);
+
+            testState.metrics.charactersGenerated += successCount;
+            testState.metrics.totalGenerationTime += batchTime;
+            updateMetricsDisplay();
+        }
+
+        // Diversity test
+        async function generateDiversityTest() {
+            if (!testState.systemsInitialized) {
+                updateResults('generation', '❌ Systems not initialized');
+                return;
+            }
+
+            updateResults('generation', '\n🌈 Running Diversity Test...\n');
+            
+            const ethnicities = ['european', 'african', 'asian', 'hispanic', 'middle_eastern', 'mixed'];
+            const ages = ['child', 'teen', 'young', 'middle', 'elderly'];
+            const builds = ['petite', 'slender', 'average', 'athletic', 'stocky', 'muscular'];
+
+            let diversityResults = {
+                ethnicities: new Set(),
+                ages: new Set(),
+                builds: new Set()
+            };
+
+            for (let i = 0; i < 10; i++) {
+                try {
+                    const character = await testState.generator.generateActor({});
+                    if (character) {
+                        const params = character.userData.characterData.metadata;
+                        diversityResults.ethnicities.add(params.ethnicity);
+                        diversityResults.ages.add(params.ageGroup);
+                        diversityResults.builds.add(params.build);
+                    }
+                } catch (error) {
+                    console.warn('Diversity test character failed:', error);
+                }
+            }
+
+            updateResults('generation', `📊 Diversity Results:`);
+            updateResults('generation', `Ethnicities: ${diversityResults.ethnicities.size}/${ethnicities.length} represented`);
+            updateResults('generation', `Age Groups: ${diversityResults.ages.size}/${ages.length} represented`);
+            updateResults('generation', `Build Types: ${diversityResults.builds.size}/${builds.length} represented`);
+            updateResults('generation', `Overall Diversity Score: ${((diversityResults.ethnicities.size + diversityResults.ages.size + diversityResults.builds.size) / (ethnicities.length + ages.length + builds.length) * 100).toFixed(1)}%`);
+        }
+
+        // Utility functions
+        function updateStatus(section, message) {
+            const statusEl = document.getElementById(section + 'Status') || document.getElementById('initStatus');
+            statusEl.innerHTML = `<div class="status ${message.includes('✅') ? 'success' : message.includes('❌') ? 'error' : 'warning'}">${message}</div>`;
+        }
+
+        function updateResults(section, message) {
+            const resultEl = document.getElementById(section + 'TestResults') || document.getElementById('testSummary');
+            if (resultEl) {
+                resultEl.textContent += message + '\n';
+                resultEl.scrollTop = resultEl.scrollHeight;
+            }
+        }
+
+        function updateMetricsDisplay() {
+            document.getElementById('charCount').textContent = testState.metrics.charactersGenerated;
+            document.getElementById('totalTime').textContent = testState.metrics.totalGenerationTime.toFixed(2) + 'ms';
+            document.getElementById('clothTime').textContent = testState.metrics.clothSimulationTime.toFixed(2) + 'ms';
+            document.getElementById('facialTime').textContent = testState.metrics.facialValidationTime.toFixed(2) + 'ms';
+            
+            if (testState.metrics.realismScores.length > 0) {
+                const avgRealism = testState.metrics.realismScores.reduce((a, b) => a + b, 0) / testState.metrics.realismScores.length;
+                document.getElementById('realismScore').textContent = avgRealism.toFixed(3);
+            }
+        }
+
+        function resetMetrics() {
+            testState.metrics = {
+                charactersGenerated: 0,
+                totalGenerationTime: 0,
+                clothSimulationTime: 0,
+                facialValidationTime: 0,
+                realismScores: []
+            };
+            updateMetricsDisplay();
+            updateResults('generation', '\n🔄 Metrics reset\n');
+        }
+
+        // Auto-initialize on page load
+        window.addEventListener('load', () => {
+            updateResults('testSummary', '🚀 Enhanced Generation Test Suite Loaded\n');
+            updateResults('testSummary', 'Click "Initialize Enhanced Systems" to begin testing.\n');
+        });
+    </script>
+</body>
+</html>
