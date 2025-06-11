@@ -100,6 +100,11 @@ class StageRenderLoop {
             window.vrmActorSystem.updateVRMAnimations(deltaTime * 0.001); // Convert to seconds
         }
         
+        // Update theatrical actors if system is available (Phase 3A - Week 1)
+        if (window.theatricalActorFactory && window.theatricalActorFactory.isInitialized) {
+            window.theatricalActorFactory.update(deltaTime * 0.001); // Convert to seconds
+        }
+        
         // Update physics and relationships
         if (this.frameCounter % this.performanceSettings.relationshipUpdateInterval === 0) {
             this.updateAllObjectRelationships();

@@ -634,6 +634,11 @@ async function init() {
             await window.actorCreationManager.initialize();
         }
         
+        // Initialize Theatrical Actor Factory (Phase 3A - Week 1)
+        if (window.theatricalActorFactory) {
+            await window.theatricalActorFactory.initialize();
+        }
+        
         // Initialize UI manager
         await window.stageUIManager.initialize();
         
@@ -742,9 +747,12 @@ function createPlacementMarker() {
 }
 
 async function onStageClick(event) {
-    // Get placement mode from UIManager
+    // Get modes from UIManager
     const currentPlacementMode = window.stageUIManager ? window.stageUIManager.uiState.placementMode : placementMode;
-    if (!currentPlacementMode) return;
+    const selectionMode = window.stageUIManager ? window.stageUIManager.uiState.actorSelectionMode : false;
+    
+    // If neither placement nor selection mode is active, do nothing
+    if (!currentPlacementMode && !selectionMode) return;
     
     // Calculate mouse position in normalized device coordinates
     const mouse = new THREE.Vector2();
@@ -754,6 +762,49 @@ async function onStageClick(event) {
     // Raycaster to find where clicked
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, camera);
+    
+    // Handle actor selection mode
+    if (selectionMode) {
+        // Check intersection with actors only
+        const actorObjects = window.stageState.objects.actors;
+        const intersects = raycaster.intersectObjects(actorObjects, true);
+        
+        if (intersects.length > 0) {
+            // Find the root actor object (not child meshes)
+            let targetActor = intersects[0].object;
+            while (targetActor.parent && targetActor.parent !== scene) {
+                targetActor = targetActor.parent;
+            }
+            
+            // Make sure it's actually an actor
+            if (targetActor.userData && targetActor.userData.type === 'actor') {
+                const actorId = targetActor.userData.id;
+                console.log(`🎯 Clicked actor: ${actorId}`);
+                
+                // Handle selection via UIManager
+                if (window.stageUIManager) {
+                    // Check if we're in multi-select mode or if Ctrl/Cmd is held
+                    const isMultiSelect = window.stageUIManager.uiState.multiSelectMode || 
+                                        event.ctrlKey || event.metaKey;
+                    
+                    if (isMultiSelect) {
+                        // In multi-select mode, toggle the actor
+                        console.log(`🔄 Multi-select click on ${actorId}`);
+                        window.stageUIManager.selectActor(actorId);
+                    } else {
+                        // Single select mode - replace selection
+                        console.log(`🎯 Single-select click on ${actorId}`);
+                        window.stageUIManager.clearActorSelection();
+                        window.stageUIManager.selectActor(actorId);
+                    }
+                }
+                return; // Don't process placement if we handled selection
+            }
+        }
+        
+        // If selection mode is active but didn't click an actor, still return to prevent placement
+        if (!currentPlacementMode) return;
+    }
     
     if (currentPlacementMode === 'push') {
         // Check intersection with all objects
@@ -1709,10 +1760,16 @@ function setCameraPreset(preset) {
             endPos = new THREE.Vector3(0, 5, 20);
             endTarget = new THREE.Vector3(0, 0, 0);
             break;
+        case 'stage':
         case 'overhead':
             endPos = new THREE.Vector3(0, 25, 0);
             endTarget = new THREE.Vector3(0, 0, 0);
             break;
+        case 'above':
+            endPos = new THREE.Vector3(0, 15, 5);
+            endTarget = new THREE.Vector3(0, 0, 0);
+            break;
+        case 'side':
         case 'stage-left':
             endPos = new THREE.Vector3(-20, 8, 0);
             endTarget = new THREE.Vector3(0, 0, 0);
@@ -1720,6 +1777,20 @@ function setCameraPreset(preset) {
         case 'stage-right':
             endPos = new THREE.Vector3(20, 8, 0);
             endTarget = new THREE.Vector3(0, 0, 0);
+            break;
+        case 'close':
+            endPos = new THREE.Vector3(0, 3, 8);
+            endTarget = new THREE.Vector3(0, 0, 0);
+            break;
+        case 'backstage':
+            // Position camera to see both backstage areas at their lower level
+            endPos = new THREE.Vector3(0, 8, -10);
+            endTarget = new THREE.Vector3(0, -0.5, -2);  // Target backstage level
+            break;
+        case 'wide':
+            // Wide view to see entire theater including height differences
+            endPos = new THREE.Vector3(0, 15, 12);
+            endTarget = new THREE.Vector3(0, -0.25, -1);  // Target between stage and backstage level
             break;
         default:
             return;
@@ -1744,6 +1815,14 @@ function setCameraPreset(preset) {
     
     animateCamera();
 }
+
+// Alias for UI compatibility
+function setCameraView(preset) {
+    setCameraPreset(preset);
+}
+
+// Make it globally accessible
+window.setCameraView = setCameraView;
 
 function toggleCurtains() {
     // Use StageBuilder module for curtain toggle functionality
@@ -1866,127 +1945,7 @@ function removeObjectProperly(object) {
     resourceManager.disposeObject(object);
 }
 
-// Simple ResourceManager for Three.js resource management
-class ResourceManager {
-    constructor() {
-        this.geometries = new Map();
-        this.materials = new Map();
-        this.textures = new Map();
-        this.disposedObjects = new Set();
-    }
-    
-    // Reuse geometries instead of creating new ones
-    getGeometry(type, params = {}) {
-        const key = `${type}_${JSON.stringify(params)}`;
-        if (!this.geometries.has(key)) {
-            this.geometries.set(key, this.createGeometry(type, params));
-        }
-        return this.geometries.get(key);
-    }
-    
-    // Create geometry based on type
-    createGeometry(type, params) {
-        switch (type) {
-            case 'box':
-                return new THREE.BoxGeometry(
-                    params.width || 1, 
-                    params.height || 1, 
-                    params.depth || 1
-                );
-            case 'sphere':
-                return new THREE.SphereGeometry(
-                    params.radius || 0.5, 
-                    params.widthSegments || 16, 
-                    params.heightSegments || 16
-                );
-            case 'cylinder':
-                return new THREE.CylinderGeometry(
-                    params.radiusTop || 1,
-                    params.radiusBottom || 1,
-                    params.height || 1,
-                    params.radialSegments || 16
-                );
-            case 'plane':
-                return new THREE.PlaneGeometry(
-                    params.width || 1,
-                    params.height || 1
-                );
-            default:
-                return new THREE.BoxGeometry(1, 1, 1);
-        }
-    }
-    
-    // Reuse materials
-    getMaterial(type, params = {}) {
-        const key = `${type}_${JSON.stringify(params)}`;
-        if (!this.materials.has(key)) {
-            this.materials.set(key, this.createMaterial(type, params));
-        }
-        return this.materials.get(key);
-    }
-    
-    // Create material based on type
-    createMaterial(type, params) {
-        switch (type) {
-            case 'phong':
-                return new THREE.MeshPhongMaterial(params);
-            case 'basic':
-                return new THREE.MeshBasicMaterial(params);
-            case 'lambert':
-                return new THREE.MeshLambertMaterial(params);
-            default:
-                return new THREE.MeshPhongMaterial(params);
-        }
-    }
-    
-    // Dispose object and its resources
-    disposeObject(object) {
-        if (!object) return;
-        
-        if (object.geometry) {
-            object.geometry.dispose();
-        }
-        
-        if (object.material) {
-            if (Array.isArray(object.material)) {
-                object.material.forEach(mat => {
-                    if (mat.map) mat.map.dispose();
-                    mat.dispose();
-                });
-            } else {
-                if (object.material.map) object.material.map.dispose();
-                object.material.dispose();
-            }
-        }
-        
-        // Recursively dispose children
-        if (object.children) {
-            object.children.forEach(child => this.disposeObject(child));
-        }
-        
-        this.disposedObjects.add(object);
-    }
-    
-    // Memory stats for performance monitoring
-    getMemoryStats() {
-        return {
-            geometries: this.geometries.size,
-            materials: this.materials.size,
-            textures: this.textures.size,
-            disposedObjects: this.disposedObjects.size
-        };
-    }
-    
-    // Event listener management for UI components
-    addEventListenerManaged(element, eventType, handler) {
-        // Simple event listener management - can be enhanced later
-        element.addEventListener(eventType, handler);
-    }
-}
-
-// Create global resource manager  
-const resourceManager = new ResourceManager();
-window.resourceManager = resourceManager;
+// ResourceManager is now loaded from separate module
 
 // Global collision check function for ObjectFactory
 window.checkAllCollisions = function(object, x, z) {
@@ -2105,6 +2064,53 @@ function debugTextureUpload() {
 // Make debug function available globally
 window.debugTextureUpload = debugTextureUpload;
 
+// Debug function to help users see and interact with actors
+window.debugActors = function() {
+    console.log('🎭 === ACTOR DEBUG REPORT ===');
+    
+    // Get all visual actors
+    const visualActors = window.stageState.objects.actors;
+    console.log(`📊 Visual actors in scene: ${visualActors.length}`);
+    
+    // Get all behavioral actors
+    let behavioralActors = [];
+    if (window.theatricalActorFactory) {
+        behavioralActors = window.theatricalActorFactory.getAllActors();
+        console.log(`🧠 Behavioral actors active: ${behavioralActors.length}`);
+    }
+    
+    // List all actors with their details
+    visualActors.forEach((actor, index) => {
+        const behavioral = window.theatricalActorFactory?.getActor(actor.userData.id);
+        console.log(`${index + 1}. ${actor.userData.id} at (${actor.position.x.toFixed(1)}, ${actor.position.z.toFixed(1)})`);
+        console.log(`   - Visual: ${actor.children.length} parts, visible: ${actor.visible}`);
+        console.log(`   - Behavioral: ${behavioral ? behavioral.currentState : 'none'}`);
+        console.log(`   - Can click to select: ${window.stageUIManager?.uiState.actorSelectionMode ? 'Yes' : 'No (enable Selection Mode)'}`);
+    });
+    
+    // UI connection status
+    const uiConnected = window.stageUIManager?.actorDebugInterval ? 'Connected' : 'Not connected';
+    console.log(`🔗 UI connection: ${uiConnected}`);
+    
+    // Selection instructions
+    console.log(`💡 To select actors:`);
+    console.log(`   1. Enable "Selection Mode" in the Objects panel`);
+    console.log(`   2. Toggle "Multi-Select" for multiple actor selection`);
+    console.log(`   3. Click on actors in the 3D view`);
+    console.log(`   4. In single-select: clicking replaces selection`);
+    console.log(`   5. In multi-select: clicking toggles individual actors`);
+    console.log(`   6. Or use "Select All" button`);
+    console.log(`   7. Selected actors will glow green`);
+    console.log(`   8. "Show Paths" displays pathfinding grids for all actors`);
+    console.log(`   9. "Show Collision Grid" shows grids for selected actors (or all if none selected)`);
+    
+    return {
+        visual: visualActors.length,
+        behavioral: behavioralActors.length,
+        uiConnected: uiConnected
+    };
+};
+
 // ReadyPlayerMe testing function
 window.testReadyPlayerMe = async function() {
     console.log('🧪 Starting ReadyPlayerMe integration test...');
@@ -2193,6 +2199,17 @@ window.addEventListener('load', async () => {
         } else {
             console.error('RenderLoop module not found');
         }
+        
+        // Connect actors to UI after everything is loaded
+        setTimeout(() => {
+            if (window.stageUIManager) {
+                console.log('🔄 Connecting actors to UI system...');
+                window.stageUIManager.updateActorCount();
+                window.stageUIManager.setupActorClickListeners();
+                window.stageUIManager.startActorDebugUpdates();
+                console.log('✅ Actors connected to UI system');
+            }
+        }, 1000);
     } catch (error) {
         console.error('Initialization failed:', error);
         console.error('Error stack:', error.stack);
@@ -2217,30 +2234,37 @@ async function addDefaultAudience() {
     
     for (const audience of audiencePositions) {
         try {
-            console.log(`\n🎭 TESTING: ${audience.type} at (${audience.x}, ${audience.z})`);
+            console.log(`\n🎭 TESTING: ${audience.type} (will be placed backstage instead of requested (${audience.x}, ${audience.z}))`);
             const actor = await window.threeObjectFactory.addActorAt(audience.x, audience.z, audience.type);
             
             if (actor) {
                 // MANDATORY VALIDATION: Check if actor actually has visible geometry
                 const hasVisibleGeometry = actor.children && actor.children.length > 0;
-                const hasPosition = actor.position.x === audience.x && actor.position.z === audience.z;
+                
+                // Check if actor is in a valid backstage position (offstage left or right)
+                const isBackstageLeft = actor.position.x < -10;
+                const isBackstageRight = actor.position.x > 10;
+                const isInBackstage = isBackstageLeft || isBackstageRight;
+                
                 const inScene = window.stageState.core.scene.children.includes(actor);
                 
                 console.log(`🔍 VALIDATION for ${audience.type}:`, {
                     created: true,
                     hasGeometry: hasVisibleGeometry,
-                    hasCorrectPosition: hasPosition,
+                    actualPosition: { x: actor.position.x.toFixed(2), z: actor.position.z.toFixed(2) },
+                    isInBackstage: isInBackstage,
+                    backstageSide: isBackstageLeft ? 'left' : (isBackstageRight ? 'right' : 'none'),
                     inScene: inScene,
                     childrenCount: actor.children ? actor.children.length : 0
                 });
                 
-                if (hasVisibleGeometry && hasPosition && inScene) {
-                    console.log(`✅ ${audience.type} PASSED ALL VALIDATION`);
+                if (hasVisibleGeometry && isInBackstage && inScene) {
+                    console.log(`✅ ${audience.type} PASSED ALL VALIDATION - placed backstage`);
                     successCount++;
                 } else {
                     console.error(`❌ ${audience.type} FAILED VALIDATION`);
                     failureCount++;
-                    errors.push(`${audience.type}: geometry=${hasVisibleGeometry}, position=${hasPosition}, scene=${inScene}`);
+                    errors.push(`${audience.type}: geometry=${hasVisibleGeometry}, backstage=${isInBackstage}, scene=${inScene}`);
                 }
             } else {
                 console.error(`❌ ${audience.type} creation returned NULL`);

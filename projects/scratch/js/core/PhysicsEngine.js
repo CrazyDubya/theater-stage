@@ -303,6 +303,12 @@ class StagePhysicsEngine {
             
             // Simple collision check with panel bounds
             const panelBounds = panelData.panelBounds;
+            
+            // Skip if panel bounds not set up
+            if (!panelBounds || !panelBounds.maxX) {
+                continue;
+            }
+            
             const distX = Math.abs(newX - panelPos.x);
             const distZ = Math.abs(newZ - panelPos.z);
             

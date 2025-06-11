@@ -63,17 +63,35 @@ class ThreeStageBuilder {
             }
         };
         
-        // Stage markers configuration
+        // Enhanced stage markers configuration - doubled count with paired positions
         this.stageMarkers = [
-            { x: -8, z: -3, label: 'USL' },  // Upstage Left
-            { x: 0, z: -3, label: 'USC' },   // Upstage Center
-            { x: 8, z: -3, label: 'USR' },   // Upstage Right
-            { x: -8, z: 0, label: 'SL' },    // Stage Left
-            { x: 0, z: 0, label: 'C' },      // Center
-            { x: 8, z: 0, label: 'SR' },     // Stage Right
-            { x: -8, z: 3, label: 'DSL' },   // Downstage Left
-            { x: 0, z: 3, label: 'DSC' },    // Downstage Center
-            { x: 8, z: 3, label: 'DSR' }     // Downstage Right
+            // Upstage row (far back)
+            { x: -8, z: -4, label: 'USL1', category: 'upstage' },   // Upstage Left 1
+            { x: -6, z: -4, label: 'USL2', category: 'upstage' },   // Upstage Left 2
+            { x: -2, z: -4, label: 'USC1', category: 'upstage' },   // Upstage Center 1
+            { x: 2, z: -4, label: 'USC2', category: 'upstage' },    // Upstage Center 2
+            { x: 6, z: -4, label: 'USR1', category: 'upstage' },    // Upstage Right 1
+            { x: 8, z: -4, label: 'USR2', category: 'upstage' },    // Upstage Right 2
+            
+            // Center stage row
+            { x: -8, z: -1, label: 'SL1', category: 'center' },     // Stage Left 1
+            { x: -6, z: -1, label: 'SL2', category: 'center' },     // Stage Left 2
+            { x: -2, z: 0, label: 'C1', category: 'center' },       // Center 1
+            { x: 2, z: 0, label: 'C2', category: 'center' },        // Center 2
+            { x: 6, z: -1, label: 'SR1', category: 'center' },      // Stage Right 1
+            { x: 8, z: -1, label: 'SR2', category: 'center' },      // Stage Right 2
+            
+            // Downstage row (front)
+            { x: -8, z: 2, label: 'DSL1', category: 'downstage' },  // Downstage Left 1
+            { x: -6, z: 2, label: 'DSL2', category: 'downstage' },  // Downstage Left 2
+            { x: -2, z: 3, label: 'DSC1', category: 'downstage' },  // Downstage Center 1
+            { x: 2, z: 3, label: 'DSC2', category: 'downstage' },   // Downstage Center 2
+            { x: 6, z: 2, label: 'DSR1', category: 'downstage' },   // Downstage Right 1
+            { x: 8, z: 2, label: 'DSR2', category: 'downstage' },   // Downstage Right 2
+            
+            // Backstage entrance markers (off-stage)
+            { x: -11, z: -2, label: 'BSL', category: 'backstage' }, // Backstage Left entrance
+            { x: 11, z: -2, label: 'BSR', category: 'backstage' }   // Backstage Right entrance
         ];
         
         // Platform configurations
@@ -236,10 +254,192 @@ class ThreeStageBuilder {
         backWall.receiveShadow = true;
         scene.add(backWall);
 
+        // Create stage transition steps/ramps
+        this.createStageTransitions();
+        
         // Create curtain system
         this.createCurtainSystem();
         
-        console.log('StageBuilder: Main stage, floor, and walls created');
+        console.log('StageBuilder: Main stage, floor, walls, and transitions created');
+    }
+
+    /**
+     * Create comprehensive stage areas with ramps, corridors, and distinct materials
+     */
+    createStageTransitions() {
+        const scene = window.stageState.core.scene;
+        const resourceManager = window.resourceManager;
+        
+        // === DISTINCT AREA MATERIALS ===
+        
+        // Offstage Left area (dark blue with different opacity and texture)
+        const offstageLeftMaterial = resourceManager.getMaterial('phong', { 
+            color: 0x1a237e,  // Dark blue
+            transparent: false,
+            opacity: 1.0,
+            roughness: 0.8,
+            metalness: 0.1
+        });
+        
+        // Offstage Right area (dark green with different texture)
+        const offstageRightMaterial = resourceManager.getMaterial('phong', { 
+            color: 0x1b5e20,  // Dark green
+            transparent: false,
+            opacity: 1.0,
+            roughness: 0.7,
+            metalness: 0.2
+        });
+        
+        // Backstage corridor (dark purple with carpet-like texture)
+        const backstageMaterial = resourceManager.getMaterial('phong', { 
+            color: 0x4a148c,  // Dark purple
+            transparent: false,
+            opacity: 1.0,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+        
+        // Ramp material (gray concrete-like)
+        const rampMaterial = resourceManager.getMaterial('phong', { 
+            color: 0x555555,  // Gray
+            transparent: false,
+            opacity: 1.0,
+            roughness: 0.6,
+            metalness: 0.3
+        });
+        
+        // === OFFSTAGE LEFT AREA ===
+        const offstageLeftGeometry = resourceManager.getGeometry('box', {
+            width: 6,   // -15 to -9
+            height: 0.15,
+            depth: 15   // Extended depth for better area definition
+        });
+        const offstageLeft = new THREE.Mesh(offstageLeftGeometry, offstageLeftMaterial);
+        offstageLeft.position.set(-12, 0.075, 0);
+        offstageLeft.receiveShadow = true;
+        offstageLeft.castShadow = true;
+        scene.add(offstageLeft);
+        
+        // === OFFSTAGE RIGHT AREA ===
+        const offstageRightGeometry = resourceManager.getGeometry('box', {
+            width: 6,   // +9 to +15
+            height: 0.15,
+            depth: 15   // Extended depth
+        });
+        const offstageRight = new THREE.Mesh(offstageRightGeometry, offstageRightMaterial);
+        offstageRight.position.set(12, 0.075, 0);
+        offstageRight.receiveShadow = true;
+        offstageRight.castShadow = true;
+        scene.add(offstageRight);
+        
+        // === BACKSTAGE CORRIDOR (connecting left and right) ===
+        const backstageGeometry = resourceManager.getGeometry('box', {
+            width: 30,  // Full width connecting both sides
+            height: 0.15,
+            depth: 6    // Deeper corridor behind stage
+        });
+        const backstage = new THREE.Mesh(backstageGeometry, backstageMaterial);
+        backstage.position.set(0, 0.075, -9);  // Behind stage
+        backstage.receiveShadow = true;
+        backstage.castShadow = true;
+        scene.add(backstage);
+        
+        // === TRANSITION RAMPS (smooth slopes from offstage to onstage) ===
+        
+        // Left ramp from offstage to stage
+        const leftRampGeometry = resourceManager.getGeometry('box', {
+            width: 2,    // Ramp width
+            height: 0.1, // Gentle slope
+            depth: 1     // Ramp length
+        });
+        const leftRamp = new THREE.Mesh(leftRampGeometry, rampMaterial);
+        leftRamp.position.set(-9.5, 0.025, 0);  // Between offstage left and main stage
+        leftRamp.rotation.z = Math.PI / 90;     // Slight slope
+        leftRamp.receiveShadow = true;
+        leftRamp.castShadow = true;
+        scene.add(leftRamp);
+        
+        // Right ramp from offstage to stage
+        const rightRamp = new THREE.Mesh(leftRampGeometry, rampMaterial);
+        rightRamp.position.set(9.5, 0.025, 0);   // Between offstage right and main stage
+        rightRamp.rotation.z = -Math.PI / 90;    // Slight slope (opposite direction)
+        rightRamp.receiveShadow = true;
+        rightRamp.castShadow = true;
+        scene.add(rightRamp);
+        
+        // Back ramp from backstage to stage
+        const backRampGeometry = resourceManager.getGeometry('box', {
+            width: 20,   // Full stage width
+            height: 0.1,
+            depth: 1
+        });
+        const backRamp = new THREE.Mesh(backRampGeometry, rampMaterial);
+        backRamp.position.set(0, 0.025, -6.5);  // Between backstage and main stage
+        backRamp.rotation.x = Math.PI / 90;     // Gentle forward slope
+        backRamp.receiveShadow = true;
+        backRamp.castShadow = true;
+        scene.add(backRamp);
+        
+        // === AREA DEFINITION BORDERS ===
+        const borderMaterial = resourceManager.getMaterial('phong', { 
+            color: 0xffffff,  // White borders for clear definition
+            emissive: 0x222222,
+            transparent: false
+        });
+        
+        // Helper function to create border lines with better visibility
+        const createAreaBorder = (x, z, width, depth, height = 0.05) => {
+            const borderGeometry = resourceManager.getGeometry('box', {
+                width: width,
+                height: height,
+                depth: depth
+            });
+            const border = new THREE.Mesh(borderGeometry, borderMaterial);
+            border.position.set(x, height/2, z);
+            border.castShadow = true;
+            scene.add(border);
+        };
+        
+        // Offstage area borders
+        createAreaBorder(-15, 0, 0.2, 15);    // Left offstage outer edge
+        createAreaBorder(-9, 0, 0.2, 15);     // Left offstage inner edge
+        createAreaBorder(9, 0, 0.2, 15);      // Right offstage inner edge  
+        createAreaBorder(15, 0, 0.2, 15);     // Right offstage outer edge
+        
+        // Backstage area borders
+        createAreaBorder(0, -12, 30, 0.2);    // Backstage rear edge
+        createAreaBorder(0, -6, 30, 0.2);     // Backstage front edge
+        
+        // Main stage outline for clarity
+        createAreaBorder(0, 7.5, 20, 0.2);    // Stage front edge
+        createAreaBorder(-10, 0, 0.2, 15);    // Stage left edge
+        createAreaBorder(10, 0, 0.2, 15);     // Stage right edge
+        
+        // === AREA LABELS (using simple text geometry for identification) ===
+        const labelMaterial = resourceManager.getMaterial('basic', { 
+            color: 0xffffff
+        });
+        
+        // Create simple label markers
+        const createAreaLabel = (x, z, size = 0.5) => {
+            const labelGeometry = resourceManager.getGeometry('cylinder', {
+                radiusTop: size,
+                radiusBottom: size,
+                height: 0.1,
+                radialSegments: 8
+            });
+            const label = new THREE.Mesh(labelGeometry, labelMaterial);
+            label.position.set(x, 0.2, z);
+            scene.add(label);
+        };
+        
+        // Place area identification markers
+        createAreaLabel(-12, 0, 0.3);    // Offstage Left center
+        createAreaLabel(12, 0, 0.3);     // Offstage Right center  
+        createAreaLabel(0, -9, 0.4);     // Backstage center
+        createAreaLabel(0, 0, 0.6);      // Main stage center
+        
+        console.log('StageBuilder: Complete stage areas with ramps, corridors, and distinct materials created');
     }
 
     /**
@@ -400,32 +600,42 @@ class ThreeStageBuilder {
         this.stageMarkers.forEach(pos => {
             const markerGroup = new THREE.Group();
             
-            // Main marker
+            // Color coding by category
+            const categoryColors = {
+                upstage: 0x0066ff,    // Blue for upstage
+                center: 0x00ff00,     // Green for center stage
+                downstage: 0xff6600,  // Orange for downstage
+                backstage: 0xff0066   // Pink for backstage
+            };
+            
+            const markerColor = categoryColors[pos.category] || 0x00ff00;
+            
+            // Smaller main marker (reduced from 0.3 to 0.2)
             const markerGeometry = resourceManager.getGeometry('cylinder', {
-                radiusTop: 0.3,
-                radiusBottom: 0.3,
-                height: 0.1,
+                radiusTop: 0.2,
+                radiusBottom: 0.2,
+                height: 0.08,
                 radialSegments: 16
             });
             const markerMaterial = resourceManager.getMaterial('phong', { 
-                color: 0x00ff00,
-                emissive: 0x00ff00,
-                emissiveIntensity: 0.3
+                color: markerColor,
+                emissive: markerColor,
+                emissiveIntensity: 0.4
             });
             const marker = new THREE.Mesh(markerGeometry, markerMaterial);
-            marker.position.set(0, 0.05, 0);
+            marker.position.set(0, 0.04, 0);
             markerGroup.add(marker);
             
-            // Glow effect
-            const glowGeometry = new THREE.RingGeometry(0.3, 0.5, 16);
+            // Smaller glow effect (reduced from 0.3-0.5 to 0.2-0.35)
+            const glowGeometry = new THREE.RingGeometry(0.2, 0.35, 16);
             const glowMaterial = resourceManager.getMaterial('basic', { 
-                color: 0x00ff00,
+                color: markerColor,
                 transparent: true,
-                opacity: 0.5
+                opacity: 0.4
             });
             const glow = new THREE.Mesh(glowGeometry, glowMaterial);
             glow.rotation.x = -Math.PI / 2;
-            glow.position.y = 0.1;
+            glow.position.y = 0.08;
             markerGroup.add(glow);
             
             markerGroup.position.set(pos.x, 0, pos.z);
