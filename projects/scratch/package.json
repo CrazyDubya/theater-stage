@@ -18,5 +18,13 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.28.0",
+    "complexity-report": "^2.0.0-alpha",
+    "eslint": "^9.28.0",
+    "jshint": "^2.13.6",
+    "sloc": "^0.3.2"
+  }
 }

@@ -59,7 +59,12 @@
     <script src="js/core/actors/ActorCollisionAvoidance.js?v=3"></script>
     <script src="js/core/actors/ActorFactory.js?v=7"></script>
     <!-- <script src="js/core/VRMActorSystem.js"></script> <!-- DISABLED due to THREE.js incompatibility -->
-    <script src="js/core/UIManager.js?v=7"></script>
+    
+    <!-- UI System Modules (Load before UIManager) -->
+    <script src="js/core/UIControls.js?v=1"></script>
+    <script src="js/core/UILighting.js?v=1"></script>
+    <script src="js/core/UILayout.js?v=1"></script>
+    <script src="js/core/UIManager.js?v=8"></script>
     <script src="js/core/RenderLoop.js?v=3"></script>
     <script src="js/ui/UIFactory.js?v=3"></script>
     
