@@ -3,6 +3,121 @@
 // State management now handled by StateManager.js
 // =============================================================================
 
+// Global Error Handling for Theater System Stability
+window.addEventListener('error', (event) => {
+    console.error('🚨 Global JavaScript Error:', {
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error
+    });
+    
+    // Attempt graceful degradation based on error type
+    if (event.message.includes('VRM') || event.message.includes('vrm')) {
+        console.warn('🎭 VRM system error detected, disabling VRM features');
+        if (typeof window !== 'undefined') {
+            window.vrmSystemDisabled = true;
+        }
+    }
+    
+    if (event.message.includes('Ollama') || event.message.includes('AI')) {
+        console.warn('🎭 AI system error detected, disabling autonomous features');
+        if (typeof window !== 'undefined') {
+            window.aiSystemDisabled = true;
+        }
+        
+        // Update AI status display
+        const statusEl = document.getElementById('ai-status');
+        if (statusEl) {
+            statusEl.textContent = 'Status: AI system disabled due to error';
+            statusEl.style.color = '#ff6b6b';
+        }
+    }
+
+    if (event.message.includes('Neural') || event.message.includes('cloth')) {
+        console.warn('🧠 Neural cloth system error detected, falling back to basic cloth');
+        if (typeof window !== 'undefined') {
+            window.neuralClothDisabled = true;
+        }
+    }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+    console.error('🚨 Unhandled Promise Rejection:', event.reason);
+    
+    // Prevent the default behavior (which would log to console)
+    event.preventDefault();
+    
+    // Attempt graceful degradation based on error type
+    if (event.reason?.message?.includes('timeout') || event.reason?.message?.includes('network')) {
+        console.warn('🌐 Network operation failed, continuing in offline mode');
+    }
+    
+    if (event.reason?.message?.includes('Ollama') || event.reason?.message?.includes('AI')) {
+        console.warn('🎭 AI operation failed, disabling AI features temporarily');
+        if (typeof window !== 'undefined') {
+            window.aiSystemDisabled = true;
+        }
+    }
+});
+
+// Performance monitoring for memory leaks
+class PerformanceMonitor {
+    constructor() {
+        this.memoryWarningThreshold = 100 * 1024 * 1024; // 100MB
+        this.lastMemoryCheck = 0;
+        this.memoryCheckInterval = 30000; // 30 seconds
+        this.highMemoryWarnings = 0;
+    }
+    
+    checkMemoryUsage() {
+        if (!performance.memory) return;
+        
+        const now = Date.now();
+        if (now - this.lastMemoryCheck < this.memoryCheckInterval) return;
+        
+        const used = performance.memory.usedJSHeapSize;
+        const limit = performance.memory.jsHeapSizeLimit;
+        
+        if (used > this.memoryWarningThreshold) {
+            this.highMemoryWarnings++;
+            console.warn(`⚠️ High memory usage: ${Math.round(used / 1024 / 1024)}MB / ${Math.round(limit / 1024 / 1024)}MB (warning #${this.highMemoryWarnings})`);
+            
+            // Trigger garbage collection hint if memory is very high
+            if (window.gc && used > limit * 0.8) {
+                console.log('🗑️ Attempting garbage collection');
+                try {
+                    window.gc();
+                } catch (gcError) {
+                    console.warn('GC not available or failed:', gcError.message);
+                }
+            }
+            
+            // Disable memory-intensive features if too many warnings
+            if (this.highMemoryWarnings > 5) {
+                console.warn('🚨 Disabling memory-intensive features due to high usage');
+                if (typeof window !== 'undefined') {
+                    window.neuralClothDisabled = true;
+                    window.advancedPhysicsDisabled = true;
+                }
+            }
+        }
+        
+        this.lastMemoryCheck = now;
+    }
+}
+
+// Initialize performance monitor
+if (typeof window !== 'undefined') {
+    window.performanceMonitor = new PerformanceMonitor();
+    
+    // Check memory usage every 30 seconds
+    setInterval(() => {
+        window.performanceMonitor.checkMemoryUsage();
+    }, 30000);
+}
+
 // Global state access (will be set up by ModuleLoader)
 // Note: stageState is defined in StateManager.js, we just reference it here
 

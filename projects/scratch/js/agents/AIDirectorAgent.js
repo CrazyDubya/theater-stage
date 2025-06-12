@@ -263,13 +263,19 @@ Current error: ${error.message}
     }
 
     /**
-     * Process events using AI reasoning
+     * Process events using AI reasoning with circuit breaker pattern
      */
     async processEventWithAI(event, data, timestamp) {
+        // Check if we're in error backoff period
+        if (this.errorBackoffUntil && Date.now() < this.errorBackoffUntil) {
+            console.log('🎭 AI Director: In error backoff, skipping event processing');
+            return;
+        }
+        
         // Only process significant events to avoid overwhelming the AI
         const significantEvents = [
             'actor:created',
-            'actor:moved',
+            'actor:moved', 
             'lighting:changed',
             'performance:audience-reaction',
             'system:user-input'
@@ -303,12 +309,62 @@ Current error: ${error.message}
                 await this.ollamaInterface.generatePerformance(eventPrompt, {
                     stream: true,
                     temperature: this.creativityLevel * 0.8,
-                    max_tokens: 300
+                    max_tokens: 300,
+                    timeout: 15000 // 15 second timeout for background events
                 });
+                
+                // Reset error count on success
+                this.consecutiveErrors = 0;
+                this.errorBackoffUntil = null;
+                
             } catch (error) {
-                console.warn('🎭 AI Director: Background event processing failed:', error);
+                this.handleEventProcessingError(error);
             }
         }, 100);
+    }
+
+    /**
+     * Handle event processing errors with exponential backoff
+     */
+    handleEventProcessingError(error) {
+        this.consecutiveErrors++;
+        
+        console.warn(`🎭 AI Director: Event processing error #${this.consecutiveErrors}:`, error.message);
+        
+        if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
+            // Exponential backoff: start with 30 seconds, double each failure, max 5 minutes
+            const backoffSeconds = Math.min(30 * Math.pow(2, this.consecutiveErrors - this.maxConsecutiveErrors), 300);
+            this.errorBackoffUntil = Date.now() + (backoffSeconds * 1000);
+            
+            console.error(`🎭 AI Director: Too many consecutive errors, backing off for ${backoffSeconds} seconds`);
+            
+            // Notify user about the issue
+            this.notifyUserOfError(`AI Director paused due to errors (${Math.round(backoffSeconds/60)}m)`);
+        } else {
+            // Short backoff for minor errors
+            this.errorBackoffUntil = Date.now() + (10 * 1000); // 10 seconds
+        }
+    }
+
+    /**
+     * Notify user of AI Director errors
+     */
+    notifyUserOfError(message) {
+        if (typeof window !== 'undefined' && window.document) {
+            // Update AI status display if available
+            const statusEl = document.getElementById('ai-status');
+            if (statusEl) {
+                statusEl.textContent = `Status: ${message}`;
+                statusEl.style.color = '#ff6b6b';
+            }
+            
+            // Also use notification manager if available
+            if (window.notificationManager) {
+                window.notificationManager.show(message, 'warning');
+            }
+        }
+        
+        console.error(`🎭 AI Director: ${message}`);
     }
 
     /**
@@ -686,7 +742,7 @@ Current error: ${error.message}
     }
 
     /**
-     * Handle analysis errors with backoff strategy
+     * Handle analysis errors with backoff strategy and user notification
      */
     handleAnalysisError(error) {
         this.consecutiveErrors++;
@@ -694,23 +750,35 @@ Current error: ${error.message}
         console.warn(`🎭 AI Director: Analysis error #${this.consecutiveErrors}:`, error.message);
         
         if (this.consecutiveErrors >= this.maxConsecutiveErrors) {
-            // Exponential backoff: 5 minutes for first major failure, doubling each time
+            // Exponential backoff: 5 minutes for first major failure, doubling each time, max 60 minutes
             const backoffMinutes = Math.min(5 * Math.pow(2, this.consecutiveErrors - this.maxConsecutiveErrors), 60);
             this.errorBackoffUntil = Date.now() + (backoffMinutes * 60 * 1000);
             
             console.error(`🎭 AI Director: Too many consecutive errors, backing off for ${backoffMinutes} minutes`);
             
-            // Notify user about the issue
-            if (typeof window !== 'undefined' && window.document) {
-                const statusEl = document.getElementById('ai-status');
-                if (statusEl) {
-                    statusEl.textContent = `Status: AI paused due to errors (${backoffMinutes}m)`;
-                    statusEl.style.color = '#ff6b6b';
-                }
-            }
+            // Notify user using unified notification system
+            this.notifyUserOfError(`AI Director paused due to analysis errors (${backoffMinutes}m)`);
+            
         } else {
             // Short backoff for minor errors
             this.errorBackoffUntil = Date.now() + (30 * 1000); // 30 seconds
+            
+            // Brief notification for minor errors
+            if (typeof window !== 'undefined' && window.document) {
+                const statusEl = document.getElementById('ai-status');
+                if (statusEl) {
+                    statusEl.textContent = `Status: Temporary error, retrying...`;
+                    statusEl.style.color = '#ffa500'; // Orange for warnings
+                    
+                    // Reset to normal after backoff period
+                    setTimeout(() => {
+                        if (statusEl.style.color === 'rgb(255, 165, 0)') { // Still orange
+                            statusEl.textContent = 'Status: Active';
+                            statusEl.style.color = '#4CAF50';
+                        }
+                    }, 30000);
+                }
+            }
         }
     }
 

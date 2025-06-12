@@ -362,81 +362,176 @@ class OllamaTheaterInterface {
     }
 
     /**
-     * Generate performance content using Ollama
+     * Generate performance content using Ollama with comprehensive error handling
      */
     async generatePerformance(prompt, options = {}) {
         const startTime = Date.now();
+        const timeout = options.timeout || 30000; // 30 second default timeout
+        const maxRetries = options.maxRetries || 2; // Maximum retry attempts
         
-        try {
-            const fullPrompt = this.buildPerformancePrompt(prompt, options);
-            
-            const requestBody = {
-                model: options.model || this.defaultModel,
-                messages: [
-                    {
-                        role: 'system',
-                        content: this.getSystemPrompt()
-                    },
-                    {
-                        role: 'user',
-                        content: fullPrompt
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                const fullPrompt = this.buildPerformancePrompt(prompt, options);
+                
+                const requestBody = {
+                    model: options.model || this.defaultModel,
+                    messages: [
+                        {
+                            role: 'system',
+                            content: this.getSystemPrompt()
+                        },
+                        {
+                            role: 'user',
+                            content: fullPrompt
+                        }
+                    ],
+                    stream: options.stream || false,
+                    options: {
+                        temperature: options.temperature || 0.7,
+                        top_p: options.top_p || 0.9,
+                        num_predict: options.max_tokens || 1000
                     }
-                ],
-                stream: options.stream || false,
-                options: {
-                    temperature: options.temperature || 0.7,
-                    top_p: options.top_p || 0.9,
-                    num_predict: options.max_tokens || 1000
+                };
+
+                // Only add tools if the model supports them
+                if (this.modelSupportsTools()) {
+                    requestBody.tools = this.theaterTools;
+                    console.log('🎭 Using function calling with tools');
+                } else {
+                    console.log('🎭 Model does not support function calling, using text-only mode');
                 }
-            };
 
-            // Only add tools if the model supports them
-            if (this.modelSupportsTools()) {
-                requestBody.tools = this.theaterTools;
-                console.log('🎭 Using function calling with tools');
-            } else {
-                console.log('🎭 Model does not support function calling, using text-only mode');
+                // Create abort controller for timeout protection
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => {
+                    controller.abort();
+                }, timeout);
+
+                try {
+                    console.log(`🎭 Ollama request attempt ${attempt + 1}/${maxRetries + 1} (timeout: ${timeout}ms)`);
+                    
+                    const response = await fetch(`${this.ollamaUrl}/api/chat`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(requestBody),
+                        signal: controller.signal
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (!response.ok) {
+                        // Check for specific HTTP errors
+                        if (response.status === 404) {
+                            throw new Error(`Model '${requestBody.model}' not found. Install with: ollama pull ${requestBody.model}`);
+                        } else if (response.status === 503) {
+                            throw new Error('Ollama server overloaded. Please wait and try again.');
+                        } else {
+                            throw new Error(`Ollama request failed: ${response.status} ${response.statusText}`);
+                        }
+                    }
+
+                    if (options.stream) {
+                        return this.handleStreamingResponse(response, timeout);
+                    } else {
+                        const data = await response.json();
+                        this.updateResponseStats(Date.now() - startTime);
+                        this.isConnected = true; // Mark as connected on success
+                        return this.processAIResponse(data);
+                    }
+
+                } catch (fetchError) {
+                    clearTimeout(timeoutId);
+                    
+                    if (fetchError.name === 'AbortError') {
+                        const errorMsg = `Ollama request timed out after ${timeout}ms. Consider increasing timeout or checking server status.`;
+                        if (attempt < maxRetries) {
+                            console.warn(`⚠️ ${errorMsg} Retrying... (${attempt + 1}/${maxRetries})`);
+                            await this.delay(1000 * (attempt + 1)); // Exponential backoff
+                            continue;
+                        } else {
+                            throw new Error(errorMsg);
+                        }
+                    }
+                    
+                    throw fetchError;
+                }
+
+            } catch (error) {
+                console.error(`🎭 OllamaInterface: Attempt ${attempt + 1} failed:`, error.message);
+                
+                // Check if we should retry
+                if (attempt < maxRetries && this.shouldRetry(error)) {
+                    const delay = Math.min(1000 * Math.pow(2, attempt), 5000); // Exponential backoff, max 5s
+                    console.log(`⏳ Retrying in ${delay}ms...`);
+                    await this.delay(delay);
+                    continue;
+                } else {
+                    // Final attempt failed, provide user-friendly error messages
+                    this.isConnected = false;
+                    
+                    if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch')) {
+                        throw new Error('Cannot connect to Ollama. Please ensure Ollama is running: `ollama serve`');
+                    } else if (error.message.includes('timeout')) {
+                        throw new Error(`AI Director timed out after ${timeout}ms. ${error.message}`);
+                    } else if (error.message.includes('Model') && error.message.includes('not found')) {
+                        throw new Error(error.message); // Pass through model-specific errors
+                    } else if (error.message.includes('overloaded')) {
+                        throw new Error('Ollama server is overloaded. Please wait a moment and try again.');
+                    } else {
+                        throw new Error(`AI Director error: ${error.message}`);
+                    }
+                }
             }
-
-            const response = await fetch(`${this.ollamaUrl}/api/chat`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody)
-            });
-
-            if (!response.ok) {
-                throw new Error(`Ollama request failed: ${response.status} ${response.statusText}`);
-            }
-
-            if (options.stream) {
-                return this.handleStreamingResponse(response);
-            } else {
-                const data = await response.json();
-                this.updateResponseStats(Date.now() - startTime);
-                return this.processAIResponse(data);
-            }
-
-        } catch (error) {
-            console.error('🎭 OllamaInterface: Performance generation failed:', error);
-            throw error;
         }
     }
 
     /**
-     * Handle streaming responses from Ollama
+     * Determine if an error is retryable
      */
-    async handleStreamingResponse(response) {
+    shouldRetry(error) {
+        const retryableErrors = [
+            'timeout',
+            'ECONNRESET',
+            'ETIMEDOUT',
+            'ENOTFOUND',
+            'overloaded',
+            'temporary'
+        ];
+        
+        return retryableErrors.some(retryable => 
+            error.message.toLowerCase().includes(retryable.toLowerCase())
+        );
+    }
+
+    /**
+     * Utility delay function for retries
+     */
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * Handle streaming responses from Ollama with timeout protection
+     */
+    async handleStreamingResponse(response, timeout = 60000) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         const results = [];
+        let lastChunkTime = Date.now();
 
         try {
             while (true) {
+                // Check for stream timeout (no data received for too long)
+                if (Date.now() - lastChunkTime > timeout) {
+                    throw new Error(`Stream timed out after ${timeout}ms of inactivity`);
+                }
+
                 const { value, done } = await reader.read();
                 if (done) break;
 
+                lastChunkTime = Date.now(); // Update last chunk time
                 const chunk = decoder.decode(value);
                 const lines = chunk.split('\n').filter(line => line.trim());
 
@@ -448,21 +543,39 @@ class OllamaTheaterInterface {
                             
                             // Execute function calls immediately for real-time control
                             if (data.message.tool_calls) {
-                                await this.executeToolCalls(data.message.tool_calls);
+                                try {
+                                    await this.executeToolCalls(data.message.tool_calls);
+                                } catch (toolError) {
+                                    console.warn('⚠️ Function call execution failed:', toolError.message);
+                                    // Continue processing other chunks
+                                }
                             }
                             
                             // Broadcast content updates
                             if (data.message.content) {
-                                this.broadcastDirectorNarrative(data.message.content);
+                                try {
+                                    this.broadcastDirectorNarrative(data.message.content);
+                                } catch (broadcastError) {
+                                    console.warn('⚠️ Failed to broadcast narrative:', broadcastError.message);
+                                    // Continue processing
+                                }
                             }
                         }
                     } catch (parseError) {
-                        console.warn('Failed to parse streaming response:', parseError);
+                        console.warn('⚠️ Failed to parse streaming response chunk:', parseError.message);
+                        // Continue processing other chunks
                     }
                 }
             }
+        } catch (streamError) {
+            console.error('🚨 Streaming response error:', streamError.message);
+            throw new Error(`Streaming failed: ${streamError.message}`);
         } finally {
-            reader.releaseLock();
+            try {
+                reader.releaseLock();
+            } catch (releaseError) {
+                console.warn('⚠️ Failed to release stream reader:', releaseError.message);
+            }
         }
 
         return results;

@@ -9,6 +9,7 @@
 class NeuralClothSystem {
     constructor() {
         this.isInitialized = false;
+        this.simulationCancelled = false;
         
         // Physics-embedded learning parameters
         this.physicsParams = {
@@ -267,40 +268,110 @@ class NeuralClothSystem {
     }
 
     /**
-     * Apply neural simulation for realistic cloth dynamics
+     * Apply neural simulation for realistic cloth dynamics with async batching
      */
-    async applyNeuralSimulation(clothGeometry, fabricMaterial, bodyData) {
+    async applyNeuralSimulation(clothGeometry, fabricMaterial, bodyData, options = {}) {
         console.log('🧠 Applying neural cloth simulation...');
         
-        // Initialize simulation state
-        this.initializeSimulationState(clothGeometry, fabricMaterial);
-        
-        // Run physics-embedded neural network
-        const simulationSteps = 60; // Simulate 1 second at 60 FPS
-        
-        for (let step = 0; step < simulationSteps; step++) {
-            // Neural network prediction for next frame
-            const neuralPrediction = await this.neuralPhysicsStep(
-                this.simulationState,
-                fabricMaterial,
-                bodyData
-            );
+        try {
+            // Initialize simulation state
+            this.initializeSimulationState(clothGeometry, fabricMaterial);
             
-            // Apply physics constraints
-            const constrainedPrediction = this.applyPhysicsConstraints(
-                neuralPrediction,
-                clothGeometry.constraints
-            );
+            // Configurable simulation parameters
+            const simulationSteps = options.steps || 60; // Simulate 1 second at 60 FPS
+            const batchSize = options.batchSize || 5; // Process in smaller chunks to prevent freezing
+            const yieldInterval = options.yieldInterval || 16; // Yield every 16ms (1 frame at 60fps)
             
-            // Update simulation state
-            this.updateSimulationState(constrainedPrediction);
+            console.log(`🧠 Neural cloth: Running ${simulationSteps} steps in batches of ${batchSize}`);
             
-            // Store frame in temporal history
-            this.storeTemporalState(step);
+            // Process simulation in batches to prevent browser freezing
+            for (let batch = 0; batch < simulationSteps; batch += batchSize) {
+                const endStep = Math.min(batch + batchSize, simulationSteps);
+                const batchStartTime = performance.now();
+                
+                // Process current batch
+                for (let step = batch; step < endStep; step++) {
+                    try {
+                        // Neural network prediction for next frame
+                        const neuralPrediction = await this.neuralPhysicsStep(
+                            this.simulationState,
+                            fabricMaterial,
+                            bodyData
+                        );
+                        
+                        // Apply physics constraints
+                        const constrainedPrediction = this.applyPhysicsConstraints(
+                            neuralPrediction,
+                            clothGeometry.constraints
+                        );
+                        
+                        // Update simulation state
+                        this.updateSimulationState(constrainedPrediction);
+                        
+                        // Store frame in temporal history
+                        this.storeTemporalState(step);
+                        
+                    } catch (stepError) {
+                        console.warn(`⚠️ Neural cloth simulation step ${step} failed:`, stepError.message);
+                        
+                        // Continue with previous state if single step fails
+                        if (step > 0) {
+                            console.log(`📦 Using previous simulation state for step ${step}`);
+                        } else {
+                            throw new Error(`Neural cloth simulation failed at initialization: ${stepError.message}`);
+                        }
+                    }
+                }
+                
+                const batchTime = performance.now() - batchStartTime;
+                console.log(`🧠 Completed batch ${Math.floor(batch/batchSize) + 1}/${Math.ceil(simulationSteps/batchSize)} (${batchTime.toFixed(1)}ms)`);
+                
+                // Yield control to browser if not the last batch
+                if (batch + batchSize < simulationSteps) {
+                    await new Promise(resolve => setTimeout(resolve, yieldInterval));
+                    
+                    // Check if simulation should be cancelled (e.g., user navigated away)
+                    if (this.simulationCancelled) {
+                        console.log('🚫 Neural cloth simulation cancelled by user');
+                        throw new Error('Simulation cancelled');
+                    }
+                }
+            }
+            
+            console.log('✅ Neural cloth simulation completed successfully');
+            
+            // Return final cloth state with realistic draping
+            return this.extractFinalClothState();
+            
+        } catch (error) {
+            console.error('❌ Neural cloth simulation failed:', error);
+            
+            // Provide user-friendly error messages
+            if (error.message.includes('cancelled')) {
+                throw new Error('Cloth simulation was cancelled');
+            } else if (error.message.includes('memory')) {
+                throw new Error('Cloth simulation failed due to insufficient memory. Try reducing quality settings.');
+            } else if (error.message.includes('timeout')) {
+                throw new Error('Cloth simulation timed out. The model may be too complex.');
+            } else {
+                throw new Error(`Cloth simulation error: ${error.message}`);
+            }
         }
-        
-        // Return final cloth state with realistic draping
-        return this.extractFinalClothState();
+    }
+
+    /**
+     * Cancel ongoing simulation
+     */
+    cancelSimulation() {
+        this.simulationCancelled = true;
+        console.log('🚫 Neural cloth simulation cancellation requested');
+    }
+
+    /**
+     * Reset cancellation flag
+     */
+    resetCancellation() {
+        this.simulationCancelled = false;
     }
 
     /**
