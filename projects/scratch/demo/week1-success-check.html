@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Week 1 Success Check - Phase 3A</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+        }
+        #successPanel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 400px;
+            background: linear-gradient(135deg, rgba(0,0,0,0.95), rgba(30,30,30,0.95));
+            padding: 25px;
+            border-radius: 12px;
+            border: 2px solid #333;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+            z-index: 1000;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 15px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #4CAF50;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .header p {
+            margin: 5px 0 0 0;
+            color: #888;
+            font-size: 14px;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 12px 0;
+            padding: 8px 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            border-left: 4px solid #4CAF50;
+        }
+        .metric.warning { border-left-color: #FF9800; }
+        .metric.error { border-left-color: #F44336; }
+        .metric-label {
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .metric-value {
+            font-weight: bold;
+            font-size: 16px;
+            color: #4CAF50;
+        }
+        .metric.warning .metric-value { color: #FF9800; }
+        .metric.error .metric-value { color: #F44336; }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-success { background: #4CAF50; }
+        .status-warning { background: #FF9800; }
+        .status-error { background: #F44336; }
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4CAF50, #66BB6A);
+            transition: width 0.3s ease;
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+        button:hover { background: #45a049; }
+        button:disabled { 
+            background: #666; 
+            cursor: not-allowed; 
+        }
+        .log {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+        .success-banner {
+            background: linear-gradient(135deg, #4CAF50, #66BB6A);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+            border-top: 1px solid #333;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="successPanel">
+        <div class="header">
+            <h1>🏆 Week 1 Success Check</h1>
+            <p>Phase 3A: 5+ Actors @ 50+ FPS with Collision Avoidance</p>
+        </div>
+        
+        <div class="progress-bar">
+            <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+        </div>
+        
+        <div id="metrics">
+            <div class="metric">
+                <span class="metric-label">
+                    <span id="statusIndicator" class="status-indicator status-error"></span>
+                    System Status
+                </span>
+                <span id="systemStatus" class="metric-value">Initializing...</span>
+            </div>
+            
+            <div class="metric">
+                <span class="metric-label">Active Actors</span>
+                <span id="actorCount" class="metric-value">0</span>
+            </div>
+            
+            <div class="metric">
+                <span class="metric-label">Current FPS</span>
+                <span id="currentFPS" class="metric-value">0</span>
+            </div>
+            
+            <div class="metric">
+                <span class="metric-label">Average FPS</span>
+                <span id="averageFPS" class="metric-value">0</span>
+            </div>
+            
+            <div class="metric">
+                <span class="metric-label">Collision Events</span>
+                <span id="collisionEvents" class="metric-value">0</span>
+            </div>
+            
+            <div class="metric">
+                <span class="metric-label">Test Duration</span>
+                <span id="testDuration" class="metric-value">0s</span>
+            </div>
+        </div>
+        
+        <div id="successBanner" class="success-banner" style="display: none;">
+            🎉 WEEK 1 SUCCESS CHECK PASSED! 🎉
+        </div>
+        
+        <div class="controls">
+            <button id="startTest" onclick="startSuccessCheck()">🚀 Start Success Check</button>
+            <button id="stopTest" onclick="stopSuccessCheck()" disabled>⏹️ Stop Test</button>
+        </div>
+        
+        <div id="log" class="log"></div>
+        
+        <div class="footer">
+            <p>Target: 5+ actors moving with collision avoidance at 50+ fps</p>
+            <p>Duration: 10 second performance test</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <!-- Core Systems -->
+    <script src="js/core/StateManager.js"></script>
+    <script src="js/core/SceneManager.js"></script>
+    <script src="js/core/StageBuilder.js"></script>
+    <script src="js/core/ObjectFactory.js"></script>
+    <script src="js/core/PhysicsEngine.js"></script>
+    <script src="js/core/AudioSystem.js"></script>
+    <script src="js/core/TextureManager.js"></script>
+    <script src="js/ui/UIFactory.js"></script>
+    <script src="js/core/UIManager.js"></script>
+    
+    <!-- ActorFactory System -->
+    <script src="js/core/actors/ActorStateMachine.js"></script>
+    <script src="js/core/actors/ActorMovement.js"></script>
+    <script src="js/core/actors/ActorCollisionAvoidance.js"></script>
+    <script src="js/core/actors/ActorFactory.js"></script>
+    
+    <script>
+        // Success Check Variables
+        let testRunning = false;
+        let testStartTime = 0;
+        let frameCount = 0;
+        let fpsHistory = [];
+        let collisionEventCount = 0;
+        let testActors = [];
+        let animationId = null;
+        
+        // Performance tracking
+        let lastFrameTime = 0;
+        let frameTimeHistory = [];
+        
+        // Test configuration
+        const TEST_DURATION = 10000; // 10 seconds
+        const TARGET_ACTORS = 6; // More than 5 required
+        const TARGET_FPS = 50;
+        const UPDATE_INTERVAL = 100; // UI update every 100ms
+        
+        function log(message, type = 'info') {
+            const logElement = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logElement.textContent += logEntry;
+            logElement.scrollTop = logElement.scrollHeight;
+            console.log(`[Week1Check] ${message}`);
+        }
+        
+        function updateUI() {
+            if (!testRunning) return;
+            
+            const elapsed = performance.now() - testStartTime;
+            const progress = Math.min(elapsed / TEST_DURATION * 100, 100);
+            
+            // Update progress bar
+            document.getElementById('progressFill').style.width = progress + '%';
+            
+            // Update duration
+            document.getElementById('testDuration').textContent = Math.floor(elapsed / 1000) + 's';
+            
+            // Update actor count
+            const activeActors = testActors.filter(actor => actor && actor.isMoving).length;
+            document.getElementById('actorCount').textContent = testActors.length + ` (${activeActors} moving)`;
+            
+            // Calculate and update FPS
+            const currentFPS = fpsHistory.length > 0 ? fpsHistory[fpsHistory.length - 1] : 0;
+            const averageFPS = fpsHistory.length > 0 ? 
+                fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length : 0;
+                
+            document.getElementById('currentFPS').textContent = currentFPS.toFixed(1);
+            document.getElementById('averageFPS').textContent = averageFPS.toFixed(1);
+            
+            // Update collision events
+            document.getElementById('collisionEvents').textContent = collisionEventCount;
+            
+            // Update status
+            const statusElement = document.getElementById('systemStatus');
+            const indicatorElement = document.getElementById('statusIndicator');
+            
+            if (averageFPS >= TARGET_FPS && testActors.length >= 5 && collisionEventCount > 0) {
+                statusElement.textContent = 'SUCCESS! 🎉';
+                statusElement.className = 'metric-value';
+                indicatorElement.className = 'status-indicator status-success';
+                
+                if (progress >= 50 && !document.getElementById('successBanner').style.display !== 'none') {
+                    document.getElementById('successBanner').style.display = 'block';
+                }
+            } else if (averageFPS >= TARGET_FPS * 0.8) {
+                statusElement.textContent = 'Good';
+                statusElement.className = 'metric-value';
+                indicatorElement.className = 'status-indicator status-warning';
+            } else {
+                statusElement.textContent = 'Testing...';
+                statusElement.className = 'metric-value';
+                indicatorElement.className = 'status-indicator status-error';
+            }
+            
+            // Update metric styling based on performance
+            updateMetricStyling('currentFPS', currentFPS, TARGET_FPS);
+            updateMetricStyling('averageFPS', averageFPS, TARGET_FPS);
+            updateMetricStyling('actorCount', testActors.length, 5);
+        }
+        
+        function updateMetricStyling(elementId, value, target) {
+            const element = document.getElementById(elementId).parentElement;
+            element.className = 'metric';
+            
+            if (value >= target) {
+                element.className += ' success';
+            } else if (value >= target * 0.8) {
+                element.className += ' warning';
+            } else {
+                element.className += ' error';
+            }
+        }
+        
+        async function initializeSystems() {
+            log('🏗️ Initializing core systems...');
+            
+            try {
+                // Initialize in dependency order
+                if (window.threeSceneManager) {
+                    await window.threeSceneManager.initialize();
+                    log('✅ SceneManager initialized');
+                }
+                
+                if (window.threeStageBuilder) {
+                    await window.threeStageBuilder.initialize();
+                    log('✅ StageBuilder initialized');
+                }
+                
+                if (window.threeObjectFactory) {
+                    await window.threeObjectFactory.initialize();
+                    log('✅ ObjectFactory initialized');
+                }
+                
+                if (window.theatricalActorFactory) {
+                    await window.theatricalActorFactory.initialize();
+                    log('✅ ActorFactory initialized');
+                }
+                
+                log('🎉 All systems initialized successfully!');
+                return true;
+                
+            } catch (error) {
+                log(`❌ System initialization failed: ${error.message}`);
+                return false;
+            }
+        }
+        
+        async function createTestActors() {
+            log(`🎭 Creating ${TARGET_ACTORS} test actors...`);
+            testActors = [];
+            
+            for (let i = 0; i < TARGET_ACTORS; i++) {
+                try {
+                    const x = (Math.random() - 0.5) * 8; // -4 to 4
+                    const z = (Math.random() - 0.5) * 8;
+                    const actorType = i % 3 === 0 ? 'human_male' : (i % 3 === 1 ? 'human_female' : 'human_male');
+                    
+                    const visualActor = await window.threeObjectFactory.addActorAt(x, z, actorType);
+                    const behavioralActor = window.theatricalActorFactory.getActor(visualActor.userData.id);
+                    
+                    if (behavioralActor) {
+                        testActors.push(behavioralActor);
+                        
+                        // Set random personality for variety
+                        behavioralActor.personality.energy = 0.3 + Math.random() * 0.7;
+                        behavioralActor.personality.confidence = 0.3 + Math.random() * 0.7;
+                        behavioralActor.personality.sociability = 0.3 + Math.random() * 0.7;
+                        
+                        log(`✅ Created actor ${i + 1}: ${behavioralActor.id}`);
+                    }
+                } catch (error) {
+                    log(`❌ Failed to create actor ${i + 1}: ${error.message}`);
+                }
+            }
+            
+            log(`🎯 Created ${testActors.length}/${TARGET_ACTORS} actors successfully`);
+            return testActors.length >= 5; // Need at least 5 for success
+        }
+        
+        function startActorMovement() {
+            log('🚶 Starting actor movement and collision testing...');
+            
+            // Start actors moving around randomly
+            testActors.forEach((actor, index) => {
+                if (actor) {
+                    // Initial movement
+                    const targetX = (Math.random() - 0.5) * 6;
+                    const targetZ = (Math.random() - 0.5) * 6;
+                    actor.moveTo(targetX, targetZ);
+                    
+                    // Set up periodic movement
+                    const moveInterval = setInterval(() => {
+                        if (!testRunning) {
+                            clearInterval(moveInterval);
+                            return;
+                        }
+                        
+                        // Random chance to move to new target
+                        if (Math.random() < 0.3) {
+                            const newX = (Math.random() - 0.5) * 6;
+                            const newZ = (Math.random() - 0.5) * 6;
+                            actor.moveTo(newX, newZ);
+                        }
+                    }, 2000 + Math.random() * 3000); // Every 2-5 seconds
+                }
+            });
+        }
+        
+        function performanceLoop() {
+            if (!testRunning) return;
+            
+            const frameStartTime = performance.now();
+            frameCount++;
+            
+            // Update actor system
+            if (window.theatricalActorFactory) {
+                window.theatricalActorFactory.update(0.016); // 60fps target
+            }
+            
+            // Track collision events by checking avoidance systems
+            let currentCollisions = 0;
+            testActors.forEach(actor => {
+                if (actor && actor.collisionAvoidance) {
+                    const avoidanceInfo = actor.collisionAvoidance.getAvoidanceDebugInfo();
+                    if (avoidanceInfo.isAvoiding) {
+                        currentCollisions++;
+                    }
+                }
+            });
+            
+            collisionEventCount = Math.max(collisionEventCount, currentCollisions);
+            
+            // Calculate FPS
+            if (lastFrameTime > 0) {
+                const frameDelta = frameStartTime - lastFrameTime;
+                const fps = 1000 / frameDelta;
+                fpsHistory.push(fps);
+                
+                // Keep only recent FPS samples
+                if (fpsHistory.length > 60) {
+                    fpsHistory.shift();
+                }
+            }
+            
+            lastFrameTime = frameStartTime;
+            
+            // Render scene
+            if (window.stageState && window.stageState.core) {
+                const { renderer, scene, camera } = window.stageState.core;
+                if (renderer && scene && camera) {
+                    renderer.render(scene, camera);
+                }
+            }
+            
+            // Continue loop
+            if (testRunning) {
+                animationId = requestAnimationFrame(performanceLoop);
+            }
+            
+            // Check if test is complete
+            const elapsed = performance.now() - testStartTime;
+            if (elapsed >= TEST_DURATION) {
+                stopSuccessCheck();
+            }
+        }
+        
+        async function startSuccessCheck() {
+            if (testRunning) return;
+            
+            log('🚀 Starting Week 1 Success Check!');
+            
+            // Reset state
+            testRunning = true;
+            testStartTime = performance.now();
+            frameCount = 0;
+            fpsHistory = [];
+            collisionEventCount = 0;
+            testActors = [];
+            lastFrameTime = 0;
+            
+            // Update UI
+            document.getElementById('startTest').disabled = true;
+            document.getElementById('stopTest').disabled = false;
+            document.getElementById('successBanner').style.display = 'none';
+            document.getElementById('log').textContent = '';
+            
+            // Initialize systems
+            const systemsReady = await initializeSystems();
+            if (!systemsReady) {
+                log('❌ System initialization failed - cannot proceed');
+                stopSuccessCheck();
+                return;
+            }
+            
+            // Create test actors
+            const actorsReady = await createTestActors();
+            if (!actorsReady) {
+                log('❌ Failed to create minimum number of actors');
+                stopSuccessCheck();
+                return;
+            }
+            
+            // Start actor movement
+            startActorMovement();
+            
+            // Start performance loop
+            performanceLoop();
+            
+            // Start UI updates
+            const uiUpdateInterval = setInterval(() => {
+                if (!testRunning) {
+                    clearInterval(uiUpdateInterval);
+                    return;
+                }
+                updateUI();
+            }, UPDATE_INTERVAL);
+            
+            log(`✅ Success check started! Running for ${TEST_DURATION/1000} seconds...`);
+        }
+        
+        function stopSuccessCheck() {
+            if (!testRunning) return;
+            
+            testRunning = false;
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            // Update UI
+            document.getElementById('startTest').disabled = false;
+            document.getElementById('stopTest').disabled = true;
+            
+            // Calculate final results
+            const elapsed = performance.now() - testStartTime;
+            const averageFPS = fpsHistory.length > 0 ? 
+                fpsHistory.reduce((a, b) => a + b, 0) / fpsHistory.length : 0;
+            
+            // Log final results
+            log('🏁 Success check complete!');
+            log(`📊 Final Results:`);
+            log(`   Duration: ${(elapsed/1000).toFixed(1)}s`);
+            log(`   Actors: ${testActors.length}`);
+            log(`   Average FPS: ${averageFPS.toFixed(1)}`);
+            log(`   Collision Events: ${collisionEventCount}`);
+            log(`   Frames Rendered: ${frameCount}`);
+            
+            // Determine success
+            const success = testActors.length >= 5 && averageFPS >= TARGET_FPS && collisionEventCount > 0;
+            
+            if (success) {
+                log('🎉 ✅ WEEK 1 SUCCESS CHECK: PASSED!');
+                log(`   ✓ ${testActors.length}+ actors (target: 5+)`);
+                log(`   ✓ ${averageFPS.toFixed(1)} fps (target: 50+)`);
+                log(`   ✓ ${collisionEventCount} collision avoidance events`);
+                document.getElementById('successBanner').style.display = 'block';
+            } else {
+                log('❌ Week 1 Success Check: Failed');
+                if (testActors.length < 5) log(`   ✗ Only ${testActors.length} actors (need 5+)`);
+                if (averageFPS < TARGET_FPS) log(`   ✗ Only ${averageFPS.toFixed(1)} fps (need 50+)`);
+                if (collisionEventCount === 0) log(`   ✗ No collision avoidance detected`);
+            }
+            
+            updateUI();
+        }
+        
+        // Auto-start when page loads
+        window.addEventListener('load', async () => {
+            log('🌟 Week 1 Success Check environment ready!');
+            log('💡 Click "Start Success Check" to begin testing');
+            
+            // Initialize basic systems for display
+            try {
+                await initializeSystems();
+                log('✅ Systems pre-initialized and ready for testing');
+            } catch (error) {
+                log(`⚠️ Pre-initialization warning: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Theater Stage - Agent Control Demo</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #000;
+        }
+        
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 300px;
+            z-index: 1000;
+        }
+        
+        #api-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            background: rgba(0,0,0,0.9);
+            padding: 15px;
+            border-radius: 5px;
+            min-width: 320px;
+            z-index: 1000;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .control-section {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 10px;
+        }
+        
+        .control-section h3 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 2px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        select, input {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 3px;
+            margin: 2px;
+            border-radius: 3px;
+        }
+        
+        .status {
+            font-size: 11px;
+            color: #888;
+            margin-top: 5px;
+        }
+        
+        .agent-status {
+            margin: 5px 0;
+            padding: 5px;
+            background: rgba(76, 175, 80, 0.2);
+            border-radius: 3px;
+            font-size: 11px;
+        }
+        
+        .agent-inactive {
+            background: rgba(255, 152, 0, 0.2);
+        }
+        
+        #api-log {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            height: 150px;
+            background: rgba(0,0,0,0.9);
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+        
+        .log-entry {
+            margin: 2px 0;
+        }
+        
+        .log-api { color: #4CAF50; }
+        .log-agent { color: #2196F3; }
+        .log-error { color: #f44336; }
+        .log-info { color: #888; }
+    </style>
+</head>
+<body>
+    <div id="info">
+        <h3>🎭 3D Theater Stage - Agent Control Demo</h3>
+        <p>This demo shows AI agents controlling the theater through a comprehensive API.</p>
+        <p><strong>Controls:</strong></p>
+        <ul>
+            <li>Mouse: Rotate view</li>
+            <li>Scroll: Zoom</li>
+            <li>Right-click: Pan</li>
+        </ul>
+        <p><strong>Features:</strong></p>
+        <ul>
+            <li>DirectorAgent: Orchestrates scenes</li>
+            <li>ChoreographerAgent: Controls formations</li>
+            <li>LightingAgent: Manages ambiance</li>
+            <li>AudienceAgent: Simulates reactions</li>
+        </ul>
+    </div>
+    
+    <div id="api-controls">
+        <h3>🤖 Agent Control Panel</h3>
+        
+        <div class="control-section">
+            <h3>System Status</h3>
+            <div id="system-status" class="status">Initializing...</div>
+        </div>
+        
+        <div class="control-section">
+            <h3>Manual API Calls</h3>
+            <button onclick="testAPI()">Test API Connection</button>
+            <button onclick="createTestActor()">Create Actor</button>
+            <button onclick="getActorList()">List Actors</button>
+            <br>
+            <button onclick="setLightingTest('dramatic')">Dramatic Lighting</button>
+            <button onclick="setLightingTest('concert')">Concert Lighting</button>
+            <button onclick="setCameraTest('overhead')">Overhead View</button>
+        </div>
+        
+        <div class="control-section">
+            <h3>Agent Management</h3>
+            <button onclick="startAllAgents()">Start All Agents</button>
+            <button onclick="stopAllAgents()">Stop All Agents</button>
+            <button onclick="showAgentStats()">Show Agent Stats</button>
+            <br>
+            <button onclick="startDirector()">Start Director</button>
+            <button onclick="startChoreographer()">Start Choreographer</button>
+            <button onclick="startLighting()">Start Lighting</button>
+            <button onclick="startAudience()">Start Audience</button>
+        </div>
+        
+        <div class="control-section">
+            <h3>Performance Control</h3>
+            <button onclick="triggerPerformance()">Start Performance</button>
+            <button onclick="emergencyStop()">Emergency Stop</button>
+            <button onclick="resetScene()">Reset Scene</button>
+        </div>
+        
+        <div class="control-section">
+            <h3>Active Agents</h3>
+            <div id="agent-list">No agents running</div>
+        </div>
+    </div>
+    
+    <div id="api-log">
+        <div class="log-entry log-info">🎭 Agent Control Demo - API Log</div>
+    </div>
+    
+    <!-- Three.js and dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <!-- Use working v0.6.7 CDN build -->
+    <script src="https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.6.7/lib/three-vrm.js"></script>
+    
+    <!-- Core Theater System -->
+    <script src="js/core/StateManager.js?v=3"></script>
+    <script src="js/core/ResourceManager.js?v=3"></script>
+    <script src="js/core/SceneManager.js?v=3"></script>
+    <script src="js/core/StageBuilder.js?v=8"></script>
+    <script src="js/core/ObjectFactory.js?v=3"></script>
+    <script src="js/core/PhysicsEngine.js?v=4"></script>
+    <script src="js/core/AudioSystem.js?v=3"></script>
+    <script src="js/core/TextureManager.js?v=3"></script>
+    <script src="js/core/CommandManager.js?v=3"></script>
+    <script src="js/core/AdvancedFaceSystem.js?v=3"></script>
+    <script src="js/core/AdvancedHairSystem.js?v=3"></script>
+    <script src="js/core/ModernHairSystem.js?v=3"></script>
+    <script src="js/core/EnhancedActorSystem.js?v=3"></script>
+    <script src="js/core/PrimitiveActorSystem.js?v=3"></script>
+    <script src="js/core/AdvancedActorSystemV2.js?v=3"></script>
+    <script src="js/core/ActorCreationManager.js?v=3"></script>
+    <script src="js/core/actors/ActorStateMachine.js?v=3"></script>
+    <script src="js/core/actors/ActorMovement.js?v=3"></script>
+    <script src="js/core/actors/ActorCollisionAvoidance.js?v=3"></script>
+    <script src="js/core/actors/ActorFactory.js?v=7"></script>
+    <script src="js/core/UIManager.js?v=7"></script>
+    <script src="js/core/RenderLoop.js?v=3"></script>
+    <script src="js/ui/UIFactory.js?v=3"></script>
+    
+    <!-- NEW: API and Agent System -->
+    <script src="js/core/TheaterAPI.js?v=1"></script>
+    <script src="js/agents/AgentInterface.js?v=1"></script>
+    <script src="js/agents/ExampleAgents.js?v=1"></script>
+    
+    <!-- Main Application -->
+    <script src="js/stage.js?v=7"></script>
+    
+    <script>
+        // Global variables for demo
+        let activeAgents = new Map();
+        let apiInitialized = false;
+        
+        // Initialize the demo when everything is loaded
+        window.addEventListener('load', async () => {
+            try {
+                console.log('🎭 Agent Demo: Starting initialization...');
+                logToUI('🎭 Initializing theater system...', 'info');
+                
+                // Wait for theater system to be ready
+                await waitForTheaterSystem();
+                
+                // Initialize theater API
+                await window.theaterAPIInstance.initialize();
+                apiInitialized = true;
+                
+                logToUI('✅ Theater API initialized', 'api');
+                updateSystemStatus('✅ API Ready - Agents can be started');
+                
+                // Update UI periodically
+                setInterval(updateAgentList, 2000);
+                
+                console.log('🎭 Agent Demo: Ready for agent control!');
+                
+            } catch (error) {
+                console.error('🎭 Agent Demo: Initialization failed:', error);
+                logToUI(`❌ Initialization failed: ${error.message}`, 'error');
+                updateSystemStatus('❌ System Error');
+            }
+        });
+        
+        async function waitForTheaterSystem() {
+            return new Promise((resolve, reject) => {
+                const checkSystem = () => {
+                    if (window.stageState && 
+                        window.theatricalActorFactory?.isInitialized && 
+                        window.threeStageBuilder?.isInitialized &&
+                        window.stageUIManager?.isInitialized) {
+                        resolve();
+                    } else {
+                        setTimeout(checkSystem, 100);
+                    }
+                };
+                
+                checkSystem();
+                
+                setTimeout(() => {
+                    reject(new Error('Theater system not ready after 30 seconds'));
+                }, 30000);
+            });
+        }
+        
+        // === MANUAL API TESTING ===
+        
+        async function testAPI() {
+            try {
+                const result = await window.theaterAPI.get('/api/state');
+                logToUI(`🔍 API Test: ${JSON.stringify(result.data).substring(0, 100)}...`, 'api');
+            } catch (error) {
+                logToUI(`❌ API Test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function createTestActor() {
+            try {
+                const result = await window.theaterAPI.post('/api/actors', {
+                    x: Math.random() * 6 - 3,
+                    z: Math.random() * 4 - 2,
+                    type: 'human_male'
+                });
+                logToUI(`🎭 Created actor: ${result.data.id}`, 'api');
+            } catch (error) {
+                logToUI(`❌ Actor creation failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getActorList() {
+            try {
+                const result = await window.theaterAPI.get('/api/actors');
+                logToUI(`👥 Actors: ${result.data.length} found`, 'api');
+                result.data.forEach(actor => {
+                    logToUI(`   ${actor.id}: ${actor.state} at (${actor.position.x.toFixed(1)}, ${actor.position.z.toFixed(1)})`, 'info');
+                });
+            } catch (error) {
+                logToUI(`❌ Actor list failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function setLightingTest(preset) {
+            try {
+                await window.theaterAPI.put('/api/stage/lighting', { preset });
+                logToUI(`💡 Lighting set to: ${preset}`, 'api');
+            } catch (error) {
+                logToUI(`❌ Lighting change failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function setCameraTest(preset) {
+            try {
+                await window.theaterAPI.put('/api/stage/camera', { preset });
+                logToUI(`📷 Camera set to: ${preset}`, 'api');
+            } catch (error) {
+                logToUI(`❌ Camera change failed: ${error.message}`, 'error');
+            }
+        }
+        
+        // === AGENT MANAGEMENT ===
+        
+        async function startAllAgents() {
+            try {
+                await startDirector();
+                await startChoreographer();
+                await startLighting();
+                await startAudience();
+                await startAnalyzer();
+                
+                logToUI('🤖 All agents started', 'agent');
+            } catch (error) {
+                logToUI(`❌ Failed to start all agents: ${error.message}`, 'error');
+            }
+        }
+        
+        function stopAllAgents() {
+            for (const [agentId, agent] of activeAgents) {
+                agent.stop();
+                logToUI(`⏹️ Stopped agent: ${agentId}`, 'agent');
+            }
+            activeAgents.clear();
+            window.agentManager.stop();
+        }
+        
+        async function startDirector() {
+            if (activeAgents.has('director')) {
+                logToUI('🎭 Director already running', 'info');
+                return;
+            }
+            
+            const director = new DirectorAgent();
+            await window.agentManager.registerAgent(director);
+            activeAgents.set('director', director);
+            
+            if (!window.agentManager.isActive) {
+                window.agentManager.start();
+            }
+            
+            logToUI('🎭 Director agent started', 'agent');
+        }
+        
+        async function startChoreographer() {
+            if (activeAgents.has('choreographer')) {
+                logToUI('💃 Choreographer already running', 'info');
+                return;
+            }
+            
+            const choreographer = new ChoreographerAgent();
+            await window.agentManager.registerAgent(choreographer);
+            activeAgents.set('choreographer', choreographer);
+            
+            if (!window.agentManager.isActive) {
+                window.agentManager.start();
+            }
+            
+            logToUI('💃 Choreographer agent started', 'agent');
+        }
+        
+        async function startLighting() {
+            if (activeAgents.has('lighting')) {
+                logToUI('💡 Lighting agent already running', 'info');
+                return;
+            }
+            
+            const lighting = new LightingAgent();
+            await window.agentManager.registerAgent(lighting);
+            activeAgents.set('lighting', lighting);
+            
+            if (!window.agentManager.isActive) {
+                window.agentManager.start();
+            }
+            
+            logToUI('💡 Lighting agent started', 'agent');
+        }
+        
+        async function startAudience() {
+            if (activeAgents.has('audience')) {
+                logToUI('👏 Audience agent already running', 'info');
+                return;
+            }
+            
+            const audience = new AudienceAgent();
+            await window.agentManager.registerAgent(audience);
+            activeAgents.set('audience', audience);
+            
+            if (!window.agentManager.isActive) {
+                window.agentManager.start();
+            }
+            
+            logToUI('👏 Audience agent started', 'agent');
+        }
+        
+        async function startAnalyzer() {
+            if (activeAgents.has('analyzer')) {
+                logToUI('📊 Analyzer already running', 'info');
+                return;
+            }
+            
+            const analyzer = new PerformanceAnalyzerAgent();
+            await window.agentManager.registerAgent(analyzer);
+            activeAgents.set('analyzer', analyzer);
+            
+            if (!window.agentManager.isActive) {
+                window.agentManager.start();
+            }
+            
+            logToUI('📊 Performance analyzer started', 'agent');
+        }
+        
+        async function triggerPerformance() {
+            logToUI('🎭 Triggering coordinated performance...', 'agent');
+            
+            // Create some actors if none exist
+            const actors = await window.theaterAPI.get('/api/actors');
+            if (actors.data.length < 3) {
+                for (let i = 0; i < 5; i++) {
+                    await createTestActor();
+                }
+            }
+            
+            // Start key agents if not running
+            if (!activeAgents.has('director')) await startDirector();
+            if (!activeAgents.has('choreographer')) await startChoreographer();
+            if (!activeAgents.has('lighting')) await startLighting();
+        }
+        
+        function emergencyStop() {
+            logToUI('🚨 EMERGENCY STOP - All agents halted', 'error');
+            stopAllAgents();
+        }
+        
+        async function resetScene() {
+            // Stop all actors
+            await window.theaterAPI.post('/api/actors/stop-all');
+            
+            // Reset lighting
+            await window.theaterAPI.put('/api/stage/lighting', { preset: 'normal' });
+            
+            // Reset camera
+            await window.theaterAPI.put('/api/stage/camera', { preset: 'audience' });
+            
+            logToUI('🔄 Scene reset to defaults', 'info');
+        }
+        
+        function showAgentStats() {
+            const stats = window.agentManager.getAllStats();
+            logToUI('📊 Agent Statistics:', 'info');
+            
+            for (const [agentId, stat] of Object.entries(stats)) {
+                logToUI(`   ${agentId}: ${stat.actionsExecuted} actions, ${stat.actionsPerMinute}/min`, 'info');
+            }
+        }
+        
+        // === UI UTILITIES ===
+        
+        function logToUI(message, type = 'info') {
+            const log = document.getElementById('api-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+            
+            // Keep only last 50 entries
+            while (log.children.length > 50) {
+                log.removeChild(log.firstChild);
+            }
+        }
+        
+        function updateSystemStatus(status) {
+            document.getElementById('system-status').textContent = status;
+        }
+        
+        function updateAgentList() {
+            const agentListDiv = document.getElementById('agent-list');
+            
+            if (activeAgents.size === 0) {
+                agentListDiv.innerHTML = '<div class="agent-status agent-inactive">No agents running</div>';
+                return;
+            }
+            
+            let html = '';
+            for (const [agentId, agent] of activeAgents) {
+                const stats = agent.getStats();
+                const status = agent.isActive ? 'active' : 'inactive';
+                const statusClass = agent.isActive ? 'agent-status' : 'agent-status agent-inactive';
+                
+                html += `
+                    <div class="${statusClass}">
+                        <strong>${agent.config.name}</strong> (${agentId})<br>
+                        Status: ${status} | Actions: ${stats.actionsExecuted} | Queue: ${stats.queueLength}
+                    </div>
+                `;
+            }
+            
+            agentListDiv.innerHTML = html;
+        }
+        
+        // Listen for API messages and log them
+        window.addEventListener('theater-api-message', (event) => {
+            const { agentId, data } = event.detail;
+            if (data.event && data.data) {
+                logToUI(`📡 ${agentId} received: ${data.event}`, 'agent');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theater API Middleware Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            display: flex;
+            height: 100vh;
+        }
+
+        #theater-container {
+            flex: 2;
+            position: relative;
+        }
+
+        #test-panel {
+            flex: 1;
+            background: #2a2a2a;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #444;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 8px;
+        }
+
+        .section h3 {
+            margin: 0 0 15px 0;
+            color: #4CAF50;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 3px;
+            font-size: 12px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        #test-log {
+            background: #1a1a1a;
+            height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            border: 1px solid #666;
+        }
+
+        .log-entry {
+            margin: 3px 0;
+            padding: 3px;
+            border-radius: 2px;
+        }
+
+        .log-entry.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 3px solid #4CAF50;
+        }
+
+        .log-entry.error {
+            background: rgba(244, 67, 54, 0.1);
+            border-left: 3px solid #f44336;
+        }
+
+        .log-entry.info {
+            background: rgba(33, 150, 243, 0.1);
+            border-left: 3px solid #2196F3;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            background: #f44336;
+        }
+
+        .status-indicator.ready {
+            background: #4CAF50;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div id="theater-container">
+        <div id="info">
+            <h4>🧪 API Middleware Test</h4>
+            <p>Testing HTTP-style API interface for Ollama function calling.</p>
+            <p><strong>Status:</strong> <span id="system-status">Initializing...</span></p>
+        </div>
+    </div>
+
+    <div id="test-panel">
+        <div class="section">
+            <h3>
+                <span id="api-status" class="status-indicator"></span>
+                API Middleware Status
+            </h3>
+            <div id="api-info">Checking middleware...</div>
+            <button onclick="checkAPIStatus()">Refresh Status</button>
+        </div>
+
+        <div class="section">
+            <h3>🎭 Actor API Tests</h3>
+            <div class="test-grid">
+                <button onclick="testGetActors()">GET /api/actors</button>
+                <button onclick="testCreateActor()">POST /api/actors</button>
+                <button onclick="testMoveActor()">PUT /api/actors/:id/position</button>
+                <button onclick="testDeleteActor()">DELETE /api/actors/:id</button>
+                <button onclick="testMoveToMarker()">PUT /api/actors/:id/move-to-marker</button>
+                <button onclick="testGetState()">GET /api/state</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🎬 Stage API Tests</h3>
+            <div class="test-grid">
+                <button onclick="testSetLighting()">PUT /api/stage/lighting</button>
+                <button onclick="testSetCamera()">PUT /api/stage/camera</button>
+                <button onclick="testToggleCurtains()">PUT /api/stage/curtains</button>
+                <button onclick="testGetCompleteState()">GET /api/state (complete)</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🚀 Ollama Function Simulation</h3>
+            <button onclick="simulateOllamaFunctionCall()">Simulate Function Call</button>
+            <button onclick="testBatchOperations()">Test Batch Operations</button>
+            <button onclick="runFullScenario()">Run Full Scenario</button>
+        </div>
+
+        <div class="section">
+            <h3>📊 Test Log</h3>
+            <div id="test-log"></div>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <!-- Three.js and Theater System -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.6.7/lib/three-vrm.js"></script>
+    
+    <!-- Theater System Core (minimal for testing) -->
+    <script src="js/core/StateManager.js?v=3"></script>
+    <script src="js/core/ResourceManager.js?v=3"></script>
+    <script src="js/core/SceneManager.js?v=3"></script>
+    <script src="js/core/StageBuilder.js?v=8"></script>
+    <script src="js/core/ObjectFactory.js?v=3"></script>
+    <script src="js/core/ActorCreationManager.js?v=3"></script>
+    <script src="js/core/actors/ActorStateMachine.js?v=3"></script>
+    <script src="js/core/actors/ActorMovement.js?v=3"></script>
+    <script src="js/core/actors/ActorCollisionAvoidance.js?v=3"></script>
+    <script src="js/core/actors/ActorFactory.js?v=7"></script>
+    <script src="js/core/UIManager.js?v=7"></script>
+    <script src="js/core/RenderLoop.js?v=3"></script>
+    <script src="js/ui/UIFactory.js?v=3"></script>
+    
+    <!-- API System -->
+    <script src="js/core/TheaterAPIMiddleware.js?v=1"></script>
+    
+    <!-- Main Application -->
+    <script src="js/stage.js?v=7"></script>
+
+    <script>
+        let testActorId = null;
+        let testCount = 0;
+
+        // Initialize test system
+        window.addEventListener('load', async () => {
+            await initializeTestSystem();
+        });
+
+        async function initializeTestSystem() {
+            log('Initializing test system...', 'info');
+            
+            // Wait for theater system
+            await waitForTheaterSystem();
+            
+            // Wait for API middleware
+            await waitForAPIMiddleware();
+            
+            // Check status
+            await checkAPIStatus();
+            
+            document.getElementById('system-status').textContent = 'Ready for testing';
+            log('Test system ready!', 'success');
+        }
+
+        async function waitForTheaterSystem() {
+            return new Promise((resolve) => {
+                const check = () => {
+                    if (window.stageManager && window.theatricalActorFactory) {
+                        resolve();
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+
+        async function waitForAPIMiddleware() {
+            return new Promise((resolve) => {
+                const check = () => {
+                    if (window.theaterAPIMiddleware?.isInitialized && window.theaterAPI) {
+                        resolve();
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                };
+                check();
+            });
+        }
+
+        async function checkAPIStatus() {
+            try {
+                const status = document.getElementById('api-status');
+                const info = document.getElementById('api-info');
+                
+                if (window.theaterAPI && window.theaterAPIMiddleware?.isInitialized) {
+                    status.className = 'status-indicator ready';
+                    
+                    const stats = window.theaterAPIMiddleware.getStats();
+                    info.innerHTML = `
+                        Status: Ready<br>
+                        API Calls: ${stats.callCount}<br>
+                        Methods: GET, POST, PUT, DELETE<br>
+                        Last Call: ${stats.lastCall?.method || 'None'} ${stats.lastCall?.path || ''}
+                    `;
+                    
+                    log('API Middleware is ready', 'success');
+                } else {
+                    status.className = 'status-indicator';
+                    info.innerHTML = 'API Middleware not ready';
+                    log('API Middleware not available', 'error');
+                }
+            } catch (error) {
+                log(`Status check failed: ${error.message}`, 'error');
+            }
+        }
+
+        // === API TEST FUNCTIONS ===
+
+        async function testGetActors() {
+            try {
+                log('Testing GET /api/actors...', 'info');
+                const response = await window.theaterAPI.get('/api/actors');
+                
+                if (response.success) {
+                    log(`✓ GET /api/actors: Found ${response.data.length} actors`, 'success');
+                    console.log('Actors:', response.data);
+                } else {
+                    log(`✗ GET /api/actors failed: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ GET /api/actors error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testCreateActor() {
+            try {
+                log('Testing POST /api/actors...', 'info');
+                const response = await window.theaterAPI.post('/api/actors', {
+                    x: Math.random() * 4 - 2,
+                    z: Math.random() * 4 - 2,
+                    type: 'human_male'
+                });
+                
+                if (response.success) {
+                    testActorId = response.data.id; // Save for other tests
+                    log(`✓ POST /api/actors: Created actor ${response.data.id}`, 'success');
+                } else {
+                    log(`✗ POST /api/actors failed: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ POST /api/actors error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testMoveActor() {
+            if (!testActorId) {
+                log('No test actor available. Create one first.', 'error');
+                return;
+            }
+            
+            try {
+                log('Testing PUT /api/actors/:id/position...', 'info');
+                const response = await window.theaterAPI.put(`/api/actors/${testActorId}/position`, {
+                    x: Math.random() * 6 - 3,
+                    z: Math.random() * 6 - 3
+                });
+                
+                if (response.success) {
+                    log(`✓ PUT position: Moved actor to (${response.data.newPosition.x.toFixed(1)}, ${response.data.newPosition.z.toFixed(1)})`, 'success');
+                } else {
+                    log(`✗ PUT position failed: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ PUT position error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testMoveToMarker() {
+            if (!testActorId) {
+                log('No test actor available. Create one first.', 'error');
+                return;
+            }
+            
+            try {
+                log('Testing PUT /api/actors/:id/move-to-marker...', 'info');
+                const markerIndex = Math.floor(Math.random() * 20); // 0-19 markers
+                const response = await window.theaterAPI.put(`/api/actors/${testActorId}/move-to-marker`, {
+                    markerIndex: markerIndex
+                });
+                
+                if (response.success) {
+                    log(`✓ PUT move-to-marker: Moved actor to marker ${markerIndex}`, 'success');
+                } else {
+                    log(`✗ PUT move-to-marker failed: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ PUT move-to-marker error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDeleteActor() {
+            if (!testActorId) {
+                log('No test actor available. Create one first.', 'error');
+                return;
+            }
+            
+            try {
+                log('Testing DELETE /api/actors/:id...', 'info');
+                const response = await window.theaterAPI.delete(`/api/actors/${testActorId}`);
+                
+                if (response.success) {
+                    log(`✓ DELETE actor: Removed actor ${response.data.deleted}`, 'success');
+                    testActorId = null; // Clear reference
+                } else {
+                    log(`✗ DELETE actor failed: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ DELETE actor error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSetLighting() {
+            try {
+                log('Testing PUT /api/stage/lighting...', 'info');
+                const presets = ['normal', 'dramatic', 'evening', 'concert', 'spotlight'];
+                const preset = presets[Math.floor(Math.random() * presets.length)];
+                
+                const response = await window.theaterAPI.put('/api/stage/lighting', { preset });
+                
+                if (response.success) {
+                    log(`✓ PUT lighting: Set to '${response.data.preset}'`, 'success');
+                } else {
+                    log(`✗ PUT lighting failed: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ PUT lighting error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSetCamera() {
+            try {
+                log('Testing PUT /api/stage/camera...', 'info');
+                const presets = ['audience', 'overhead', 'backstage', 'stage-left', 'stage-right', 'close'];
+                const preset = presets[Math.floor(Math.random() * presets.length)];
+                
+                const response = await window.theaterAPI.put('/api/stage/camera', { preset });
+                
+                if (response.success) {
+                    log(`✓ PUT camera: Set to '${response.data.preset}'`, 'success');
+                } else {
+                    log(`✗ PUT camera failed: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ PUT camera error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testToggleCurtains() {
+            try {
+                log('Testing PUT /api/stage/curtains...', 'info');
+                const response = await window.theaterAPI.put('/api/stage/curtains', {});
+                
+                if (response.success) {
+                    log(`✓ PUT curtains: State is '${response.data.state}'`, 'success');
+                } else {
+                    log(`✗ PUT curtains failed: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ PUT curtains error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetState() {
+            try {
+                log('Testing GET /api/state...', 'info');
+                const response = await window.theaterAPI.get('/api/state');
+                
+                if (response.success) {
+                    const state = response.data;
+                    log(`✓ GET state: ${state.actors.length} actors, lighting: ${state.stage.lighting}`, 'success');
+                    console.log('Complete state:', state);
+                } else {
+                    log(`✗ GET state failed: ${response.error}`, 'error');
+                }
+            } catch (error) {
+                log(`✗ GET state error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetCompleteState() {
+            await testGetState(); // Same as GET /api/state
+        }
+
+        async function simulateOllamaFunctionCall() {
+            log('🤖 Simulating Ollama function call...', 'info');
+            
+            // Simulate what Ollama would do when calling move_actor function
+            try {
+                // First, get current state (like Ollama would)
+                const stateResponse = await window.theaterAPI.get('/api/state');
+                if (!stateResponse.success) {
+                    log('✗ Failed to get state for simulation', 'error');
+                    return;
+                }
+                
+                const actors = stateResponse.data.actors;
+                if (actors.length === 0) {
+                    // Create an actor first
+                    const createResponse = await window.theaterAPI.post('/api/actors', {
+                        x: 0, z: 0, type: 'human_male'
+                    });
+                    if (createResponse.success) {
+                        log(`🤖 Ollama: Created actor ${createResponse.data.id}`, 'success');
+                        
+                        // Now move it
+                        const moveResponse = await window.theaterAPI.put(`/api/actors/${createResponse.data.id}/position`, {
+                            x: 2, z: 1
+                        });
+                        
+                        if (moveResponse.success) {
+                            log(`🤖 Ollama: Moved actor to center stage`, 'success');
+                        }
+                    }
+                } else {
+                    // Move existing actor
+                    const actor = actors[0];
+                    const moveResponse = await window.theaterAPI.put(`/api/actors/${actor.id}/position`, {
+                        x: Math.random() * 4 - 2,
+                        z: Math.random() * 4 - 2
+                    });
+                    
+                    if (moveResponse.success) {
+                        log(`🤖 Ollama: Repositioned actor ${actor.id}`, 'success');
+                    }
+                }
+                
+                // Set dramatic lighting
+                await window.theaterAPI.put('/api/stage/lighting', { preset: 'dramatic' });
+                log('🤖 Ollama: Set dramatic lighting', 'success');
+                
+            } catch (error) {
+                log(`🤖 Ollama simulation failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBatchOperations() {
+            try {
+                log('Testing batch operations...', 'info');
+                
+                const operations = [
+                    { method: 'POST', path: '/api/actors', data: { x: -2, z: 0, type: 'human_female' } },
+                    { method: 'POST', path: '/api/actors', data: { x: 2, z: 0, type: 'human_male' } },
+                    { method: 'PUT', path: '/api/stage/lighting', data: { preset: 'concert' } },
+                    { method: 'GET', path: '/api/state' }
+                ];
+                
+                const results = await window.theaterAPI.batch(operations);
+                
+                const successCount = results.filter(r => r.success).length;
+                log(`✓ Batch: ${successCount}/${results.length} operations succeeded`, 'success');
+                
+            } catch (error) {
+                log(`✗ Batch operations error: ${error.message}`, 'error');
+            }
+        }
+
+        async function runFullScenario() {
+            log('🎭 Running full theater scenario...', 'info');
+            
+            try {
+                // Step 1: Create multiple actors
+                log('Step 1: Creating actors...', 'info');
+                for (let i = 0; i < 3; i++) {
+                    await window.theaterAPI.post('/api/actors', {
+                        x: (i - 1) * 2,
+                        z: 0,
+                        type: i % 2 === 0 ? 'human_male' : 'human_female'
+                    });
+                }
+                
+                // Step 2: Set dramatic lighting
+                log('Step 2: Setting scene...', 'info');
+                await window.theaterAPI.put('/api/stage/lighting', { preset: 'dramatic' });
+                
+                // Step 3: Move actors in formation
+                log('Step 3: Arranging formation...', 'info');
+                const state = await window.theaterAPI.get('/api/state');
+                if (state.success && state.data.actors.length >= 3) {
+                    const actors = state.data.actors;
+                    
+                    // Triangle formation
+                    await window.theaterAPI.put(`/api/actors/${actors[0].id}/position`, { x: 0, z: 2 });
+                    await window.theaterAPI.put(`/api/actors/${actors[1].id}/position`, { x: -2, z: -1 });
+                    await window.theaterAPI.put(`/api/actors/${actors[2].id}/position`, { x: 2, z: -1 });
+                }
+                
+                // Step 4: Camera adjustment
+                log('Step 4: Setting camera...', 'info');
+                await window.theaterAPI.put('/api/stage/camera', { preset: 'audience' });
+                
+                log('🎭 Full scenario completed!', 'success');
+                
+            } catch (error) {
+                log(`🎭 Scenario failed: ${error.message}`, 'error');
+            }
+        }
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('test-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span style="color: #888;">[${new Date().toLocaleTimeString()}]</span> ${message}`;
+            
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('test-log').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

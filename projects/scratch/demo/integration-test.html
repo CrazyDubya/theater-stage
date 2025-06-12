@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Test - Phase 3A Week 1</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        #testConsole {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 450px;
+            height: 300px;
+            background: rgba(0,0,0,0.9);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-y: auto;
+            font-size: 12px;
+            border: 2px solid #333;
+            z-index: 1000;
+        }
+        #testResults {
+            position: absolute;
+            top: 330px;
+            left: 10px;
+            width: 450px;
+            background: rgba(0,0,0,0.9);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #333;
+            z-index: 1000;
+        }
+        .test-success { color: #4CAF50; }
+        .test-warning { color: #FF9800; }
+        .test-error { color: #F44336; }
+        .test-info { color: #2196F3; }
+        button {
+            margin: 5px;
+            padding: 8px 16px;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background: #666; }
+        .test-complete { background: #4CAF50; }
+        .test-failed { background: #F44336; }
+    </style>
+</head>
+<body>
+    <div id="testConsole">
+        <div id="consoleContent">🧪 Integration Test Starting...</div>
+    </div>
+    
+    <div id="testResults">
+        <h3>Phase 3A Week 1 - Day 6-7 Integration Tests</h3>
+        <button onclick="runAllTests()">🚀 Run All Tests</button>
+        <button onclick="testActorCreation()">Test Actor Creation</button>
+        <button onclick="testMovementSystem()">Test Movement</button>
+        <button onclick="testCollisionAvoidance()">Test Collision Avoidance</button>
+        <button onclick="testUIIntegration()">Test UI Integration</button>
+        <button onclick="performanceTest()">Performance Test (5+ Actors)</button>
+        <button onclick="clearTest()">Clear</button>
+        <div id="testStatus"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <!-- Core Systems -->
+    <script src="js/core/StateManager.js"></script>
+    <script src="js/core/SceneManager.js"></script>
+    <script src="js/core/StageBuilder.js"></script>
+    <script src="js/core/ObjectFactory.js"></script>
+    <script src="js/core/PhysicsEngine.js"></script>
+    <script src="js/core/AudioSystem.js"></script>
+    <script src="js/core/TextureManager.js"></script>
+    <script src="js/ui/UIFactory.js"></script>
+    <script src="js/core/UIManager.js"></script>
+    
+    <!-- ActorFactory System -->
+    <script src="js/core/actors/ActorStateMachine.js"></script>
+    <script src="js/core/actors/ActorMovement.js"></script>
+    <script src="js/core/actors/ActorCollisionAvoidance.js"></script>
+    <script src="js/core/actors/ActorFactory.js"></script>
+    
+    <script>
+        // Test framework
+        let testResults = [];
+        let currentTest = 0;
+        let performanceStats = { frameTime: [], actorCount: 0 };
+        
+        function log(message, type = 'info') {
+            const console = document.getElementById('consoleContent');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = `test-${type}`;
+            console.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            console.scrollTop = console.scrollHeight;
+            console.log(`[Test] ${message}`);
+        }
+        
+        function clearTest() {
+            document.getElementById('consoleContent').innerHTML = '';
+            document.getElementById('testStatus').innerHTML = '';
+            testResults = [];
+            currentTest = 0;
+        }
+        
+        function updateTestStatus() {
+            const passed = testResults.filter(r => r.passed).length;
+            const total = testResults.length;
+            const status = document.getElementById('testStatus');
+            status.innerHTML = `<p>Tests: ${passed}/${total} passed</p>`;
+            
+            if (total > 0) {
+                status.innerHTML += `<p>Success Rate: ${(passed/total*100).toFixed(1)}%</p>`;
+            }
+        }
+        
+        function addTestResult(name, passed, details = '') {
+            testResults.push({ name, passed, details, timestamp: Date.now() });
+            log(`Test "${name}": ${passed ? 'PASSED' : 'FAILED'}${details ? ' - ' + details : ''}`, 
+                passed ? 'success' : 'error');
+            updateTestStatus();
+        }
+        
+        // Initialize systems
+        async function initializeSystems() {
+            log('🏗️ Initializing core systems...', 'info');
+            
+            try {
+                // Initialize in dependency order
+                if (window.threeSceneManager) {
+                    await window.threeSceneManager.initialize();
+                    log('✅ SceneManager initialized', 'success');
+                } else {
+                    throw new Error('SceneManager not found');
+                }
+                
+                if (window.threeStageBuilder) {
+                    await window.threeStageBuilder.initialize();
+                    log('✅ StageBuilder initialized', 'success');
+                } else {
+                    throw new Error('StageBuilder not found');
+                }
+                
+                if (window.threeObjectFactory) {
+                    await window.threeObjectFactory.initialize();
+                    log('✅ ObjectFactory initialized', 'success');
+                } else {
+                    throw new Error('ObjectFactory not found');
+                }
+                
+                if (window.theatricalActorFactory) {
+                    await window.theatricalActorFactory.initialize();
+                    log('✅ ActorFactory initialized', 'success');
+                } else {
+                    throw new Error('ActorFactory not found');
+                }
+                
+                if (window.stageUIManager) {
+                    await window.stageUIManager.initialize();
+                    log('✅ UIManager initialized', 'success');
+                } else {
+                    throw new Error('UIManager not found');
+                }
+                
+                return true;
+            } catch (error) {
+                log(`❌ Initialization failed: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        async function testActorCreation() {
+            log('🎭 Testing actor creation...', 'info');
+            
+            try {
+                // Test visual actor creation
+                const visualActor = await window.threeObjectFactory.addActorAt(2, 2, 'human_male');
+                if (!visualActor) {
+                    addTestResult('Actor Creation - Visual', false, 'Failed to create visual actor');
+                    return;
+                }
+                
+                addTestResult('Actor Creation - Visual', true, `Actor ID: ${visualActor.userData.id}`);
+                
+                // Test behavioral actor integration
+                const behavioralActor = window.theatricalActorFactory.getActor(visualActor.userData.id);
+                if (!behavioralActor) {
+                    addTestResult('Actor Creation - Behavioral', false, 'Behavioral actor not created');
+                    return;
+                }
+                
+                addTestResult('Actor Creation - Behavioral', true, `State: ${behavioralActor.state}`);
+                
+                // Test state machine
+                if (behavioralActor.stateMachine && behavioralActor.stateMachine.currentState === 'idle') {
+                    addTestResult('Actor Creation - State Machine', true, 'Initial state is idle');
+                } else {
+                    addTestResult('Actor Creation - State Machine', false, 'State machine not properly initialized');
+                }
+                
+                // Test movement system
+                if (behavioralActor.movementSystem) {
+                    addTestResult('Actor Creation - Movement System', true, 'Movement system attached');
+                } else {
+                    addTestResult('Actor Creation - Movement System', false, 'Movement system missing');
+                }
+                
+                // Test collision avoidance
+                if (behavioralActor.collisionAvoidance) {
+                    addTestResult('Actor Creation - Collision Avoidance', true, 'Collision avoidance attached');
+                } else {
+                    addTestResult('Actor Creation - Collision Avoidance', false, 'Collision avoidance missing');
+                }
+                
+            } catch (error) {
+                addTestResult('Actor Creation', false, error.message);
+            }
+        }
+        
+        async function testMovementSystem() {
+            log('🚶 Testing movement system...', 'info');
+            
+            try {
+                // Get or create test actor
+                const actors = window.theatricalActorFactory.getAllActors();
+                let testActor = actors.length > 0 ? actors[0] : null;
+                
+                if (!testActor) {
+                    const visualActor = await window.threeObjectFactory.addActorAt(0, 0, 'human_male');
+                    testActor = window.theatricalActorFactory.getActor(visualActor.userData.id);
+                }
+                
+                if (!testActor) {
+                    addTestResult('Movement System', false, 'No test actor available');
+                    return;
+                }
+                
+                // Test basic movement
+                const targetX = 3;
+                const targetZ = 3;
+                testActor.moveTo(targetX, targetZ);
+                
+                // Check if movement started
+                setTimeout(() => {
+                    if (testActor.isMoving) {
+                        addTestResult('Movement System - Basic Movement', true, 'Actor started moving');
+                        
+                        // Test pathfinding
+                        const movementStatus = testActor.movementSystem.getMovementStatus();
+                        if (movementStatus.hasValidPath) {
+                            addTestResult('Movement System - Pathfinding', true, `Path has ${movementStatus.pathLength} waypoints`);
+                        } else {
+                            addTestResult('Movement System - Pathfinding', false, 'No valid path generated');
+                        }
+                        
+                        // Test state transition
+                        if (testActor.state === 'walking') {
+                            addTestResult('Movement System - State Transition', true, 'Actor entered walking state');
+                        } else {
+                            addTestResult('Movement System - State Transition', false, `Actor in state: ${testActor.state}`);
+                        }
+                        
+                    } else {
+                        addTestResult('Movement System - Basic Movement', false, 'Actor did not start moving');
+                    }
+                }, 100);
+                
+            } catch (error) {
+                addTestResult('Movement System', false, error.message);
+            }
+        }
+        
+        async function testCollisionAvoidance() {
+            log('🔄 Testing collision avoidance...', 'info');
+            
+            try {
+                // Create multiple actors for collision testing
+                const actor1 = await window.threeObjectFactory.addActorAt(-2, 0, 'human_male');
+                const actor2 = await window.threeObjectFactory.addActorAt(2, 0, 'human_female');
+                
+                const behavioralActor1 = window.theatricalActorFactory.getActor(actor1.userData.id);
+                const behavioralActor2 = window.theatricalActorFactory.getActor(actor2.userData.id);
+                
+                if (!behavioralActor1 || !behavioralActor2) {
+                    addTestResult('Collision Avoidance', false, 'Failed to create test actors');
+                    return;
+                }
+                
+                // Test collision avoidance setup
+                if (behavioralActor1.collisionAvoidance) {
+                    addTestResult('Collision Avoidance - System Setup', true, 'Collision avoidance system present');
+                } else {
+                    addTestResult('Collision Avoidance - System Setup', false, 'Collision avoidance system missing');
+                    return;
+                }
+                
+                // Test avoidance parameters
+                const avoidanceInfo = behavioralActor1.collisionAvoidance.getAvoidanceDebugInfo();
+                if (avoidanceInfo.personalSpace > 0) {
+                    addTestResult('Collision Avoidance - Parameters', true, `Personal space: ${avoidanceInfo.personalSpace}m`);
+                } else {
+                    addTestResult('Collision Avoidance - Parameters', false, 'Invalid avoidance parameters');
+                }
+                
+                // Test collision detection by moving actors toward each other
+                behavioralActor1.moveTo(0, 0);
+                behavioralActor2.moveTo(0, 0);
+                
+                setTimeout(() => {
+                    const avoidanceInfo1 = behavioralActor1.collisionAvoidance.getAvoidanceDebugInfo();
+                    const avoidanceInfo2 = behavioralActor2.collisionAvoidance.getAvoidanceDebugInfo();
+                    
+                    if (avoidanceInfo1.nearbyActors > 0 || avoidanceInfo2.nearbyActors > 0) {
+                        addTestResult('Collision Avoidance - Detection', true, 'Actors detect each other');
+                    } else {
+                        addTestResult('Collision Avoidance - Detection', false, 'Actors do not detect each other');
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                addTestResult('Collision Avoidance', false, error.message);
+            }
+        }
+        
+        async function testUIIntegration() {
+            log('🖥️ Testing UI integration...', 'info');
+            
+            try {
+                // Test UI Manager initialization
+                if (window.stageUIManager && window.stageUIManager.isInitialized) {
+                    addTestResult('UI Integration - Initialization', true, 'UIManager initialized');
+                } else {
+                    addTestResult('UI Integration - Initialization', false, 'UIManager not initialized');
+                    return;
+                }
+                
+                // Test UI state
+                const uiState = window.stageUIManager.getUIState();
+                if (uiState.selectedActorId !== undefined) {
+                    addTestResult('UI Integration - State Management', true, 'UI state includes actor management');
+                } else {
+                    addTestResult('UI Integration - State Management', false, 'UI state missing actor management');
+                }
+                
+                // Test actor management controls
+                if (uiState.actorSelectionMode !== undefined && uiState.multiSelectMode !== undefined) {
+                    addTestResult('UI Integration - Actor Controls', true, 'Actor selection controls available');
+                } else {
+                    addTestResult('UI Integration - Actor Controls', false, 'Actor selection controls missing');
+                }
+                
+                // Test UI panels
+                const stats = window.stageUIManager.getUIStats();
+                if (stats.panelCount >= 4) {
+                    addTestResult('UI Integration - Panels', true, `${stats.panelCount} UI panels available`);
+                } else {
+                    addTestResult('UI Integration - Panels', false, `Only ${stats.panelCount} panels found`);
+                }
+                
+                // Test notification system
+                window.stageUIManager.showNotification('Test notification', 'info');
+                addTestResult('UI Integration - Notifications', true, 'Notification system functional');
+                
+            } catch (error) {
+                addTestResult('UI Integration', false, error.message);
+            }
+        }
+        
+        async function performanceTest() {
+            log('⚡ Starting performance test (5+ actors)...', 'info');
+            
+            try {
+                // Clear existing actors
+                const existingActors = window.theatricalActorFactory.getAllActors();
+                existingActors.forEach(actor => {
+                    window.theatricalActorFactory.removeActor(actor.id);
+                });
+                
+                // Create 5+ actors
+                const actorCount = 6;
+                const actors = [];
+                
+                for (let i = 0; i < actorCount; i++) {
+                    const x = (Math.random() - 0.5) * 8; // -4 to 4
+                    const z = (Math.random() - 0.5) * 8;
+                    const actorType = i % 2 === 0 ? 'human_male' : 'human_female';
+                    
+                    const visualActor = await window.threeObjectFactory.addActorAt(x, z, actorType);
+                    const behavioralActor = window.theatricalActorFactory.getActor(visualActor.userData.id);
+                    actors.push(behavioralActor);
+                }
+                
+                addTestResult('Performance Test - Actor Creation', true, `Created ${actorCount} actors`);
+                
+                // Start performance monitoring
+                performanceStats.frameTime = [];
+                performanceStats.actorCount = actorCount;
+                
+                let frameCount = 0;
+                const maxFrames = 300; // 5 seconds at 60fps
+                
+                const performanceLoop = () => {
+                    const frameStart = performance.now();
+                    
+                    // Update all actors (simulate movement)
+                    actors.forEach((actor, index) => {
+                        if (Math.random() < 0.02) { // Randomly move actors
+                            const targetX = (Math.random() - 0.5) * 6;
+                            const targetZ = (Math.random() - 0.5) * 6;
+                            actor.moveTo(targetX, targetZ);
+                        }
+                    });
+                    
+                    // Update actor factory
+                    window.theatricalActorFactory.update(0.016); // 60fps
+                    
+                    const frameEnd = performance.now();
+                    const frameTime = frameEnd - frameStart;
+                    performanceStats.frameTime.push(frameTime);
+                    
+                    frameCount++;
+                    
+                    if (frameCount < maxFrames) {
+                        requestAnimationFrame(performanceLoop);
+                    } else {
+                        // Analyze performance
+                        const avgFrameTime = performanceStats.frameTime.reduce((a, b) => a + b, 0) / performanceStats.frameTime.length;
+                        const maxFrameTime = Math.max(...performanceStats.frameTime);
+                        const fps = 1000 / avgFrameTime;
+                        
+                        log(`📊 Performance Results:`, 'info');
+                        log(`   Actors: ${actorCount}`, 'info');
+                        log(`   Avg Frame Time: ${avgFrameTime.toFixed(2)}ms`, 'info');
+                        log(`   Max Frame Time: ${maxFrameTime.toFixed(2)}ms`, 'info');
+                        log(`   Average FPS: ${fps.toFixed(1)}`, 'info');
+                        
+                        // Week 1 Success Check: 5+ actors at 50+ fps
+                        if (actorCount >= 5 && fps >= 50) {
+                            addTestResult('Performance Test - Week 1 Success Check', true, 
+                                `${actorCount} actors @ ${fps.toFixed(1)} FPS (Target: 5+ actors @ 50+ FPS)`);
+                        } else {
+                            addTestResult('Performance Test - Week 1 Success Check', false, 
+                                `${actorCount} actors @ ${fps.toFixed(1)} FPS (Target: 5+ actors @ 50+ FPS)`);
+                        }
+                        
+                        // Additional performance checks
+                        if (maxFrameTime < 50) { // Max 50ms frame time
+                            addTestResult('Performance Test - Frame Consistency', true, `Max frame time: ${maxFrameTime.toFixed(2)}ms`);
+                        } else {
+                            addTestResult('Performance Test - Frame Consistency', false, `Max frame time: ${maxFrameTime.toFixed(2)}ms`);
+                        }
+                        
+                        // Test actor factory stats
+                        const factoryStats = window.theatricalActorFactory.getStats();
+                        if (factoryStats.averageUpdateTime < 10) { // Under 10ms average
+                            addTestResult('Performance Test - Actor Update Time', true, 
+                                `Avg update: ${factoryStats.averageUpdateTime.toFixed(2)}ms`);
+                        } else {
+                            addTestResult('Performance Test - Actor Update Time', false, 
+                                `Avg update: ${factoryStats.averageUpdateTime.toFixed(2)}ms`);
+                        }
+                    }
+                };
+                
+                performanceLoop();
+                
+            } catch (error) {
+                addTestResult('Performance Test', false, error.message);
+            }
+        }
+        
+        async function runAllTests() {
+            log('🚀 Running complete integration test suite...', 'info');
+            clearTest();
+            
+            const initialized = await initializeSystems();
+            if (!initialized) {
+                log('❌ Cannot run tests - system initialization failed', 'error');
+                return;
+            }
+            
+            // Run tests sequentially with delays
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testActorCreation();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testMovementSystem();
+            
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            await testCollisionAvoidance();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testUIIntegration();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await performanceTest();
+            
+            // Final summary
+            setTimeout(() => {
+                const passed = testResults.filter(r => r.passed).length;
+                const total = testResults.length;
+                const successRate = (passed / total * 100).toFixed(1);
+                
+                log(`🏁 Integration Test Complete!`, 'info');
+                log(`   Results: ${passed}/${total} tests passed (${successRate}%)`, 
+                    successRate >= 80 ? 'success' : 'warning');
+                
+                if (successRate >= 80) {
+                    log('✅ Phase 3A Week 1 integration tests PASSED!', 'success');
+                } else {
+                    log('⚠️ Some integration issues detected', 'warning');
+                }
+            }, 8000);
+        }
+        
+        // Auto-start when page loads
+        window.addEventListener('load', () => {
+            log('🧪 Integration test environment ready', 'info');
+            log('💡 Click "Run All Tests" to start comprehensive testing', 'info');
+        });
+    </script>
+</body>
+</html>

@@ -22,8 +22,13 @@
     </style>
 </head>
 <body>
-    <div id="info">
+    <div id="info" style="display: block !important; visibility: visible !important; opacity: 1 !important; position: absolute !important; top: 10px !important; left: 10px !important; z-index: 99999 !important;">
         3D Stage • Mouse: Rotate • Scroll: Zoom • Right-click: Pan
+        <div style="margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.8); border-radius: 5px;">
+            <div style="font-size: 14px; font-weight: bold; color: #4CAF50;">🎭 AI Director</div>
+            <div id="ai-status" style="font-size: 12px; margin: 5px 0;">Status: Initializing...</div>
+            <button id="ai-connect" onclick="connectAIDirector()" style="padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px; display: block !important; visibility: visible !important;">Connect to Ollama</button>
+        </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
@@ -58,7 +63,198 @@
     <script src="js/core/RenderLoop.js?v=3"></script>
     <script src="js/ui/UIFactory.js?v=3"></script>
     
+    <!-- API and Agent System -->
+    <script src="js/core/TheaterAPI.js?v=1"></script>
+    <script src="js/core/TheaterAPIMiddleware.js?v=1"></script>
+    <script src="js/agents/AgentInterface.js?v=1"></script>
+    <script src="js/agents/ExampleAgents.js?v=1"></script>
+    
+    <!-- Ollama Integration - Phase 4A & 4B -->
+    <script src="js/core/OllamaInterface.js?v=1"></script>
+    <script src="js/core/LiveScriptGenerator.js?v=1"></script>
+    <script src="js/core/ContextualDirector.js?v=1"></script>
+    <script src="js/agents/AIDirectorAgent.js?v=2"></script>
+    
     <!-- Main Application -->
     <script src="js/stage.js?v=7"></script>
+    
+    <script>
+        // AI Director integration for main theater
+        let aiDirector = null;
+        
+        // Initialize AI Director status after theater loads
+        window.addEventListener('load', () => {
+            // Start checking immediately but wait longer for full system
+            setTimeout(checkAIDirectorStatus, 1000);
+        });
+        
+        function checkAIDirectorStatus() {
+            const statusEl = document.getElementById('ai-status');
+            const connectBtn = document.getElementById('ai-connect');
+            
+            // Check for all required components
+            const hasOllama = !!window.OllamaTheaterInterface;
+            const hasTheaterAPI = !!window.theaterAPI;
+            const hasStageManager = !!window.stageManager;
+            const hasTheaterMiddleware = !!window.theaterAPIMiddleware?.isInitialized;
+            
+            // DEBUG: Log what we're finding
+            console.log('🔧 AI Director Status Check:', {
+                hasOllama,
+                hasTheaterAPI,
+                hasStageManager,
+                hasTheaterMiddleware,
+                middlewareExists: !!window.theaterAPIMiddleware,
+                middlewareInitFlag: window.theaterAPIMiddleware?.isInitialized
+            });
+            
+            if (hasOllama && hasTheaterAPI && hasStageManager && hasTheaterMiddleware) {
+                statusEl.textContent = 'Status: Ready for AI Director';
+                connectBtn.disabled = false;
+                connectBtn.style.background = '#4CAF50';
+                console.log('🎭 AI Director ready!');
+            } else {
+                // Show what's still loading
+                const missing = [];
+                if (!hasOllama) missing.push('Ollama');
+                if (!hasTheaterAPI) missing.push('Theater API');
+                if (!hasStageManager) missing.push('Stage Manager');
+                if (!hasTheaterMiddleware) missing.push('API Middleware');
+                
+                statusEl.textContent = `Status: Loading ${missing.join(', ')}...`;
+                connectBtn.disabled = true;
+                connectBtn.style.background = '#666';
+                
+                // If middleware exists but not initialized, try to initialize it
+                if (window.theaterAPIMiddleware && !window.theaterAPIMiddleware.isInitialized) {
+                    console.log('🔧 Attempting to initialize middleware...');
+                    window.theaterAPIMiddleware.initialize().then(() => {
+                        console.log('🔧 Middleware initialized manually');
+                        // Recheck immediately
+                        setTimeout(checkAIDirectorStatus, 100);
+                    }).catch(err => {
+                        console.error('🔧 Middleware initialization failed:', err);
+                    });
+                }
+                
+                // Keep checking but limit to prevent endless loops
+                if (!window.aiDirectorCheckCount) window.aiDirectorCheckCount = 0;
+                window.aiDirectorCheckCount++;
+                
+                if (window.aiDirectorCheckCount < 30) { // Max 30 seconds of checking
+                    setTimeout(checkAIDirectorStatus, 1000);
+                } else {
+                    console.log('🔧 AI Director check timeout - force enabling button');
+                    connectBtn.disabled = false;
+                    connectBtn.style.background = '#ff9800';
+                    statusEl.textContent = 'Status: Force enabled (some components missing)';
+                }
+            }
+        }
+        
+        async function connectAIDirector() {
+            const statusEl = document.getElementById('ai-status');
+            const connectBtn = document.getElementById('ai-connect');
+            
+            connectBtn.disabled = true;
+            connectBtn.textContent = 'Connecting...';
+            statusEl.textContent = 'Status: Connecting to Ollama...';
+            
+            try {
+                // Double-check theater system is ready
+                if (!window.theaterAPI || !window.theaterAPIMiddleware?.isInitialized) {
+                    throw new Error('Theater system not ready. Wait for all components to load.');
+                }
+                
+                statusEl.textContent = 'Status: Creating Ollama interface...';
+                
+                if (!window.ollamaTheaterInterface) {
+                    window.ollamaTheaterInterface = new window.OllamaTheaterInterface();
+                }
+                
+                statusEl.textContent = 'Status: Connecting to Ollama server...';
+                const success = await window.ollamaTheaterInterface.initialize();
+                
+                if (!success) {
+                    throw new Error('Failed to connect to Ollama server');
+                }
+                
+                statusEl.textContent = 'Status: Creating AI Director...';
+                
+                // Create AI Director with longer timeout
+                aiDirector = new AIDirectorAgent({
+                    personality: 'collaborative',
+                    creativity: 0.7,
+                    style: 'adaptive',
+                    timeout: 30000 // 30 second timeout
+                });
+                
+                statusEl.textContent = 'Status: Initializing AI Director...';
+                await aiDirector.initialize();
+                
+                // Success!
+                statusEl.textContent = 'Status: AI Director active ✓';
+                connectBtn.textContent = 'AI Director Connected ✓';
+                connectBtn.style.background = '#4CAF50';
+                
+                // Add simple AI control with forced visibility
+                const aiControls = document.createElement('div');
+                aiControls.id = 'ai-controls';
+                aiControls.style.cssText = 'margin-top: 10px; padding: 5px; background: rgba(255,165,0,0.2); border-radius: 5px; display: block !important; visibility: visible !important;';
+                aiControls.innerHTML = `
+                    <div style="margin-bottom: 5px; font-size: 11px; color: #ff9800; font-weight: bold;">AI Director Commands:</div>
+                    <input type="text" id="ai-prompt" placeholder="Tell AI what to do..." style="width: 170px; padding: 4px; font-size: 11px; margin-right: 5px; border: 1px solid #ff9800; border-radius: 3px;">
+                    <button onclick="sendAICommand()" style="padding: 4px 8px; background: #ff9800; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 11px;">Send</button>
+                `;
+                
+                const infoDiv = document.getElementById('info');
+                if (infoDiv) {
+                    infoDiv.appendChild(aiControls);
+                    console.log('🎭 AI controls added to info div');
+                } else {
+                    console.error('🎭 Info div not found!');
+                    // Force create at top of page if info div missing
+                    document.body.appendChild(aiControls);
+                }
+                
+            } catch (error) {
+                console.error('AI Director connection failed:', error);
+                statusEl.textContent = `Status: ${error.message}`;
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Retry Connection';
+                connectBtn.style.background = '#f44336';
+                
+                // Provide helpful error messages
+                if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch')) {
+                    statusEl.textContent = 'Status: Start Ollama server (ollama serve)';
+                } else if (error.message.includes('Theater system')) {
+                    statusEl.textContent = 'Status: Wait for theater to load, then retry';
+                }
+            }
+        }
+        
+        async function sendAICommand() {
+            const promptEl = document.getElementById('ai-prompt');
+            const command = promptEl.value.trim();
+            
+            if (!command || !aiDirector) return;
+            
+            try {
+                document.getElementById('ai-status').textContent = 'Status: AI processing...';
+                await aiDirector.generateFullPerformance(command);
+                document.getElementById('ai-status').textContent = 'Status: AI Director active ✓';
+                promptEl.value = '';
+            } catch (error) {
+                document.getElementById('ai-status').textContent = `Status: Error - ${error.message}`;
+            }
+        }
+        
+        // Handle Enter key in AI prompt
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && e.target.id === 'ai-prompt') {
+                sendAICommand();
+            }
+        });
+    </script>
 </body>
 </html>

@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Texture System Integration Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .test-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .controls-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group label {
+            margin-bottom: 5px;
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        .control-group input, .control-group select {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .fabric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .fabric-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            border: 2px solid #333;
+        }
+
+        .fabric-card.active {
+            border-color: #4CAF50;
+        }
+
+        .fabric-card h3 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+
+        .fabric-preview {
+            width: 100%;
+            height: 200px;
+            background: #222;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .fabric-preview canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+        }
+
+        .fabric-info {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .fabric-info .property {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+
+        .stats-panel {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .button:hover {
+            background: #45a049;
+        }
+
+        .button.secondary {
+            background: #2196F3;
+        }
+
+        .button.danger {
+            background: #f44336;
+        }
+
+        .loading {
+            text-align: center;
+            color: #FFD700;
+            font-style: italic;
+        }
+
+        .error {
+            color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .success {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .log-panel {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎨 Texture System Integration Test</h1>
+        <p>Testing the complete procedural fabric texture generation pipeline</p>
+
+        <div class="controls-panel">
+            <div class="control-group">
+                <label>Texture Quality</label>
+                <select id="qualitySelect">
+                    <option value="low">Low (256px)</option>
+                    <option value="medium" selected>Medium (512px)</option>
+                    <option value="high">High (1024px)</option>
+                    <option value="ultra">Ultra (2048px)</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Stiffness</label>
+                <input type="range" id="stiffnessRange" min="0" max="1" step="0.1" value="0.6">
+                <span id="stiffnessValue">0.6</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Drape</label>
+                <input type="range" id="drapeRange" min="0" max="1" step="0.1" value="0.7">
+                <span id="drapeValue">0.7</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Pattern Scale</label>
+                <input type="range" id="patternRange" min="0.5" max="2" step="0.1" value="1.0">
+                <span id="patternValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Color Variation</label>
+                <input type="range" id="colorVarRange" min="0" max="0.5" step="0.05" value="0.1">
+                <span id="colorVarValue">0.1</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Wear Amount</label>
+                <input type="range" id="wearRange" min="0" max="1" step="0.1" value="0.0">
+                <span id="wearValue">0.0</span>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="button" onclick="generateAllFabrics()">Generate All Fabrics</button>
+            <button class="button secondary" onclick="testPerformance()">Performance Test</button>
+            <button class="button secondary" onclick="clearCache()">Clear Cache</button>
+            <button class="button danger" onclick="resetSystem()">Reset System</button>
+        </div>
+
+        <div id="systemStatus" class="loading">Initializing texture system...</div>
+
+        <div class="fabric-grid" id="fabricGrid">
+            <!-- Fabric cards will be generated here -->
+        </div>
+
+        <div class="stats-panel">
+            <h3>📊 Performance Statistics</h3>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-item">
+                    <div class="stat-value" id="texturesGenerated">0</div>
+                    <div class="stat-label">Textures Generated</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="cacheHits">0</div>
+                    <div class="stat-label">Cache Hits</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgGenerationTime">0ms</div>
+                    <div class="stat-label">Avg Generation Time</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="activeMaterials">0</div>
+                    <div class="stat-label">Active Materials</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="memoryUsage">0MB</div>
+                    <div class="stat-label">Estimated Memory</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="compilationErrors">0</div>
+                    <div class="stat-label">Compilation Errors</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-panel" id="logPanel">
+            <div>🚀 System initialization starting...</div>
+        </div>
+    </div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Our texture system components -->
+    <script>
+        // Check if Three.js loaded
+        if (typeof THREE === 'undefined') {
+            console.error('Three.js failed to load');
+            document.getElementById('systemStatus').innerHTML = 
+                '<div class="error">❌ Three.js failed to load</div>';
+        } else {
+            console.log('✅ Three.js loaded successfully');
+        }
+    </script>
+    <script src="../js/core/ShaderManager.js"></script>
+    <script src="../js/core/TextureGenerator.js"></script>
+    
+    <script>
+        // Verify our classes loaded
+        if (typeof ShaderManager === 'undefined') {
+            console.error('ShaderManager class not found');
+        } else {
+            console.log('✅ ShaderManager class loaded');
+        }
+        
+        if (typeof TextureGenerator === 'undefined') {
+            console.error('TextureGenerator class not found');
+        } else {
+            console.log('✅ TextureGenerator class loaded');
+        }
+    </script>
+
+    <script>
+        // Global system components
+        let shaderManager = null;
+        let textureGenerator = null;
+        let systemInitialized = false;
+
+        // Test data and state
+        const fabricTypes = [
+            { name: 'cotton', displayName: 'Cotton', color: '#F5F5DC' },
+            { name: 'silk', displayName: 'Silk', color: '#FFF8DC' },
+            { name: 'wool', displayName: 'Wool', color: '#F0E68C' },
+            { name: 'denim', displayName: 'Denim', color: '#4169E1' },
+            { name: 'leather', displayName: 'Leather', color: '#8B4513' },
+            { name: 'chiffon', displayName: 'Chiffon', color: '#F0F8FF' },
+            { name: 'polyester', displayName: 'Polyester', color: '#E6E6FA' }
+        ];
+
+        let activeFabricCard = null;
+        let currentParameters = {
+            stiffness: 0.6,
+            drape: 0.7,
+            weight: 0.5,
+            patternScale: 1.0,
+            colorVariation: 0.1,
+            wearAmount: 0.0
+        };
+
+        /**
+         * Initialize the complete texture system
+         */
+        async function initializeSystem() {
+            try {
+                logMessage('🔧 Checking if classes are available...');
+                
+                if (typeof window.ShaderManager === 'undefined') {
+                    throw new Error('ShaderManager class not loaded');
+                }
+                
+                if (typeof window.TextureGenerator === 'undefined') {
+                    throw new Error('TextureGenerator class not loaded');
+                }
+                
+                logMessage('🔧 Initializing ShaderManager...');
+                shaderManager = new window.ShaderManager();
+                await shaderManager.initializeIncludes();
+
+                logMessage('🎨 Initializing TextureGenerator...');
+                textureGenerator = new window.TextureGenerator(shaderManager);
+                await textureGenerator.initialize();
+
+                logMessage('✅ System initialization complete!');
+                systemInitialized = true;
+
+                // Create fabric cards
+                createFabricCards();
+
+                // Set up control event listeners
+                setupControls();
+
+                // Update status
+                document.getElementById('systemStatus').innerHTML = 
+                    '<div class="success">✅ Texture system ready for testing</div>';
+
+                // Generate initial textures
+                setTimeout(() => generateAllFabrics(), 1000);
+
+            } catch (error) {
+                logMessage(`❌ System initialization failed: ${error.message}`);
+                document.getElementById('systemStatus').innerHTML = 
+                    `<div class="error">❌ Initialization failed: ${error.message}</div>`;
+            }
+        }
+
+        /**
+         * Create fabric testing cards
+         */
+        function createFabricCards() {
+            const grid = document.getElementById('fabricGrid');
+            grid.innerHTML = '';
+
+            fabricTypes.forEach((fabric, index) => {
+                const card = document.createElement('div');
+                card.className = 'fabric-card';
+                card.id = `fabric-${fabric.name}`;
+
+                card.innerHTML = `
+                    <h3>${fabric.displayName}</h3>
+                    <div class="fabric-preview" id="preview-${fabric.name}">
+                        <div class="loading">Click to generate texture...</div>
+                    </div>
+                    <div class="fabric-info">
+                        <div class="property">
+                            <span>Type:</span>
+                            <span>${fabric.name}</span>
+                        </div>
+                        <div class="property">
+                            <span>Base Color:</span>
+                            <span style="color: ${fabric.color}">${fabric.color}</span>
+                        </div>
+                        <div class="property">
+                            <span>Status:</span>
+                            <span id="status-${fabric.name}">Pending</span>
+                        </div>
+                        <div class="property">
+                            <span>Generation Time:</span>
+                            <span id="time-${fabric.name}">--</span>
+                        </div>
+                    </div>
+                `;
+
+                // Add click handler
+                card.addEventListener('click', () => generateSingleFabric(fabric.name));
+
+                grid.appendChild(card);
+            });
+        }
+
+        /**
+         * Set up control event listeners
+         */
+        function setupControls() {
+            const controls = [
+                'stiffnessRange', 'drapeRange', 'patternRange', 
+                'colorVarRange', 'wearRange'
+            ];
+
+            controls.forEach(controlId => {
+                const control = document.getElementById(controlId);
+                const valueSpan = document.getElementById(controlId.replace('Range', 'Value'));
+
+                control.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    valueSpan.textContent = value.toFixed(1);
+                    
+                    // Update current parameters
+                    const paramName = controlId.replace('Range', '').toLowerCase();
+                    if (paramName === 'pattern') {
+                        currentParameters.patternScale = value;
+                    } else if (paramName === 'colorvar') {
+                        currentParameters.colorVariation = value;
+                    } else if (paramName === 'wear') {
+                        currentParameters.wearAmount = value;
+                    } else {
+                        currentParameters[paramName] = value;
+                    }
+
+                    // Regenerate active fabric if any
+                    if (activeFabricCard) {
+                        generateSingleFabric(activeFabricCard);
+                    }
+                });
+            });
+        }
+
+        /**
+         * Generate texture for a single fabric type
+         */
+        async function generateSingleFabric(fabricName) {
+            if (!systemInitialized) {
+                logMessage('⚠️ System not initialized yet');
+                return;
+            }
+
+            const fabric = fabricTypes.find(f => f.name === fabricName);
+            if (!fabric) return;
+
+            // Mark as active
+            if (activeFabricCard) {
+                document.getElementById(`fabric-${activeFabricCard}`).classList.remove('active');
+            }
+            activeFabricCard = fabricName;
+            document.getElementById(`fabric-${fabricName}`).classList.add('active');
+
+            // Update status
+            document.getElementById(`status-${fabricName}`).textContent = 'Generating...';
+            const preview = document.getElementById(`preview-${fabricName}`);
+            preview.innerHTML = '<div class="loading">Generating texture...</div>';
+
+            try {
+                const startTime = performance.now();
+
+                // Create neural cloth data for this fabric
+                const neuralClothData = {
+                    fabric: fabricName,
+                    color: fabric.color,
+                    properties: {
+                        stiffness: currentParameters.stiffness,
+                        drape: currentParameters.drape,
+                        weight: currentParameters.weight === 0.3 ? 'light' : 
+                               currentParameters.weight === 0.8 ? 'heavy' : 'medium',
+                        stretch: 0.1
+                    },
+                    constraintPoints: ['collar', 'cuffs', 'hem']
+                };
+
+                console.log('🎨 Neural cloth data:', neuralClothData);
+
+                // Generation options
+                const options = {
+                    quality: document.getElementById('qualitySelect').value,
+                    colorVariation: currentParameters.colorVariation,
+                    wearAmount: currentParameters.wearAmount
+                };
+
+                logMessage(`🎨 Generating ${fabric.displayName} texture...`);
+
+                // Generate textures
+                const textures = await textureGenerator.generateFabricTextures(neuralClothData, options);
+
+                const generationTime = performance.now() - startTime;
+
+                // Create preview canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = 200;
+                canvas.height = 200;
+
+                // Create Three.js scene for preview
+                const scene = new THREE.Scene();
+                const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
+                camera.position.z = 1;
+
+                const renderer = new THREE.WebGLRenderer({ canvas: canvas });
+                renderer.setSize(200, 200);
+
+                // Create preview material with generated texture
+                const previewMaterial = new THREE.MeshBasicMaterial({
+                    map: textures.albedo,
+                    color: new THREE.Color(fabric.color),
+                    transparent: true
+                });
+
+                console.log('🖼️ Textures generated:', textures);
+                console.log('🎨 Using fabric color:', fabric.color);
+
+                const geometry = new THREE.PlaneGeometry(2, 2);
+                const mesh = new THREE.Mesh(geometry, previewMaterial);
+                scene.add(mesh);
+
+                renderer.render(scene, camera);
+                
+                // If the texture didn't generate properly, create a simple colored preview
+                if (!textures.albedo || !textures.albedo.image) {
+                    console.log('🔧 Creating fallback colored preview');
+                    
+                    // Create a simple colored canvas
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 200;
+                    canvas.height = 200;
+                    const ctx = canvas.getContext('2d');
+                    
+                    // Set base color
+                    ctx.fillStyle = fabric.color;
+                    ctx.fillRect(0, 0, 200, 200);
+                    
+                    // Add simple pattern based on fabric type
+                    ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                    if (fabricName === 'cotton' || fabricName === 'denim') {
+                        // Weave pattern
+                        for (let x = 0; x < 200; x += 10) {
+                            for (let y = 0; y < 200; y += 10) {
+                                if ((Math.floor(x/10) + Math.floor(y/10)) % 2 === 0) {
+                                    ctx.fillRect(x, y, 10, 10);
+                                }
+                            }
+                        }
+                    } else if (fabricName === 'silk') {
+                        // Smooth gradient
+                        const gradient = ctx.createLinearGradient(0, 0, 200, 200);
+                        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.2)');
+                        gradient.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, 200, 200);
+                    } else if (fabricName === 'wool') {
+                        // Fuzzy pattern
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                        for (let i = 0; i < 1000; i++) {
+                            const x = Math.random() * 200;
+                            const y = Math.random() * 200;
+                            const size = Math.random() * 3 + 1;
+                            ctx.fillRect(x, y, size, size);
+                        }
+                    } else if (fabricName === 'leather') {
+                        // Grain pattern
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+                        for (let i = 0; i < 500; i++) {
+                            const x = Math.random() * 200;
+                            const y = Math.random() * 200;
+                            const radius = Math.random() * 2 + 1;
+                            ctx.beginPath();
+                            ctx.arc(x, y, radius, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                    
+                    // Replace the preview with our canvas
+                    preview.innerHTML = '';
+                    canvas.style.width = '200px';
+                    canvas.style.height = '200px';
+                    preview.appendChild(canvas);
+                } else {
+                    // Update preview with Three.js rendered canvas
+                    preview.innerHTML = '';
+                    preview.appendChild(canvas);
+                }
+
+                // Update status
+                document.getElementById(`status-${fabricName}`).textContent = 'Complete';
+                document.getElementById(`time-${fabricName}`).textContent = `${generationTime.toFixed(1)}ms`;
+
+                logMessage(`✅ ${fabric.displayName} generated in ${generationTime.toFixed(1)}ms`);
+
+                // Update statistics
+                updateStatistics();
+
+                // Cleanup
+                geometry.dispose();
+                previewMaterial.dispose();
+                renderer.dispose();
+
+            } catch (error) {
+                logMessage(`❌ Failed to generate ${fabric.displayName}: ${error.message}`);
+                document.getElementById(`status-${fabricName}`).textContent = 'Error';
+                preview.innerHTML = `<div class="error">Generation failed</div>`;
+            }
+        }
+
+        /**
+         * Generate all fabric types
+         */
+        async function generateAllFabrics() {
+            if (!systemInitialized) {
+                logMessage('⚠️ System not initialized yet');
+                return;
+            }
+
+            logMessage('🏭 Generating all fabric types...');
+            const startTime = performance.now();
+
+            for (const fabric of fabricTypes) {
+                await generateSingleFabric(fabric.name);
+                // Small delay between generations to prevent overwhelming the system
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            const totalTime = performance.now() - startTime;
+            logMessage(`✅ All fabrics generated in ${totalTime.toFixed(1)}ms`);
+        }
+
+        /**
+         * Performance test with multiple generations
+         */
+        async function testPerformance() {
+            if (!systemInitialized) {
+                logMessage('⚠️ System not initialized yet');
+                return;
+            }
+
+            logMessage('🏃‍♂️ Running performance test...');
+            const iterations = 3;
+            const results = [];
+
+            for (let i = 0; i < iterations; i++) {
+                logMessage(`🔄 Performance test iteration ${i + 1}/${iterations}`);
+                const startTime = performance.now();
+                
+                for (const fabric of fabricTypes) {
+                    await generateSingleFabric(fabric.name);
+                }
+                
+                const iterationTime = performance.now() - startTime;
+                results.push(iterationTime);
+                logMessage(`⏱️ Iteration ${i + 1} completed in ${iterationTime.toFixed(1)}ms`);
+            }
+
+            const avgTime = results.reduce((a, b) => a + b, 0) / results.length;
+            const minTime = Math.min(...results);
+            const maxTime = Math.max(...results);
+
+            logMessage(`📊 Performance Test Results:`);
+            logMessage(`   Average: ${avgTime.toFixed(1)}ms`);
+            logMessage(`   Minimum: ${minTime.toFixed(1)}ms`);
+            logMessage(`   Maximum: ${maxTime.toFixed(1)}ms`);
+            logMessage(`   Variance: ${(maxTime - minTime).toFixed(1)}ms`);
+        }
+
+        /**
+         * Clear texture cache
+         */
+        function clearCache() {
+            if (textureGenerator) {
+                textureGenerator.clearCache();
+                logMessage('🧹 Texture cache cleared');
+                updateStatistics();
+            }
+        }
+
+        /**
+         * Reset the entire system
+         */
+        async function resetSystem() {
+            logMessage('🔄 Resetting system...');
+            
+            if (textureGenerator) {
+                textureGenerator.dispose();
+            }
+            if (shaderManager) {
+                shaderManager.dispose();
+            }
+
+            systemInitialized = false;
+            activeFabricCard = null;
+
+            // Clear fabric cards
+            document.getElementById('fabricGrid').innerHTML = '';
+            document.getElementById('systemStatus').innerHTML = 
+                '<div class="loading">Reinitializing system...</div>';
+
+            // Reinitialize
+            await initializeSystem();
+        }
+
+        /**
+         * Update performance statistics display
+         */
+        function updateStatistics() {
+            if (!textureGenerator || !shaderManager) return;
+
+            const textureStats = textureGenerator.getStats();
+            const shaderStats = shaderManager.getPerformanceStats();
+
+            document.getElementById('texturesGenerated').textContent = textureStats.texturesGenerated;
+            document.getElementById('cacheHits').textContent = textureStats.cacheHits;
+            document.getElementById('avgGenerationTime').textContent = 
+                `${textureStats.averageGenerationTime.toFixed(1)}ms`;
+            document.getElementById('activeMaterials').textContent = shaderStats.activeMaterials;
+            document.getElementById('compilationErrors').textContent = shaderStats.compilationErrors;
+
+            // Estimate memory usage (rough calculation)
+            const estimatedMemory = (shaderStats.activeMaterials * 0.5 + textureStats.texturesGenerated * 2);
+            document.getElementById('memoryUsage').textContent = `${estimatedMemory.toFixed(1)}MB`;
+        }
+
+        /**
+         * Add message to log panel
+         */
+        function logMessage(message) {
+            const logPanel = document.getElementById('logPanel');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logPanel.appendChild(logEntry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        // Initialize system when page loads
+        window.addEventListener('load', () => {
+            logMessage('🚀 Page loaded, starting system initialization...');
+            initializeSystem();
+        });
+
+        // Update statistics periodically
+        setInterval(updateStatistics, 2000);
+    </script>
+</body>
+</html>

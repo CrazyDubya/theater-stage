@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Quick ResourceManager Test</title>
+    <style>
+        body { margin: 0; font-family: monospace; background: #000; color: #0f0; padding: 20px; }
+    </style>
+</head>
+<body>
+    <h2>ResourceManager Test</h2>
+    <div id="status">Loading...</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script src="js/core/StateManager.js"></script>
+    <script src="js/core/ResourceManager.js"></script>
+    
+    <script>
+        document.getElementById('status').innerHTML = `
+            <div>StateManager: ${!!window.stageState ? '✅' : '❌'}</div>
+            <div>ResourceManager: ${!!window.resourceManager ? '✅' : '❌'}</div>
+            <div>ResourceManager Class: ${!!window.ResourceManager ? '✅' : '❌'}</div>
+        `;
+        
+        if (window.resourceManager) {
+            console.log('✅ ResourceManager loaded successfully');
+            console.log('Memory stats:', window.resourceManager.getMemoryStats());
+        } else {
+            console.error('❌ ResourceManager failed to load');
+        }
+    </script>
+</body>
+</html>

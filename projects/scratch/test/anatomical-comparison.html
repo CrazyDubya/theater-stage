@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anatomical vs Primitive Mesh Comparison</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+        }
+
+        .comparison-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .mesh-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #333;
+        }
+
+        .mesh-panel.anatomical {
+            border-color: #4CAF50;
+        }
+
+        .mesh-panel.primitive {
+            border-color: #f44336;
+        }
+
+        .mesh-panel h3 {
+            margin: 0 0 15px 0;
+            text-align: center;
+        }
+
+        .anatomical h3 {
+            color: #4CAF50;
+        }
+
+        .primitive h3 {
+            color: #f44336;
+        }
+
+        .preview {
+            width: 100%;
+            height: 400px;
+            background: #222;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .preview canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+        }
+
+        .stats {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .stats .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+
+        .controls {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .control {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .control label {
+            width: 120px;
+            color: #FFD700;
+        }
+
+        .control input[type="range"] {
+            flex: 1;
+            max-width: 200px;
+        }
+
+        .control span {
+            width: 50px;
+            text-align: right;
+        }
+
+        .button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .button:hover {
+            background: #45a049;
+        }
+
+        .log {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .landmark-info {
+            background: rgba(76, 175, 80, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧬 Anatomical vs Primitive Mesh Comparison</h1>
+    <p>Compare the new anatomically-based mesh generation with the old primitive-based approach</p>
+
+    <div class="controls">
+        <div class="control">
+            <label>Face Width:</label>
+            <input type="range" id="faceWidth" min="0.7" max="1.3" step="0.1" value="1.0">
+            <span id="faceWidthValue">1.0</span>
+        </div>
+        <div class="control">
+            <label>Torso Scale:</label>
+            <input type="range" id="torsoScale" min="0.7" max="1.3" step="0.1" value="1.0">
+            <span id="torsoScaleValue">1.0</span>
+        </div>
+        <div class="control">
+            <label>Jawline:</label>
+            <input type="range" id="jawline" min="0" max="1" step="0.1" value="0.5">
+            <span id="jawlineValue">0.5</span>
+        </div>
+        <div class="control">
+            <label>Muscle Def:</label>
+            <input type="range" id="muscle" min="0" max="1" step="0.1" value="0.5">
+            <span id="muscleValue">0.5</span>
+        </div>
+        
+        <button class="button" onclick="generateBoth()">Generate Both Meshes</button>
+        <button class="button" onclick="showLandmarks()">Show Anatomical Landmarks</button>
+        <button class="button" onclick="analyzeTopology()">Analyze Topology</button>
+    </div>
+
+    <div class="comparison-container">
+        <!-- New Anatomical Approach -->
+        <div class="mesh-panel anatomical">
+            <h3>🧬 New: Anatomical Mesh</h3>
+            <div class="preview" id="anatomicalPreview">
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #4CAF50;">
+                    Click "Generate Both Meshes" to see anatomical approach
+                </div>
+            </div>
+            <div class="stats" id="anatomicalStats">
+                <div class="stat">
+                    <span>Approach:</span>
+                    <span>Anatomical landmarks + proper topology</span>
+                </div>
+                <div class="stat">
+                    <span>Vertices:</span>
+                    <span id="anatomicalVertices">--</span>
+                </div>
+                <div class="stat">
+                    <span>Generation Time:</span>
+                    <span id="anatomicalTime">--</span>
+                </div>
+                <div class="stat">
+                    <span>Topology:</span>
+                    <span>Quad-based anatomical flow</span>
+                </div>
+            </div>
+            <div class="landmark-info" id="landmarkInfo">
+                <strong>Anatomical Features:</strong><br>
+                • 60+ anatomical landmarks<br>
+                • Real anthropometric ratios<br>
+                • Facial thirds/fifths proportions<br>
+                • Demographic variations<br>
+                • Professional mesh topology
+            </div>
+        </div>
+
+        <!-- Old Primitive Approach -->
+        <div class="mesh-panel primitive">
+            <h3>⚠️ Old: Primitive Mesh</h3>
+            <div class="preview" id="primitivePreview">
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #f44336;">
+                    Click "Generate Both Meshes" to see primitive approach
+                </div>
+            </div>
+            <div class="stats" id="primitiveStats">
+                <div class="stat">
+                    <span>Approach:</span>
+                    <span>Combined geometric primitives</span>
+                </div>
+                <div class="stat">
+                    <span>Vertices:</span>
+                    <span id="primitiveVertices">--</span>
+                </div>
+                <div class="stat">
+                    <span>Generation Time:</span>
+                    <span id="primitiveTime">--</span>
+                </div>
+                <div class="stat">
+                    <span>Topology:</span>
+                    <span>Mixed sphere/cylinder/box</span>
+                </div>
+            </div>
+            <div class="landmark-info" style="background: rgba(244, 67, 54, 0.1);">
+                <strong>Primitive Limitations:</strong><br>
+                • Basic geometric shapes<br>
+                • Arbitrary scaling factors<br>
+                • No real human proportions<br>
+                • Poor mesh topology<br>
+                • Uncanny valley appearance
+            </div>
+        </div>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- System components -->
+    <script src="../js/core/AnatomicalLandmarks.js"></script>
+    <script src="../js/core/AnatomicalMeshGenerator.js"></script>
+    <script src="../js/core/MeshTemplateSystem.js"></script>
+    <script src="../js/core/VertexDeformationEngine.js"></script>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        // Systems
+        let anatomicalGenerator = null;
+        let primitiveSystem = null;
+        let deformationEngine = null;
+        
+        function logMessage(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `[${timestamp}] ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+            console.log(message);
+        }
+
+        // Update value displays
+        ['faceWidth', 'torsoScale', 'jawline', 'muscle'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                document.getElementById(id + 'Value').textContent = e.target.value;
+            });
+        });
+
+        async function initSystems() {
+            try {
+                logMessage('🚀 Initializing comparison systems...');
+                
+                // Initialize new anatomical system
+                anatomicalGenerator = new window.AnatomicalMeshGenerator();
+                logMessage('✅ Anatomical mesh generator ready');
+                
+                // Initialize old primitive system
+                primitiveSystem = new window.MeshTemplateSystem();
+                await primitiveSystem.initialize();
+                logMessage('✅ Primitive mesh system ready');
+                
+                deformationEngine = new window.VertexDeformationEngine();
+                logMessage('✅ Deformation engine ready');
+                
+                logMessage('🎉 All systems initialized - ready for comparison');
+                
+            } catch (error) {
+                logMessage(`❌ System initialization failed: ${error.message}`);
+            }
+        }
+
+        async function generateBoth() {
+            if (!anatomicalGenerator || !primitiveSystem || !deformationEngine) {
+                logMessage('❌ Systems not initialized');
+                return;
+            }
+
+            try {
+                logMessage('🔄 Generating both mesh types for comparison...');
+                
+                // Get current control values
+                const specs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european',
+                    body: {
+                        height: 1.75,
+                        scale: parseFloat(document.getElementById('torsoScale').value),
+                        muscle: {
+                            definition: parseFloat(document.getElementById('muscle').value)
+                        },
+                        proportions: {
+                            torso: parseFloat(document.getElementById('torsoScale').value),
+                            arms: 1.0,
+                            legs: 1.0,
+                            shoulders: 1.0,
+                            hips: 1.0
+                        }
+                    },
+                    facial: {
+                        faceWidth: parseFloat(document.getElementById('faceWidth').value),
+                        faceHeight: 1.0,
+                        jawline: parseFloat(document.getElementById('jawline').value),
+                        cheekbones: 0.3
+                    }
+                };
+
+                // Generate anatomical mesh
+                const anatomicalStart = performance.now();
+                const anatomicalMesh = await anatomicalGenerator.generateAnatomicalMesh(specs);
+                const anatomicalTime = performance.now() - anatomicalStart;
+                
+                // Generate primitive mesh
+                const primitiveStart = performance.now();
+                const primitiveMesh = await primitiveSystem.generateCharacterMesh(specs);
+                const deformedPrimitive = await deformationEngine.applyCharacterDeformation(
+                    primitiveMesh.clone(), specs
+                );
+                const primitiveTime = performance.now() - primitiveStart;
+
+                // Display both meshes
+                displayMesh(anatomicalMesh, 'anatomicalPreview', '🧬 Anatomical Mesh');
+                displayMesh(deformedPrimitive, 'primitivePreview', '⚠️ Primitive Mesh');
+
+                // Update statistics
+                updateStats('anatomical', anatomicalMesh, anatomicalTime);
+                updateStats('primitive', deformedPrimitive, primitiveTime);
+
+                logMessage(`✅ Comparison complete - Anatomical: ${anatomicalTime.toFixed(1)}ms, Primitive: ${primitiveTime.toFixed(1)}ms`);
+
+                // Cleanup
+                primitiveMesh.dispose();
+
+            } catch (error) {
+                logMessage(`❌ Mesh generation failed: ${error.message}`);
+                logMessage(`Stack: ${error.stack}`);
+            }
+        }
+
+        function displayMesh(geometry, containerId, title) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 400;
+            
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+            camera.position.set(2, 1.6, 3);
+            camera.lookAt(0, 1, 0);
+            
+            // Enhanced lighting for better visualization
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.4);
+            scene.add(ambientLight);
+            
+            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight1.position.set(5, 10, 5);
+            scene.add(directionalLight1);
+            
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.3);
+            directionalLight2.position.set(-5, 5, -5);
+            scene.add(directionalLight2);
+            
+            // Different materials to distinguish approaches
+            let material;
+            if (containerId === 'anatomicalPreview') {
+                material = new THREE.MeshLambertMaterial({
+                    color: 0x4CAF50,
+                    wireframe: false
+                });
+            } else {
+                material = new THREE.MeshLambertMaterial({
+                    color: 0xf44336,
+                    wireframe: false
+                });
+            }
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            
+            const renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas, 
+                antialias: true 
+            });
+            renderer.setSize(400, 400);
+            renderer.setClearColor(0x222222);
+            renderer.render(scene, camera);
+            
+            container.appendChild(canvas);
+            
+            // Add interaction
+            let isRotating = false;
+            let previousMouse = { x: 0, y: 0 };
+
+            canvas.addEventListener('mousedown', (e) => {
+                isRotating = true;
+                previousMouse = { x: e.clientX, y: e.clientY };
+            });
+
+            canvas.addEventListener('mousemove', (e) => {
+                if (isRotating) {
+                    const deltaX = e.clientX - previousMouse.x;
+                    const deltaY = e.clientY - previousMouse.y;
+
+                    mesh.rotation.y += deltaX * 0.01;
+                    mesh.rotation.x += deltaY * 0.01;
+
+                    renderer.render(scene, camera);
+                    
+                    previousMouse = { x: e.clientX, y: e.clientY };
+                }
+            });
+
+            canvas.addEventListener('mouseup', () => {
+                isRotating = false;
+            });
+
+            canvas.addEventListener('wheel', (e) => {
+                const delta = e.deltaY > 0 ? 1.1 : 0.9;
+                camera.position.multiplyScalar(delta);
+                camera.lookAt(0, 1, 0);
+                renderer.render(scene, camera);
+                e.preventDefault();
+            });
+            
+            // Cleanup
+            material.dispose();
+            renderer.dispose();
+        }
+
+        function updateStats(type, geometry, time) {
+            const vertexCount = geometry.attributes.position.count;
+            
+            document.getElementById(type + 'Vertices').textContent = vertexCount.toLocaleString();
+            document.getElementById(type + 'Time').textContent = `${time.toFixed(1)}ms`;
+        }
+
+        async function showLandmarks() {
+            if (!anatomicalGenerator) {
+                logMessage('❌ Anatomical system not initialized');
+                return;
+            }
+
+            try {
+                logMessage('🎯 Analyzing anatomical landmarks...');
+                
+                const specs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european',
+                    body: { height: 1.75 }
+                };
+
+                const landmarks = anatomicalGenerator.landmarkSystem.generateLandmarks(specs);
+                const validation = anatomicalGenerator.landmarkSystem.validateProportions(landmarks);
+                
+                logMessage(`📊 Generated ${Object.keys(landmarks).length} anatomical landmarks`);
+                
+                validation.forEach(result => {
+                    logMessage(`${result.test}: ${result.upper}, ${result.middle}, ${result.lower} (ideal: ${result.ideal})`);
+                });
+                
+                // Sample key landmarks
+                const keyLandmarks = ['vertex', 'nasion', 'stomion', 'pogonion', 'acromion_r', 'trochanterion_r'];
+                keyLandmarks.forEach(name => {
+                    if (landmarks[name]) {
+                        const lm = landmarks[name];
+                        logMessage(`${name}: (${lm.x.toFixed(3)}, ${lm.y.toFixed(3)}, ${lm.z.toFixed(3)})`);
+                    }
+                });
+
+            } catch (error) {
+                logMessage(`❌ Landmark analysis failed: ${error.message}`);
+            }
+        }
+
+        function analyzeTopology() {
+            if (!anatomicalGenerator || !primitiveSystem) {
+                logMessage('❌ Systems not initialized');
+                return;
+            }
+
+            logMessage('🔍 Analyzing mesh topology differences...');
+            
+            const anatomicalStats = anatomicalGenerator.getStats();
+            const primitiveStats = primitiveSystem.getStats();
+
+            logMessage('📋 Anatomical Mesh:');
+            Object.entries(anatomicalStats).forEach(([key, value]) => {
+                logMessage(`  ${key}: ${value}`);
+            });
+
+            logMessage('📋 Primitive Mesh:');
+            Object.entries(primitiveStats).forEach(([key, value]) => {
+                logMessage(`  ${key}: ${value}`);
+            });
+
+            logMessage('🎯 Key Differences:');
+            logMessage('  • Anatomical uses proper quad topology vs mixed primitives');
+            logMessage('  • Anatomical follows real human proportions vs arbitrary scaling');
+            logMessage('  • Anatomical uses 60+ landmarks vs geometric regions');
+            logMessage('  • Anatomical suitable for animation vs static only');
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            logMessage('🚀 Comparison system loading...');
+            initSystems();
+        });
+    </script>
+</body>
+</html>

@@ -1821,8 +1821,10 @@ function setCameraView(preset) {
     setCameraPreset(preset);
 }
 
-// Make it globally accessible
+// Make functions globally accessible for AI Director
 window.setCameraView = setCameraView;
+window.setCameraPreset = setCameraPreset;
+window.applyLightingPreset = applyLightingPreset;
 
 function toggleCurtains() {
     // Use StageBuilder module for curtain toggle functionality
@@ -2195,7 +2197,18 @@ window.addEventListener('load', async () => {
         if (window.stageRenderLoop) {
             console.log('Starting render loop...');
             window.stageRenderLoop.start();
+            
+            // Set global stageManager flag for AI Director detection
+            window.stageManager = {
+                isInitialized: true,
+                scene: scene,
+                camera: camera,
+                renderer: renderer,
+                initialized: Date.now()
+            };
+            
             console.log('Application fully initialized!');
+            console.log('🎭 window.stageManager created for AI Director detection');
         } else {
             console.error('RenderLoop module not found');
         }

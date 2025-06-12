@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Theater Stage - Site Map</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            color: white;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #FFD700, #FFA500, #FF6347);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            color: #B0C4DE;
+            margin-bottom: 20px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            border: 2px solid #4CAF50;
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section h2 {
+            color: #FFD700;
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-icon {
+            font-size: 2rem;
+        }
+
+        .page-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .page-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: white;
+            display: block;
+        }
+
+        .page-card:hover {
+            transform: translateY(-5px);
+            border-color: #FFD700;
+            box-shadow: 0 10px 25px rgba(255, 215, 0, 0.2);
+        }
+
+        .page-card h3 {
+            color: #4CAF50;
+            margin-bottom: 10px;
+            font-size: 1.3rem;
+        }
+
+        .page-card p {
+            color: #B0C4DE;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .page-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .tag {
+            background: rgba(255, 215, 0, 0.2);
+            color: #FFD700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .page-status {
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: right;
+        }
+
+        .status-working { color: #4CAF50; }
+        .status-testing { color: #FFD700; }
+        .status-legacy { color: #FF9800; }
+        .status-experimental { color: #9C27B0; }
+        .status-demo { color: #2196F3; }
+
+        .quick-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .quick-link {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .quick-link:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .quick-link.secondary {
+            background: linear-gradient(45deg, #2196F3, #1976D2);
+        }
+
+        .quick-link.test {
+            background: linear-gradient(45deg, #FF9800, #F57C00);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #888;
+        }
+
+        .search-box {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 25px;
+            padding: 12px 20px;
+            color: white;
+            font-size: 1rem;
+            margin: 20px auto;
+            display: block;
+            max-width: 400px;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-box::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #FFD700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎭 3D Theater Stage</h1>
+            <p>Complete Procedural Character Generation System</p>
+            <div class="status-badge">✅ Phase 2 Complete - All Systems Operational</div>
+            
+            <input type="text" class="search-box" id="searchBox" placeholder="🔍 Search pages and features...">
+        </div>
+
+        <div class="quick-links">
+            <a href="index.html" class="quick-link">🎭 Main Theater</a>
+            <a href="test/integration-test.html" class="quick-link test">🧪 Full Test Suite</a>
+            <a href="test/quick-check.html" class="quick-link secondary">⚡ Quick Check</a>
+            <a href="test/mesh-generation-test.html" class="quick-link secondary">🏭 Mesh Testing</a>
+        </div>
+
+        <div class="section">
+            <h2><span class="section-icon">🎯</span>Core System Tests</h2>
+            <p>Comprehensive testing and validation of all procedural generation systems</p>
+            <div class="page-grid">
+                <a href="test/integration-test.html" class="page-card">
+                    <h3>Integration Test Suite</h3>
+                    <p>Complete end-to-end testing of all systems working together. Includes core system tests, generation pipeline validation, and performance benchmarking.</p>
+                    <div class="page-tags">
+                        <span class="tag">Full Testing</span>
+                        <span class="tag">Performance</span>
+                        <span class="tag">3D Preview</span>
+                    </div>
+                    <div class="page-status status-working">✅ Fully Operational</div>
+                </a>
+
+                <a href="test/system-validation.html" class="page-card">
+                    <h3>System Validation</h3>
+                    <p>Quick validation that all systems can load and initialize properly. Perfect for debugging and system health checks.</p>
+                    <div class="page-tags">
+                        <span class="tag">Validation</span>
+                        <span class="tag">Debugging</span>
+                        <span class="tag">Health Check</span>
+                    </div>
+                    <div class="page-status status-working">✅ Fully Operational</div>
+                </a>
+
+                <a href="test/quick-check.html" class="page-card">
+                    <h3>Quick System Check</h3>
+                    <p>Minimal terminal-style check for rapid system verification. Console output format for easy debugging.</p>
+                    <div class="page-tags">
+                        <span class="tag">Terminal Style</span>
+                        <span class="tag">Fast Check</span>
+                        <span class="tag">Debug</span>
+                    </div>
+                    <div class="page-status status-working">✅ Fully Operational</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="section-icon">🏭</span>Mesh Generation System</h2>
+            <p>Advanced procedural character mesh creation and deformation</p>
+            <div class="page-grid">
+                <a href="test/mesh-generation-test.html" class="page-card">
+                    <h3>Mesh Generation Test</h3>
+                    <p>Interactive testing of character mesh creation with real-time 3D preview. Control demographics, facial features, and body proportions.</p>
+                    <div class="page-tags">
+                        <span class="tag">3D Characters</span>
+                        <span class="tag">Interactive</span>
+                        <span class="tag">Real-time</span>
+                        <span class="tag">Export</span>
+                    </div>
+                    <div class="page-status status-working">✅ Fully Operational</div>
+                </a>
+
+                <a href="test/anatomical-comparison.html" class="page-card">
+                    <h3>🧬 Anatomical vs Primitive Comparison</h3>
+                    <p>Side-by-side comparison of new anatomically-based mesh generation vs old primitive approach. Shows real human proportions and proper topology.</p>
+                    <div class="page-tags">
+                        <span class="tag">Anatomical</span>
+                        <span class="tag">Research</span>
+                        <span class="tag">Comparison</span>
+                        <span class="tag">Professional</span>
+                    </div>
+                    <div class="page-status status-experimental">🔬 Research System</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="section-icon">🎨</span>Texture Generation System</h2>
+            <p>Procedural fabric and material texture generation</p>
+            <div class="page-grid">
+                <a href="test/texture-system-test.html" class="page-card">
+                    <h3>Texture System Test</h3>
+                    <p>Complete fabric texture generation testing with 7 different material types. Real-time parameter control and PBR material generation.</p>
+                    <div class="page-tags">
+                        <span class="tag">Fabrics</span>
+                        <span class="tag">PBR Materials</span>
+                        <span class="tag">Shaders</span>
+                        <span class="tag">Real-time</span>
+                    </div>
+                    <div class="page-status status-working">✅ Fully Operational</div>
+                </a>
+
+                <a href="test/texture-system-test-fixed.html" class="page-card">
+                    <h3>Texture System (Fixed)</h3>
+                    <p>Updated version of texture generation with improved fallback systems and enhanced compatibility.</p>
+                    <div class="page-tags">
+                        <span class="tag">Improved</span>
+                        <span class="tag">Fallbacks</span>
+                        <span class="tag">Compatible</span>
+                    </div>
+                    <div class="page-status status-working">✅ Fully Operational</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="section-icon">🎭</span>Main Theater System</h2>
+            <p>The complete 3D theater stage with AI actors and interactive systems</p>
+            <div class="page-grid">
+                <a href="index.html" class="page-card">
+                    <h3>Main Theater Stage</h3>
+                    <p>The primary 3D theater environment with modular architecture. Features physics, audio, lighting, and complete actor management.</p>
+                    <div class="page-tags">
+                        <span class="tag">Main App</span>
+                        <span class="tag">3D Scene</span>
+                        <span class="tag">Physics</span>
+                        <span class="tag">Audio</span>
+                    </div>
+                    <div class="page-status status-working">✅ Phase 2 Complete</div>
+                </a>
+
+                <a href="theater-stage/index.html" class="page-card">
+                    <h3>Theater Stage (Alternative)</h3>
+                    <p>Alternative theater stage implementation with different architectural approach.</p>
+                    <div class="page-tags">
+                        <span class="tag">Alternative</span>
+                        <span class="tag">Theater</span>
+                        <span class="tag">3D</span>
+                    </div>
+                    <div class="page-status status-legacy">📦 Legacy Version</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="section-icon">🔬</span>Development & Testing</h2>
+            <p>Development tools, demos, and experimental features</p>
+            <div class="page-grid">
+                <a href="test/enhanced-generation-test.html" class="page-card">
+                    <h3>Enhanced Generation Test</h3>
+                    <p>Advanced procedural generation testing with enhanced features and experimental capabilities.</p>
+                    <div class="page-tags">
+                        <span class="tag">Advanced</span>
+                        <span class="tag">Enhanced</span>
+                        <span class="tag">Experimental</span>
+                    </div>
+                    <div class="page-status status-experimental">🧪 Experimental</div>
+                </a>
+
+                <a href="test/simple-test.html" class="page-card">
+                    <h3>Simple Test</h3>
+                    <p>Basic testing interface for simple validation and quick checks.</p>
+                    <div class="page-tags">
+                        <span class="tag">Simple</span>
+                        <span class="tag">Basic</span>
+                        <span class="tag">Quick</span>
+                    </div>
+                    <div class="page-status status-testing">⚡ Testing</div>
+                </a>
+
+                <a href="debug.html" class="page-card">
+                    <h3>Debug Interface</h3>
+                    <p>Debugging tools and diagnostic information for system troubleshooting.</p>
+                    <div class="page-tags">
+                        <span class="tag">Debug</span>
+                        <span class="tag">Diagnostics</span>
+                        <span class="tag">Troubleshoot</span>
+                    </div>
+                    <div class="page-status status-working">🔧 Debug Tools</div>
+                </a>
+
+                <a href="debug_ui.html" class="page-card">
+                    <h3>Debug UI</h3>
+                    <p>User interface debugging and UI component testing.</p>
+                    <div class="page-tags">
+                        <span class="tag">UI Debug</span>
+                        <span class="tag">Components</span>
+                        <span class="tag">Interface</span>
+                    </div>
+                    <div class="page-status status-testing">🎨 UI Testing</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="section-icon">🎮</span>Demos & Showcases</h2>
+            <p>Demonstration pages and showcase applications</p>
+            <div class="page-grid">
+                <a href="real-showcase.html" class="page-card">
+                    <h3>Real Showcase</h3>
+                    <p>Complete showcase of all system capabilities with real-world examples and demonstrations.</p>
+                    <div class="page-tags">
+                        <span class="tag">Showcase</span>
+                        <span class="tag">Demo</span>
+                        <span class="tag">Examples</span>
+                    </div>
+                    <div class="page-status status-demo">🎬 Showcase</div>
+                </a>
+
+                <a href="quick-demo.html" class="page-card">
+                    <h3>Quick Demo</h3>
+                    <p>Fast demonstration of core features and capabilities for rapid evaluation.</p>
+                    <div class="page-tags">
+                        <span class="tag">Quick</span>
+                        <span class="tag">Demo</span>
+                        <span class="tag">Fast</span>
+                    </div>
+                    <div class="page-status status-demo">⚡ Quick Demo</div>
+                </a>
+
+                <a href="preview/actor-viewer.html" class="page-card">
+                    <h3>Actor Viewer</h3>
+                    <p>Preview and viewer for generated AI actors with interactive controls.</p>
+                    <div class="page-tags">
+                        <span class="tag">Actor Preview</span>
+                        <span class="tag">Viewer</span>
+                        <span class="tag">Interactive</span>
+                    </div>
+                    <div class="page-status status-demo">👥 Actor Preview</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2><span class="section-icon">🧪</span>Legacy & Experimental</h2>
+            <p>Legacy implementations and experimental features</p>
+            <div class="page-grid">
+                <a href="test-basic.html" class="page-card">
+                    <h3>Basic Test</h3>
+                    <p>Basic testing implementation for fundamental system validation.</p>
+                    <div class="page-tags">
+                        <span class="tag">Basic</span>
+                        <span class="tag">Legacy</span>
+                        <span class="tag">Simple</span>
+                    </div>
+                    <div class="page-status status-legacy">📦 Legacy</div>
+                </a>
+
+                <a href="test.html" class="page-card">
+                    <h3>General Test</h3>
+                    <p>General testing page for various system components and features.</p>
+                    <div class="page-tags">
+                        <span class="tag">General</span>
+                        <span class="tag">Testing</span>
+                        <span class="tag">Components</span>
+                    </div>
+                    <div class="page-status status-testing">🔧 Testing</div>
+                </a>
+
+                <a href="test-actors.html" class="page-card">
+                    <h3>Actor Testing</h3>
+                    <p>Specific testing for AI actor generation and management systems.</p>
+                    <div class="page-tags">
+                        <span class="tag">Actors</span>
+                        <span class="tag">AI</span>
+                        <span class="tag">Testing</span>
+                    </div>
+                    <div class="page-status status-testing">🎭 Actor Tests</div>
+                </a>
+
+                <a href="test-vrm.html" class="page-card">
+                    <h3>VRM Testing</h3>
+                    <p>Testing for VRM (Virtual Reality Model) integration and compatibility.</p>
+                    <div class="page-tags">
+                        <span class="tag">VRM</span>
+                        <span class="tag">3D Models</span>
+                        <span class="tag">Testing</span>
+                    </div>
+                    <div class="page-status status-experimental">🤖 VRM Testing</div>
+                </a>
+
+                <a href="test_ui_parts.html" class="page-card">
+                    <h3>UI Parts Test</h3>
+                    <p>Testing individual UI components and interface elements.</p>
+                    <div class="page-tags">
+                        <span class="tag">UI Parts</span>
+                        <span class="tag">Components</span>
+                        <span class="tag">Interface</span>
+                    </div>
+                    <div class="page-status status-testing">🎨 UI Testing</div>
+                </a>
+
+                <a href="test_objectfactory.html" class="page-card">
+                    <h3>Object Factory Test</h3>
+                    <p>Testing the object factory system for creating and managing 3D objects.</p>
+                    <div class="page-tags">
+                        <span class="tag">Object Factory</span>
+                        <span class="tag">3D Objects</span>
+                        <span class="tag">Creation</span>
+                    </div>
+                    <div class="page-status status-testing">🏭 Factory Testing</div>
+                </a>
+
+                <a href="minimal_test.html" class="page-card">
+                    <h3>Minimal Test</h3>
+                    <p>Minimal testing implementation with bare essentials for system verification.</p>
+                    <div class="page-tags">
+                        <span class="tag">Minimal</span>
+                        <span class="tag">Essential</span>
+                        <span class="tag">Verification</span>
+                    </div>
+                    <div class="page-status status-legacy">📦 Minimal</div>
+                </a>
+
+                <a href="diagnose.html" class="page-card">
+                    <h3>System Diagnosis</h3>
+                    <p>System diagnosis and health monitoring tools for troubleshooting.</p>
+                    <div class="page-tags">
+                        <span class="tag">Diagnosis</span>
+                        <span class="tag">Health</span>
+                        <span class="tag">Monitor</span>
+                    </div>
+                    <div class="page-status status-working">🩺 Diagnostic</div>
+                </a>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>🎭 3D Theater Stage - Complete Procedural Character Generation System</p>
+            <p>Phase 2 Complete | All Systems Operational | Ready for Production</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">
+                🧱 MeshTemplateSystem | 🔧 VertexDeformationEngine | 🎨 TextureGenerator | 🖼️ ShaderManager
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Search functionality
+        const searchBox = document.getElementById('searchBox');
+        const pageCards = document.querySelectorAll('.page-card');
+
+        searchBox.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            pageCards.forEach(card => {
+                const title = card.querySelector('h3').textContent.toLowerCase();
+                const description = card.querySelector('p').textContent.toLowerCase();
+                const tags = Array.from(card.querySelectorAll('.tag')).map(tag => tag.textContent.toLowerCase()).join(' ');
+                
+                const matches = title.includes(searchTerm) || 
+                               description.includes(searchTerm) || 
+                               tags.includes(searchTerm);
+                
+                if (searchTerm === '' || matches) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            // Hide sections with no visible cards
+            document.querySelectorAll('.section').forEach(section => {
+                const visibleCards = section.querySelectorAll('.page-card:not([style*="display: none"])');
+                if (visibleCards.length === 0 && searchTerm !== '') {
+                    section.style.display = 'none';
+                } else {
+                    section.style.display = 'block';
+                }
+            });
+        });
+
+        // Add click tracking
+        pageCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const title = card.querySelector('h3').textContent;
+                console.log(`🔗 Navigating to: ${title}`);
+            });
+        });
+
+        // Add keyboard shortcut for search
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                searchBox.focus();
+            }
+        });
+    </script>
+</body>
+</html>

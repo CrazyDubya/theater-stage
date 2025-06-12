@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Validation Check</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+        }
+
+        .validation-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .check-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #333;
+        }
+
+        .check-item.checking {
+            border-left-color: #FFD700;
+        }
+
+        .check-item.success {
+            border-left-color: #4CAF50;
+        }
+
+        .check-item.error {
+            border-left-color: #f44336;
+        }
+
+        .check-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .check-status {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .overall-status {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+        }
+
+        .overall-status.checking {
+            background: rgba(255, 215, 0, 0.1);
+            color: #FFD700;
+        }
+
+        .overall-status.success {
+            background: rgba(76, 175, 80, 0.1);
+            color: #4CAF50;
+        }
+
+        .overall-status.error {
+            background: rgba(244, 67, 54, 0.1);
+            color: #f44336;
+        }
+
+        .details {
+            font-family: monospace;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 3px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="validation-container">
+        <h1>🔍 System Validation Check</h1>
+        <p>Quick validation of all procedural generation systems</p>
+
+        <div id="overallStatus" class="overall-status checking">
+            🔄 Running System Validation...
+        </div>
+
+        <div id="checksList">
+            <!-- Validation checks will be populated here -->
+        </div>
+    </div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- System components -->
+    <script src="../js/core/ShaderManager.js"></script>
+    <script src="../js/core/TextureGenerator.js"></script>
+    <script src="../js/core/MeshTemplateSystem.js"></script>
+    <script src="../js/core/VertexDeformationEngine.js"></script>
+
+    <script>
+        // Validation checks
+        const validationChecks = [
+            {
+                id: 'three_js',
+                title: 'Three.js Library',
+                check: () => {
+                    if (typeof THREE === 'undefined') {
+                        throw new Error('THREE is not defined');
+                    }
+                    
+                    // Test basic Three.js functionality
+                    const scene = new THREE.Scene();
+                    const geometry = new THREE.BoxGeometry();
+                    const material = new THREE.MeshBasicMaterial();
+                    const mesh = new THREE.Mesh(geometry, material);
+                    
+                    if (!mesh.isObject3D) {
+                        throw new Error('Three.js objects not working properly');
+                    }
+                    
+                    // Cleanup
+                    geometry.dispose();
+                    material.dispose();
+                    
+                    return 'Three.js loaded and functional';
+                }
+            },
+            {
+                id: 'shader_manager',
+                title: 'ShaderManager Class',
+                check: () => {
+                    if (typeof window.ShaderManager === 'undefined') {
+                        throw new Error('ShaderManager class not found');
+                    }
+                    
+                    // Test instantiation
+                    const manager = new window.ShaderManager();
+                    if (!manager.shaderCache || !manager.includes) {
+                        throw new Error('ShaderManager not properly initialized');
+                    }
+                    
+                    return `ShaderManager class available with ${Object.keys(manager.includes).length} includes`;
+                }
+            },
+            {
+                id: 'texture_generator',
+                title: 'TextureGenerator Class',
+                check: () => {
+                    if (typeof window.TextureGenerator === 'undefined') {
+                        throw new Error('TextureGenerator class not found');
+                    }
+                    
+                    // Test instantiation with mock shader manager
+                    const mockShaderManager = {
+                        loadShaderSource: () => Promise.resolve(''),
+                        createShaderMaterial: () => new THREE.MeshBasicMaterial(),
+                        updateUniforms: () => {},
+                        getPerformanceStats: () => ({})
+                    };
+                    
+                    const generator = new window.TextureGenerator(mockShaderManager);
+                    if (!generator.fabricTypeMap || !generator.resolutionPresets) {
+                        throw new Error('TextureGenerator not properly structured');
+                    }
+                    
+                    return 'TextureGenerator class available';
+                }
+            },
+            {
+                id: 'mesh_template_system',
+                title: 'MeshTemplateSystem Class',
+                check: () => {
+                    if (typeof window.MeshTemplateSystem === 'undefined') {
+                        throw new Error('MeshTemplateSystem class not found');
+                    }
+                    
+                    // Test instantiation
+                    const system = new window.MeshTemplateSystem();
+                    if (!system.templateCache || !system.demographicTemplates) {
+                        throw new Error('MeshTemplateSystem not properly structured');
+                    }
+                    
+                    // Check demographic templates
+                    const genders = Object.keys(system.demographicTemplates);
+                    const ages = Object.keys(system.demographicTemplates.male || {});
+                    
+                    return `MeshTemplateSystem available (${genders.length} genders, ${ages.length} age groups)`;
+                }
+            },
+            {
+                id: 'vertex_deformation_engine',
+                title: 'VertexDeformationEngine Class',
+                check: () => {
+                    if (typeof window.VertexDeformationEngine === 'undefined') {
+                        throw new Error('VertexDeformationEngine class not found');
+                    }
+                    
+                    // Test instantiation
+                    const engine = new window.VertexDeformationEngine();
+                    if (!engine.anatomicalLandmarks || !engine.anthropometricFactors) {
+                        throw new Error('VertexDeformationEngine not properly structured');
+                    }
+                    
+                    // Check available data
+                    const ethnicities = Object.keys(engine.anthropometricFactors);
+                    const ageGroups = Object.keys(engine.ageProgressionFactors);
+                    
+                    return `VertexDeformationEngine available (${ethnicities.length} ethnicities, ${ageGroups.length} age groups)`;
+                }
+            },
+            {
+                id: 'system_integration',
+                title: 'System Integration',
+                check: async () => {
+                    // Test that systems can work together
+                    const shaderManager = new window.ShaderManager();
+                    await shaderManager.initializeIncludes();
+                    
+                    const meshSystem = new window.MeshTemplateSystem();
+                    await meshSystem.initialize();
+                    
+                    const deformationEngine = new window.VertexDeformationEngine();
+                    
+                    // Test basic mesh generation
+                    const specs = {
+                        gender: 'neutral',
+                        ageGroup: 'young',
+                        ethnicity: 'european'
+                    };
+                    
+                    const geometry = await meshSystem.generateCharacterMesh(specs);
+                    if (!geometry.attributes.position) {
+                        throw new Error('Mesh generation failed');
+                    }
+                    
+                    const vertexCount = geometry.attributes.position.count;
+                    geometry.dispose();
+                    
+                    return `Systems integrate successfully (${vertexCount} vertices generated)`;
+                }
+            },
+            {
+                id: 'performance_check',
+                title: 'Performance Check',
+                check: async () => {
+                    const start = performance.now();
+                    
+                    // Quick performance test
+                    const meshSystem = new window.MeshTemplateSystem();
+                    await meshSystem.initialize();
+                    
+                    const geometry = await meshSystem.generateCharacterMesh({
+                        gender: 'neutral',
+                        ageGroup: 'young',
+                        ethnicity: 'european'
+                    });
+                    
+                    const duration = performance.now() - start;
+                    geometry.dispose();
+                    
+                    const acceptable = duration < 2000; // Should complete in under 2 seconds
+                    if (!acceptable) {
+                        throw new Error(`Performance too slow: ${duration.toFixed(1)}ms`);
+                    }
+                    
+                    return `Performance acceptable: ${duration.toFixed(1)}ms`;
+                }
+            }
+        ];
+
+        let checkResults = {};
+        let totalChecks = validationChecks.length;
+        let completedChecks = 0;
+
+        /**
+         * Run all validation checks
+         */
+        async function runValidation() {
+            const checksList = document.getElementById('checksList');
+            checksList.innerHTML = '';
+
+            // Create check items
+            validationChecks.forEach(check => {
+                const item = document.createElement('div');
+                item.className = 'check-item checking';
+                item.id = `check-${check.id}`;
+                
+                item.innerHTML = `
+                    <div class="check-title">${check.title}</div>
+                    <div class="check-status" id="status-${check.id}">Checking...</div>
+                    <div class="details" id="details-${check.id}" style="display: none;"></div>
+                `;
+                
+                checksList.appendChild(item);
+            });
+
+            // Run checks sequentially
+            for (const check of validationChecks) {
+                await runSingleCheck(check);
+                updateOverallStatus();
+            }
+        }
+
+        /**
+         * Run a single validation check
+         */
+        async function runSingleCheck(check) {
+            const item = document.getElementById(`check-${check.id}`);
+            const status = document.getElementById(`status-${check.id}`);
+            const details = document.getElementById(`details-${check.id}`);
+
+            try {
+                const result = await check.check();
+                
+                // Success
+                item.className = 'check-item success';
+                status.textContent = `✅ ${result}`;
+                checkResults[check.id] = { status: 'success', message: result };
+                
+            } catch (error) {
+                // Failure
+                item.className = 'check-item error';
+                status.textContent = `❌ ${error.message}`;
+                details.textContent = error.stack || error.message;
+                details.style.display = 'block';
+                checkResults[check.id] = { status: 'error', message: error.message };
+            }
+            
+            completedChecks++;
+        }
+
+        /**
+         * Update overall validation status
+         */
+        function updateOverallStatus() {
+            const overallStatus = document.getElementById('overallStatus');
+            const successCount = Object.values(checkResults).filter(r => r.status === 'success').length;
+            const errorCount = Object.values(checkResults).filter(r => r.status === 'error').length;
+
+            if (completedChecks < totalChecks) {
+                overallStatus.className = 'overall-status checking';
+                overallStatus.textContent = `🔄 Validating... (${completedChecks}/${totalChecks})`;
+            } else if (errorCount === 0) {
+                overallStatus.className = 'overall-status success';
+                overallStatus.textContent = `✅ ALL SYSTEMS OPERATIONAL (${successCount}/${totalChecks})`;
+            } else {
+                overallStatus.className = 'overall-status error';
+                overallStatus.textContent = `❌ ${errorCount} SYSTEM ISSUES DETECTED (${successCount} passed, ${errorCount} failed)`;
+            }
+        }
+
+        // Run validation when page loads
+        window.addEventListener('load', () => {
+            console.log('🔍 Starting system validation...');
+            runValidation();
+        });
+    </script>
+</body>
+</html>

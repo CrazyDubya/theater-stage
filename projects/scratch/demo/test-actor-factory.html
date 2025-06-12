@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ActorFactory Integration Test</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+        }
+        #console {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 400px;
+            height: 200px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            overflow-y: auto;
+            font-size: 12px;
+            border: 1px solid #333;
+            z-index: 1000;
+        }
+        #controls {
+            position: absolute;
+            top: 220px;
+            left: 10px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            z-index: 1000;
+        }
+        button {
+            margin: 5px;
+            padding: 10px;
+            background: #444;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="console">
+        <div id="consoleContent">Loading ActorFactory test...</div>
+    </div>
+    
+    <div id="controls">
+        <button onclick="testActorCreation()">Create Test Actor</button>
+        <button onclick="moveTestActor()">Move Actor</button>
+        <button onclick="testPathfinding()">Test Pathfinding</button>
+        <button onclick="testCollisionAvoidance()">Test Avoidance</button>
+        <button onclick="createMultipleActors()">Create 3 Actors</button>
+        <button onclick="moveToStageMarker()">Move to Marker</button>
+        <button onclick="visualizeGrid()">Show Grid</button>
+        <button onclick="testPerformance()">Start Performance</button>
+        <button onclick="testInteraction()">Test Interaction</button>
+        <button onclick="testWaiting()">Test Waiting</button>
+        <button onclick="showActorStats()">Show Stats</button>
+        <button onclick="showStateHistory()">State History</button>
+        <button onclick="clearConsole()">Clear Console</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    
+    <!-- Core Systems -->
+    <script src="js/core/StateManager.js"></script>
+    <script src="js/core/SceneManager.js"></script>
+    <script src="js/core/StageBuilder.js"></script>
+    <script src="js/core/ObjectFactory.js"></script>
+    <script src="js/core/PhysicsEngine.js"></script>
+    <script src="js/core/AudioSystem.js"></script>
+    <script src="js/core/TextureManager.js"></script>
+    <script src="js/core/UIManager.js"></script>
+    
+    <!-- ActorFactory - Phase 3A Week 1 -->
+    <script src="js/core/actors/ActorStateMachine.js"></script>
+    <script src="js/core/actors/ActorMovement.js"></script>
+    <script src="js/core/actors/ActorCollisionAvoidance.js"></script>
+    <script src="js/core/actors/ActorFactory.js"></script>
+    
+    <script>
+        // Console logging
+        function log(message) {
+            const console = document.getElementById('consoleContent');
+            const timestamp = new Date().toLocaleTimeString();
+            console.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            console.scrollTop = console.scrollHeight;
+            console.log(message); // Also log to browser console
+        }
+        
+        function clearConsole() {
+            document.getElementById('consoleContent').innerHTML = '';
+        }
+        
+        // Global references
+        let scene, camera, renderer, controls;
+        let testActor = null;
+        
+        // Test functions
+        async function testActorCreation() {
+            log('🎭 Testing actor creation...');
+            
+            if (!window.theatricalActorFactory || !window.theatricalActorFactory.isInitialized) {
+                log('❌ ActorFactory not available or not initialized');
+                return;
+            }
+            
+            try {
+                // Create a visual actor first using ObjectFactory
+                if (!window.threeObjectFactory || !window.threeObjectFactory.isInitialized) {
+                    log('❌ ObjectFactory not available');
+                    return;
+                }
+                
+                log('📍 Creating visual actor at (2, 0, 2)...');
+                const visualActor = await window.threeObjectFactory.addActorAt(2, 2, 'human_male');
+                
+                if (visualActor) {
+                    log('✅ Visual actor created successfully');
+                    log(`   ID: ${visualActor.userData.id}`);
+                    
+                    // Get the behavioral actor that should have been created automatically
+                    const behavioralActor = window.theatricalActorFactory.getActor(visualActor.userData.id);
+                    if (behavioralActor) {
+                        log('✅ Behavioral actor created automatically');
+                        log(`   Type: ${behavioralActor.actorType}`);
+                        log(`   Position: (${behavioralActor.position.x}, ${behavioralActor.position.z})`);
+                        log(`   State: ${behavioralActor.state}`);
+                        testActor = behavioralActor;
+                    } else {
+                        log('❌ Behavioral actor not found');
+                    }
+                } else {
+                    log('❌ Failed to create visual actor');
+                }
+            } catch (error) {
+                log(`❌ Error creating actor: ${error.message}`);
+            }
+        }
+        
+        function moveTestActor() {
+            if (!testActor) {
+                log('❌ No test actor available. Create one first.');
+                return;
+            }
+            
+            const targetX = Math.random() * 8 - 4; // Random position -4 to 4
+            const targetZ = Math.random() * 8 - 4;
+            
+            log(`🚶 Moving actor ${testActor.id} to (${targetX.toFixed(2)}, ${targetZ.toFixed(2)})`);
+            testActor.moveTo(targetX, targetZ);
+        }
+        
+        function testPathfinding() {
+            if (!testActor) {
+                log('❌ No test actor available. Create one first.');
+                return;
+            }
+            
+            log('🗺️ Testing pathfinding with obstacles...');
+            
+            // Create some test props first if ObjectFactory is available
+            if (window.threeObjectFactory && window.threeObjectFactory.isInitialized) {
+                log('📦 Adding test obstacles...');
+                
+                // Add some props as obstacles
+                Promise.all([
+                    window.threeObjectFactory.addPropAt(1, 1, 'cube'),
+                    window.threeObjectFactory.addPropAt(-1, -1, 'cube'),
+                    window.threeObjectFactory.addPropAt(2, -2, 'cube')
+                ]).then(() => {
+                    log('✅ Test obstacles added');
+                    
+                    // Now test pathfinding around them
+                    const targetX = 3;
+                    const targetZ = 3;
+                    log(`🗺️ Pathfinding to (${targetX}, ${targetZ}) around obstacles...`);
+                    testActor.moveTo(targetX, targetZ);
+                }).catch(error => {
+                    log(`❌ Error adding obstacles: ${error.message}`);
+                });
+            } else {
+                // Just test pathfinding without obstacles
+                const targetX = 4;
+                const targetZ = 4;
+                log(`🗺️ Simple pathfinding to (${targetX}, ${targetZ})...`);
+                testActor.moveTo(targetX, targetZ);
+            }
+        }
+        
+        function testCollisionAvoidance() {
+            if (!testActor) {
+                log('❌ No test actor available. Create one first.');
+                return;
+            }
+            
+            log('🔄 Testing collision avoidance system...');
+            
+            // Test avoidance parameters
+            testActor.collisionAvoidance.updateParameters({
+                personalSpace: 1.5,
+                obstacleAvoidanceRadius: 2.0,
+                maxAvoidanceForce: 3.0
+            });
+            
+            log('✅ Updated avoidance parameters:');
+            log('   Personal space: 1.5 units');
+            log('   Obstacle avoidance radius: 2.0 units');
+            log('   Max avoidance force: 3.0');
+            
+            // Move actor toward a congested area
+            const targetX = 0;
+            const targetZ = 0;
+            log(`🔄 Moving to center (${targetX}, ${targetZ}) to test avoidance...`);
+            testActor.moveTo(targetX, targetZ);
+        }
+        
+        function createMultipleActors() {
+            log('👥 Creating multiple actors for collision testing...');
+            
+            if (!window.threeObjectFactory || !window.threeObjectFactory.isInitialized) {
+                log('❌ ObjectFactory not available');
+                return;
+            }
+            
+            // Create 3 actors in a line
+            const positions = [
+                { x: -2, z: 0 },
+                { x: 0, z: 0 },
+                { x: 2, z: 0 }
+            ];
+            
+            const actorTypes = ['human_male', 'human_female', 'human_male'];
+            
+            Promise.all(positions.map((pos, index) => 
+                window.threeObjectFactory.addActorAt(pos.x, pos.z, actorTypes[index])
+            )).then(actors => {
+                log(`✅ Created ${actors.length} actors for collision testing`);
+                
+                // Get their behavioral actors
+                const behavioralActors = actors.map(visualActor => 
+                    window.theatricalActorFactory.getActor(visualActor.userData.id)
+                ).filter(actor => actor !== null);
+                
+                if (behavioralActors.length > 0) {
+                    log('🎯 Setting up collision avoidance test scenario...');
+                    
+                    // Make them all move toward the center
+                    behavioralActors.forEach((actor, index) => {
+                        setTimeout(() => {
+                            const targetX = Math.random() * 2 - 1; // -1 to 1
+                            const targetZ = Math.random() * 2 - 1;
+                            log(`🚶 Actor ${actor.id} moving to (${targetX.toFixed(2)}, ${targetZ.toFixed(2)})`);
+                            actor.moveTo(targetX, targetZ);
+                        }, index * 500); // Stagger the movements
+                    });
+                    
+                    // Update test actor reference to the first one if we don't have one
+                    if (!testActor && behavioralActors.length > 0) {
+                        testActor = behavioralActors[0];
+                        log(`🎭 Set test actor to ${testActor.id}`);
+                    }
+                }
+            }).catch(error => {
+                log(`❌ Error creating multiple actors: ${error.message}`);
+            });
+        }
+        
+        function moveToStageMarker() {
+            if (!testActor) {
+                log('❌ No test actor available. Create one first.');
+                return;
+            }
+            
+            log('🎯 Testing stage marker movement...');
+            
+            // Try to move to a random stage marker
+            if (window.stageState && window.stageState.stage.stageMarkers) {
+                const markers = window.stageState.stage.stageMarkers;
+                if (markers.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * markers.length);
+                    log(`🎯 Moving to stage marker ${randomIndex} of ${markers.length}`);
+                    const success = testActor.moveToStagePosition(randomIndex);
+                    if (!success) {
+                        log('❌ Failed to move to stage marker');
+                    }
+                } else {
+                    log('❌ No stage markers available');
+                }
+            } else {
+                log('❌ Stage state not available');
+            }
+        }
+        
+        function visualizeGrid() {
+            if (!testActor) {
+                log('❌ No test actor available. Create one first.');
+                return;
+            }
+            
+            log('👁️ Visualizing pathfinding grid...');
+            testActor.movementSystem.visualizeGrid();
+            log('✅ Grid visualization added to scene (will auto-remove in 10s)');
+        }
+        
+        function testPerformance() {
+            if (!testActor) {
+                log('❌ No test actor available. Create one first.');
+                return;
+            }
+            
+            log('🎭 Testing performance state...');
+            testActor.startPerformance('dramatic_monologue', 5000, false);
+        }
+        
+        function testInteraction() {
+            if (!testActor) {
+                log('❌ No test actor available. Create one first.');
+                return;
+            }
+            
+            log('🤝 Testing interaction state...');
+            testActor.startInteraction('imaginary_prop', 'examining', 3000);
+        }
+        
+        function testWaiting() {
+            if (!testActor) {
+                log('❌ No test actor available. Create one first.');
+                return;
+            }
+            
+            log('⏳ Testing waiting state...');
+            testActor.waitForCue('lighting_change', 10000);
+            
+            // Automatically trigger cue after 3 seconds for demonstration
+            setTimeout(() => {
+                if (testActor && testActor.state === 'waiting') {
+                    log('✅ Triggering demonstration cue...');
+                    testActor.receiveCue();
+                }
+            }, 3000);
+        }
+        
+        function showActorStats() {
+            if (!window.theatricalActorFactory || !window.theatricalActorFactory.isInitialized) {
+                log('❌ ActorFactory not available');
+                return;
+            }
+            
+            const stats = window.theatricalActorFactory.getStats();
+            const debugInfo = window.theatricalActorFactory.getDebugInfo();
+            
+            log('📊 ActorFactory Statistics:');
+            log(`   Total Actors: ${stats.totalActors}`);
+            log(`   Active Actors: ${stats.activeActors}`);
+            log(`   Avg Update Time: ${stats.averageUpdateTime.toFixed(2)}ms`);
+            log(`   Memory Usage: ~${stats.memoryUsage}KB`);
+            
+            if (debugInfo.actors.length > 0) {
+                log('👥 Individual Actor Status:');
+                debugInfo.actors.forEach(actor => {
+                    log(`   ${actor.id}: ${actor.state} (${actor.timeInState}) at (${actor.position.x.toFixed(1)}, ${actor.position.z.toFixed(1)})`);
+                    log(`      Transitions: ${actor.transitionCount}, Queue: ${actor.eventQueueLength}`);
+                });
+            }
+            
+            if (testActor) {
+                log('🎭 Test Actor Detailed Status:');
+                const status = testActor.getStatus();
+                Object.entries(status).forEach(([key, value]) => {
+                    if (typeof value === 'object' && value !== null) {
+                        log(`   ${key}: ${JSON.stringify(value)}`);
+                    } else {
+                        log(`   ${key}: ${value}`);
+                    }
+                });
+                
+                log('🗺️ Movement System Debug:');
+                const movementDebug = testActor.movementSystem.getDebugInfo();
+                Object.entries(movementDebug).forEach(([key, value]) => {
+                    log(`   ${key}: ${value}`);
+                });
+            }
+        }
+        
+        function showStateHistory() {
+            if (!testActor) {
+                log('❌ No test actor available. Create one first.');
+                return;
+            }
+            
+            log('📜 State Transition History:');
+            const history = testActor.getStateHistory();
+            
+            if (history.length === 0) {
+                log('   No state transitions yet');
+                return;
+            }
+            
+            history.forEach((transition, index) => {
+                const time = new Date(transition.timestamp).toLocaleTimeString();
+                const duration = (transition.duration / 1000).toFixed(1);
+                log(`   ${index + 1}. [${time}] ${transition.fromState} → ${transition.toState} (${transition.event}) - ${duration}s`);
+            });
+        }
+        
+        // Initialize test environment
+        async function initializeTest() {
+            log('🏗️ Initializing test environment...');
+            
+            try {
+                // Check if core systems are loaded
+                log('🔍 Checking core systems...');
+                const systems = {
+                    'StateManager': !!window.stageState,
+                    'SceneManager': !!window.threeSceneManager, 
+                    'ObjectFactory': !!window.threeObjectFactory,
+                    'ActorFactory': !!window.theatricalActorFactory
+                };
+                
+                for (const [name, available] of Object.entries(systems)) {
+                    log(`   ${available ? '✅' : '❌'} ${name}`);
+                }
+                
+                // Initialize systems in order
+                if (window.threeSceneManager) {
+                    log('🎬 Initializing SceneManager...');
+                    await window.threeSceneManager.initialize();
+                    
+                    // Get references
+                    scene = window.stageState.core.scene;
+                    camera = window.stageState.core.camera;
+                    renderer = window.stageState.core.renderer;
+                    controls = window.stageState.core.controls;
+                }
+                
+                if (window.threeStageBuilder) {
+                    log('🎪 Initializing StageBuilder...');
+                    await window.threeStageBuilder.initialize();
+                }
+                
+                if (window.threeObjectFactory) {
+                    log('🏭 Initializing ObjectFactory...');
+                    await window.threeObjectFactory.initialize();
+                }
+                
+                if (window.theatricalActorFactory) {
+                    log('🎭 Initializing ActorFactory...');
+                    await window.theatricalActorFactory.initialize();
+                    log('✅ ActorFactory initialized successfully');
+                } else {
+                    log('❌ ActorFactory not found');
+                }
+                
+                log('🎉 Test environment ready!');
+                log('💡 Try creating an actor using the "Create Test Actor" button');
+                
+            } catch (error) {
+                log(`❌ Initialization error: ${error.message}`);
+                console.error('Test initialization error:', error);
+            }
+        }
+        
+        // Start test when page loads
+        window.addEventListener('load', () => {
+            log('🌟 ActorFactory Integration Test Started');
+            initializeTest();
+        });
+    </script>
+</body>
+</html>

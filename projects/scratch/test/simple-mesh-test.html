@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Mesh Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .preview {
+            width: 400px;
+            height: 300px;
+            background: #333;
+            margin: 20px 0;
+            border: 2px solid #555;
+        }
+        .log {
+            white-space: pre-wrap;
+            font-size: 12px;
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Simple Mesh Test</h1>
+    
+    <button onclick="testBasicMesh()">Test Basic Mesh (No Deformations)</button>
+    <button onclick="testFaceWidthOnly()">Test Face Width Only</button>
+    <button onclick="testTorsoOnly()">Test Torso Only</button>
+
+    <div class="preview" id="preview"></div>
+    <div class="log" id="log"></div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- System components -->
+    <script src="../js/core/MeshTemplateSystem.js"></script>
+    <script src="../js/core/VertexDeformationEngine.js"></script>
+
+    <script>
+        const log = document.getElementById('log');
+        let meshSystem = null;
+        let deformationEngine = null;
+        
+        function logMessage(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `[${timestamp}] ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+            console.log(message);
+        }
+
+        async function initSystems() {
+            try {
+                logMessage('🔧 Initializing systems...');
+                
+                meshSystem = new window.MeshTemplateSystem();
+                await meshSystem.initialize();
+                logMessage('✅ MeshTemplateSystem ready');
+                
+                deformationEngine = new window.VertexDeformationEngine();
+                logMessage('✅ VertexDeformationEngine ready');
+                
+            } catch (error) {
+                logMessage(`❌ System init failed: ${error.message}`);
+                logMessage(`Stack: ${error.stack}`);
+            }
+        }
+
+        async function testBasicMesh() {
+            if (!meshSystem) {
+                logMessage('❌ Systems not initialized');
+                return;
+            }
+
+            try {
+                logMessage('🏭 Testing basic mesh generation (NO deformations)...');
+                
+                const characterSpecs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european'
+                };
+                
+                logMessage(`Character specs: ${JSON.stringify(characterSpecs)}`);
+                
+                const geometry = await meshSystem.generateCharacterMesh(characterSpecs);
+                
+                if (geometry && geometry.attributes && geometry.attributes.position) {
+                    const vertexCount = geometry.attributes.position.count;
+                    logMessage(`✅ Basic mesh generated: ${vertexCount} vertices`);
+                    
+                    // Show the mesh
+                    showMesh(geometry, '✅ Basic Mesh (No Deformations)');
+                    
+                } else {
+                    logMessage('❌ Invalid geometry generated');
+                }
+                
+            } catch (error) {
+                logMessage(`❌ Basic mesh test failed: ${error.message}`);
+                logMessage(`Stack: ${error.stack}`);
+            }
+        }
+
+        async function testFaceWidthOnly() {
+            if (!meshSystem || !deformationEngine) {
+                logMessage('❌ Systems not initialized');
+                return;
+            }
+
+            try {
+                logMessage('👤 Testing ONLY face width deformation...');
+                
+                const characterSpecs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european',
+                    facial: {
+                        faceWidth: 1.5  // Make it obviously wider
+                    }
+                };
+                
+                logMessage(`Character specs: ${JSON.stringify(characterSpecs)}`);
+                
+                // Generate base mesh
+                const baseGeometry = await meshSystem.generateCharacterMesh(characterSpecs);
+                logMessage('✅ Base mesh generated');
+                
+                // Apply deformations
+                const deformedGeometry = await deformationEngine.applyCharacterDeformation(
+                    baseGeometry.clone(), 
+                    characterSpecs
+                );
+                logMessage('✅ Face width deformation applied');
+                
+                // Show the result
+                showMesh(deformedGeometry, '👤 Face Width 1.5');
+                
+                // Cleanup
+                baseGeometry.dispose();
+                
+            } catch (error) {
+                logMessage(`❌ Face width test failed: ${error.message}`);
+                logMessage(`Stack: ${error.stack}`);
+            }
+        }
+
+        async function testTorsoOnly() {
+            if (!meshSystem || !deformationEngine) {
+                logMessage('❌ Systems not initialized');
+                return;
+            }
+
+            try {
+                logMessage('🏃 Testing ONLY torso deformation...');
+                
+                const characterSpecs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european',
+                    body: {
+                        proportions: {
+                            torso: 1.5  // Make it obviously bigger
+                        }
+                    }
+                };
+                
+                logMessage(`Character specs: ${JSON.stringify(characterSpecs)}`);
+                
+                // Generate base mesh
+                const baseGeometry = await meshSystem.generateCharacterMesh(characterSpecs);
+                logMessage('✅ Base mesh generated');
+                
+                // Apply deformations
+                const deformedGeometry = await deformationEngine.applyCharacterDeformation(
+                    baseGeometry.clone(), 
+                    characterSpecs
+                );
+                logMessage('✅ Torso deformation applied');
+                
+                // Show the result
+                showMesh(deformedGeometry, '🏃 Torso 1.5');
+                
+                // Cleanup
+                baseGeometry.dispose();
+                
+            } catch (error) {
+                logMessage(`❌ Torso test failed: ${error.message}`);
+                logMessage(`Stack: ${error.stack}`);
+            }
+        }
+
+        function showMesh(geometry, title) {
+            const preview = document.getElementById('preview');
+            preview.innerHTML = '';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 300;
+            
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, 400 / 300, 0.1, 1000);
+            camera.position.set(2, 1.6, 3);
+            camera.lookAt(0, 1, 0);
+            
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            scene.add(directionalLight);
+            
+            const material = new THREE.MeshLambertMaterial({
+                color: 0xffdbac,
+                wireframe: false
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(400, 300);
+            renderer.setClearColor(0x333333);
+            renderer.render(scene, camera);
+            
+            preview.appendChild(canvas);
+            
+            // Add title
+            const titleDiv = document.createElement('div');
+            titleDiv.textContent = title;
+            titleDiv.style.color = '#4f4';
+            titleDiv.style.textAlign = 'center';
+            titleDiv.style.marginTop = '10px';
+            preview.appendChild(titleDiv);
+            
+            // Cleanup
+            material.dispose();
+            renderer.dispose();
+            
+            logMessage(`📺 Displayed: ${title}`);
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            logMessage('🚀 Page loaded, initializing...');
+            initSystems();
+        });
+    </script>
+</body>
+</html>

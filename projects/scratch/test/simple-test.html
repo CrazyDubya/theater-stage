@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Script Loading Test</title>
+</head>
+<body>
+    <h1>Script Loading Test</h1>
+    <div id="status"></div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <script>
+        console.log('Three.js loaded:', typeof THREE !== 'undefined');
+        document.getElementById('status').innerHTML += 'Three.js: ' + (typeof THREE !== 'undefined' ? '✅' : '❌') + '<br>';
+    </script>
+    
+    <script src="../js/core/ShaderManager.js" onerror="console.error('Failed to load ShaderManager')"></script>
+    
+    <script>
+        console.log('ShaderManager loaded:', typeof ShaderManager !== 'undefined');
+        document.getElementById('status').innerHTML += 'ShaderManager: ' + (typeof ShaderManager !== 'undefined' ? '✅' : '❌') + '<br>';
+        
+        if (typeof ShaderManager !== 'undefined') {
+            try {
+                const manager = new ShaderManager();
+                console.log('ShaderManager instantiated successfully');
+                document.getElementById('status').innerHTML += 'ShaderManager instantiation: ✅<br>';
+            } catch (error) {
+                console.error('ShaderManager instantiation failed:', error);
+                document.getElementById('status').innerHTML += 'ShaderManager instantiation: ❌ ' + error.message + '<br>';
+            }
+        }
+    </script>
+</body>
+</html>

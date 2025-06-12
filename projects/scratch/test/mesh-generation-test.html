@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesh Generation System Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .test-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .controls-panel {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .control-group label {
+            margin-bottom: 5px;
+            color: #FFD700;
+            font-weight: bold;
+        }
+
+        .control-group input, .control-group select {
+            background: #333;
+            color: white;
+            border: 1px solid #555;
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .control-group input[type="color"] {
+            height: 40px;
+        }
+
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .character-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 15px;
+            border: 2px solid #333;
+        }
+
+        .character-card.active {
+            border-color: #4CAF50;
+        }
+
+        .character-card h3 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+
+        .character-preview {
+            width: 100%;
+            height: 300px;
+            background: #222;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .character-preview canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+        }
+
+        .character-info {
+            font-size: 12px;
+            line-height: 1.4;
+        }
+
+        .character-info .property {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+
+        .stats-panel {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .button:hover {
+            background: #45a049;
+        }
+
+        .button.secondary {
+            background: #2196F3;
+        }
+
+        .button.danger {
+            background: #f44336;
+        }
+
+        .loading {
+            text-align: center;
+            color: #FFD700;
+            font-style: italic;
+        }
+
+        .error {
+            color: #f44336;
+            background: rgba(244, 67, 54, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .success {
+            color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .log-panel {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .facial-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .body-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .section-header {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 5px;
+            margin: 15px 0 10px 0;
+            text-align: center;
+            font-weight: bold;
+            color: #FFD700;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🏭 Mesh Generation System Test</h1>
+        <p>Testing the complete procedural character mesh generation and deformation pipeline</p>
+
+        <div class="controls-panel">
+            <!-- Basic Character Properties -->
+            <div class="control-group">
+                <label>Gender</label>
+                <select id="genderSelect">
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="non-binary" selected>Non-Binary</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Age Group</label>
+                <select id="ageGroupSelect">
+                    <option value="child">Child</option>
+                    <option value="teen">Teen</option>
+                    <option value="young" selected>Young Adult</option>
+                    <option value="middle">Middle Age</option>
+                    <option value="elderly">Elderly</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>Ethnicity</label>
+                <select id="ethnicitySelect">
+                    <option value="european" selected>European</option>
+                    <option value="african">African</option>
+                    <option value="asian">Asian</option>
+                    <option value="hispanic">Hispanic</option>
+                    <option value="middle_eastern">Middle Eastern</option>
+                </select>
+            </div>
+
+            <!-- Body Properties -->
+            <div class="control-group">
+                <label>Height (m)</label>
+                <input type="range" id="heightRange" min="1.2" max="2.1" step="0.05" value="1.75">
+                <span id="heightValue">1.75</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Body Scale</label>
+                <input type="range" id="scaleRange" min="0.7" max="1.5" step="0.05" value="1.0">
+                <span id="scaleValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Muscle Definition</label>
+                <input type="range" id="muscleRange" min="0" max="1" step="0.1" value="0.5">
+                <span id="muscleValue">0.5</span>
+            </div>
+        </div>
+
+        <div class="section-header">Facial Feature Controls</div>
+        <div class="controls-panel facial-controls">
+            <div class="control-group">
+                <label>Face Width</label>
+                <input type="range" id="faceWidthRange" min="0.7" max="1.3" step="0.05" value="1.0">
+                <span id="faceWidthValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Face Height</label>
+                <input type="range" id="faceHeightRange" min="0.8" max="1.2" step="0.05" value="1.0">
+                <span id="faceHeightValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Eye Size</label>
+                <input type="range" id="eyeSizeRange" min="0.7" max="1.3" step="0.05" value="1.0">
+                <span id="eyeSizeValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Eye Spacing</label>
+                <input type="range" id="eyeSpacingRange" min="0.2" max="0.4" step="0.02" value="0.3">
+                <span id="eyeSpacingValue">0.3</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Nose Width</label>
+                <input type="range" id="noseWidthRange" min="0.7" max="1.3" step="0.05" value="1.0">
+                <span id="noseWidthValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Nose Length</label>
+                <input type="range" id="noseLengthRange" min="0.8" max="1.2" step="0.05" value="1.0">
+                <span id="noseLengthValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Mouth Width</label>
+                <input type="range" id="mouthWidthRange" min="0.7" max="1.3" step="0.05" value="1.0">
+                <span id="mouthWidthValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Lip Thickness</label>
+                <input type="range" id="lipThicknessRange" min="0.7" max="1.3" step="0.05" value="1.0">
+                <span id="lipThicknessValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Jawline Strength</label>
+                <input type="range" id="jawlineRange" min="0" max="1" step="0.1" value="0.5">
+                <span id="jawlineValue">0.5</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Cheekbone Prominence</label>
+                <input type="range" id="cheekbonesRange" min="0" max="1" step="0.1" value="0.3">
+                <span id="cheekbonesValue">0.3</span>
+            </div>
+        </div>
+
+        <div class="section-header">Body Proportion Controls</div>
+        <div class="controls-panel body-controls">
+            <div class="control-group">
+                <label>Torso Scale</label>
+                <input type="range" id="torsoRange" min="0.7" max="1.3" step="0.05" value="1.0">
+                <span id="torsoValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Leg Length</label>
+                <input type="range" id="legsRange" min="0.8" max="1.2" step="0.05" value="1.0">
+                <span id="legsValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Arm Length</label>
+                <input type="range" id="armsRange" min="0.8" max="1.2" step="0.05" value="1.0">
+                <span id="armsValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Shoulder Width</label>
+                <input type="range" id="shouldersRange" min="0.7" max="1.4" step="0.05" value="1.0">
+                <span id="shouldersValue">1.0</span>
+            </div>
+            
+            <div class="control-group">
+                <label>Hip Width</label>
+                <input type="range" id="hipsRange" min="0.7" max="1.3" step="0.05" value="1.0">
+                <span id="hipsValue">1.0</span>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="button" onclick="generateCharacter()">Generate Character</button>
+            <button class="button secondary" onclick="generatePresets()">Generate Presets</button>
+            <button class="button secondary" onclick="testPerformance()">Performance Test</button>
+            <button class="button secondary" onclick="exportMesh()">Export Mesh</button>
+            <button class="button danger" onclick="resetSystem()">Reset System</button>
+        </div>
+
+        <div id="systemStatus" class="loading">Initializing mesh generation system...</div>
+
+        <div class="character-grid" id="characterGrid">
+            <!-- Character preview cards will be generated here -->
+        </div>
+
+        <div class="stats-panel">
+            <h3>📊 Performance Statistics</h3>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-item">
+                    <div class="stat-value" id="meshesGenerated">0</div>
+                    <div class="stat-label">Meshes Generated</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="templatesLoaded">0</div>
+                    <div class="stat-label">Templates Loaded</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgGenerationTime">0ms</div>
+                    <div class="stat-label">Avg Generation Time</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="deformationsApplied">0</div>
+                    <div class="stat-label">Deformations Applied</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="verticesProcessed">0</div>
+                    <div class="stat-label">Vertices Processed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="memoryUsage">0MB</div>
+                    <div class="stat-label">Estimated Memory</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="log-panel" id="logPanel">
+            <div>🚀 Mesh generation system initialization starting...</div>
+        </div>
+    </div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Our mesh generation system components -->
+    <script>
+        // Check if Three.js loaded
+        if (typeof THREE === 'undefined') {
+            console.error('Three.js failed to load');
+            document.getElementById('systemStatus').innerHTML = 
+                '<div class="error">❌ Three.js failed to load</div>';
+        } else {
+            console.log('✅ Three.js loaded successfully');
+        }
+    </script>
+    <script src="../js/core/MeshTemplateSystem.js"></script>
+    <script src="../js/core/VertexDeformationEngine.js"></script>
+    
+    <script>
+        // Verify our classes loaded
+        if (typeof MeshTemplateSystem === 'undefined') {
+            console.error('MeshTemplateSystem class not found');
+        } else {
+            console.log('✅ MeshTemplateSystem class loaded');
+        }
+        
+        if (typeof VertexDeformationEngine === 'undefined') {
+            console.error('VertexDeformationEngine class not found');
+        } else {
+            console.log('✅ VertexDeformationEngine class loaded');
+        }
+    </script>
+
+    <script>
+        // Global system components
+        let meshTemplateSystem = null;
+        let vertexDeformationEngine = null;
+        let systemInitialized = false;
+
+        // Test data and state
+        let currentCharacterSpecs = {
+            gender: 'non-binary',
+            ageGroup: 'young',
+            ethnicity: 'european',
+            body: {
+                height: 1.75,
+                scale: 1.0,
+                muscle: {
+                    definition: 0.5
+                },
+                proportions: {
+                    torso: 1.0,
+                    legs: 1.0,
+                    arms: 1.0,
+                    shoulders: 1.0,
+                    hips: 1.0
+                }
+            },
+            facial: {
+                faceWidth: 1.0,
+                faceHeight: 1.0,
+                eyeSize: 1.0,
+                eyeSpacing: 0.3,
+                noseWidth: 1.0,
+                noseLength: 1.0,
+                mouthWidth: 1.0,
+                lipThickness: 1.0,
+                jawline: 0.5,
+                cheekbones: 0.3
+            }
+        };
+
+        let activeCharacterCard = null;
+        let generatedMeshes = [];
+
+        /**
+         * Initialize the complete mesh generation system
+         */
+        async function initializeSystem() {
+            try {
+                logMessage('🔧 Checking if classes are available...');
+                
+                if (typeof window.MeshTemplateSystem === 'undefined') {
+                    throw new Error('MeshTemplateSystem class not loaded');
+                }
+                
+                if (typeof window.VertexDeformationEngine === 'undefined') {
+                    throw new Error('VertexDeformationEngine class not loaded');
+                }
+                
+                logMessage('🧱 Initializing MeshTemplateSystem...');
+                meshTemplateSystem = new window.MeshTemplateSystem();
+                await meshTemplateSystem.initialize();
+
+                logMessage('🔧 Initializing VertexDeformationEngine...');
+                vertexDeformationEngine = new window.VertexDeformationEngine();
+
+                logMessage('✅ System initialization complete!');
+                systemInitialized = true;
+
+                // Set up control event listeners
+                setupControls();
+
+                // Create initial character preview
+                createCharacterPreview();
+
+                // Update status
+                document.getElementById('systemStatus').innerHTML = 
+                    '<div class="success">✅ Mesh generation system ready for testing</div>';
+
+                // Generate initial character
+                setTimeout(() => generateCharacter(), 1000);
+
+            } catch (error) {
+                logMessage(`❌ System initialization failed: ${error.message}`);
+                document.getElementById('systemStatus').innerHTML = 
+                    `<div class="error">❌ Initialization failed: ${error.message}</div>`;
+            }
+        }
+
+        /**
+         * Create character preview container
+         */
+        function createCharacterPreview() {
+            const grid = document.getElementById('characterGrid');
+            grid.innerHTML = '';
+
+            const card = document.createElement('div');
+            card.className = 'character-card active';
+            card.id = 'character-main';
+
+            card.innerHTML = `
+                <h3>Generated Character</h3>
+                <div class="character-preview" id="preview-main">
+                    <div class="loading">Click Generate Character to create mesh...</div>
+                </div>
+                <div class="character-info">
+                    <div class="property">
+                        <span>Gender:</span>
+                        <span id="info-gender">Non-Binary</span>
+                    </div>
+                    <div class="property">
+                        <span>Age Group:</span>
+                        <span id="info-age">Young Adult</span>
+                    </div>
+                    <div class="property">
+                        <span>Ethnicity:</span>
+                        <span id="info-ethnicity">European</span>
+                    </div>
+                    <div class="property">
+                        <span>Status:</span>
+                        <span id="status-main">Ready</span>
+                    </div>
+                    <div class="property">
+                        <span>Generation Time:</span>
+                        <span id="time-main">--</span>
+                    </div>
+                    <div class="property">
+                        <span>Vertex Count:</span>
+                        <span id="vertices-main">--</span>
+                    </div>
+                </div>
+            `;
+
+            grid.appendChild(card);
+        }
+
+        /**
+         * Set up control event listeners
+         */
+        function setupControls() {
+            // Basic controls
+            const selects = ['genderSelect', 'ageGroupSelect', 'ethnicitySelect'];
+            selects.forEach(selectId => {
+                const select = document.getElementById(selectId);
+                select.addEventListener('change', (e) => {
+                    const prop = selectId.replace('Select', '');
+                    if (prop === 'ageGroup') {
+                        currentCharacterSpecs.ageGroup = e.target.value;
+                    } else {
+                        currentCharacterSpecs[prop] = e.target.value;
+                    }
+                    updateCharacterInfo();
+                    generateCharacter();
+                });
+            });
+
+            // Range controls
+            const rangeControls = [
+                'heightRange', 'scaleRange', 'muscleRange',
+                'faceWidthRange', 'faceHeightRange', 'eyeSizeRange', 'eyeSpacingRange',
+                'noseWidthRange', 'noseLengthRange', 'mouthWidthRange', 'lipThicknessRange',
+                'jawlineRange', 'cheekbonesRange',
+                'torsoRange', 'legsRange', 'armsRange', 'shouldersRange', 'hipsRange'
+            ];
+
+            rangeControls.forEach(controlId => {
+                const control = document.getElementById(controlId);
+                const valueSpan = document.getElementById(controlId.replace('Range', 'Value'));
+
+                control.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    valueSpan.textContent = value.toFixed(2);
+                    
+                    // Update character specs
+                    updateCharacterSpecsFromControl(controlId, value);
+                    
+                    // Regenerate character with small delay for smoother interaction
+                    clearTimeout(window.generateTimeout);
+                    window.generateTimeout = setTimeout(() => generateCharacter(), 300);
+                });
+            });
+        }
+
+        /**
+         * Update character specs from control input
+         */
+        function updateCharacterSpecsFromControl(controlId, value) {
+            const controlMap = {
+                'heightRange': (v) => currentCharacterSpecs.body.height = v,
+                'scaleRange': (v) => currentCharacterSpecs.body.scale = v,
+                'muscleRange': (v) => currentCharacterSpecs.body.muscle.definition = v,
+                'faceWidthRange': (v) => currentCharacterSpecs.facial.faceWidth = v,
+                'faceHeightRange': (v) => currentCharacterSpecs.facial.faceHeight = v,
+                'eyeSizeRange': (v) => currentCharacterSpecs.facial.eyeSize = v,
+                'eyeSpacingRange': (v) => currentCharacterSpecs.facial.eyeSpacing = v,
+                'noseWidthRange': (v) => currentCharacterSpecs.facial.noseWidth = v,
+                'noseLengthRange': (v) => currentCharacterSpecs.facial.noseLength = v,
+                'mouthWidthRange': (v) => currentCharacterSpecs.facial.mouthWidth = v,
+                'lipThicknessRange': (v) => currentCharacterSpecs.facial.lipThickness = v,
+                'jawlineRange': (v) => currentCharacterSpecs.facial.jawline = v,
+                'cheekbonesRange': (v) => currentCharacterSpecs.facial.cheekbones = v,
+                'torsoRange': (v) => currentCharacterSpecs.body.proportions.torso = v,
+                'legsRange': (v) => currentCharacterSpecs.body.proportions.legs = v,
+                'armsRange': (v) => currentCharacterSpecs.body.proportions.arms = v,
+                'shouldersRange': (v) => currentCharacterSpecs.body.proportions.shoulders = v,
+                'hipsRange': (v) => currentCharacterSpecs.body.proportions.hips = v
+            };
+
+            if (controlMap[controlId]) {
+                controlMap[controlId](value);
+            }
+        }
+
+        /**
+         * Update character info display
+         */
+        function updateCharacterInfo() {
+            document.getElementById('info-gender').textContent = currentCharacterSpecs.gender;
+            document.getElementById('info-age').textContent = currentCharacterSpecs.ageGroup;
+            document.getElementById('info-ethnicity').textContent = currentCharacterSpecs.ethnicity;
+        }
+
+        /**
+         * Generate character mesh with current specifications
+         */
+        async function generateCharacter() {
+            if (!systemInitialized) {
+                logMessage('⚠️ System not initialized yet');
+                return;
+            }
+
+            // Update status
+            document.getElementById('status-main').textContent = 'Generating...';
+            const preview = document.getElementById('preview-main');
+            preview.innerHTML = '<div class="loading">Generating character mesh...</div>';
+
+            try {
+                const startTime = performance.now();
+
+                logMessage(`🏭 Generating character: ${currentCharacterSpecs.gender} ${currentCharacterSpecs.ageGroup} ${currentCharacterSpecs.ethnicity}`);
+
+                // Generate base mesh from template system
+                const characterGeometry = await meshTemplateSystem.generateCharacterMesh(currentCharacterSpecs);
+
+                // Apply vertex deformations
+                const finalGeometry = await vertexDeformationEngine.applyCharacterDeformation(
+                    characterGeometry, 
+                    currentCharacterSpecs
+                );
+
+                const generationTime = performance.now() - startTime;
+
+                // Create Three.js scene for preview
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, 400 / 300, 0.1, 1000);
+                camera.position.set(2, 1.6, 3);
+                camera.lookAt(0, 1, 0);
+
+                // Add lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(5, 10, 5);
+                scene.add(directionalLight);
+
+                // Create material for character
+                const material = new THREE.MeshLambertMaterial({
+                    color: 0xffdbac,
+                    wireframe: false
+                });
+
+                const mesh = new THREE.Mesh(finalGeometry, material);
+                scene.add(mesh);
+
+                // Create renderer
+                const canvas = document.createElement('canvas');
+                canvas.width = 400;
+                canvas.height = 300;
+
+                const renderer = new THREE.WebGLRenderer({ 
+                    canvas: canvas,
+                    antialias: true
+                });
+                renderer.setSize(400, 300);
+                renderer.setClearColor(0x222222);
+
+                // Render the scene
+                renderer.render(scene, camera);
+
+                // Update preview
+                preview.innerHTML = '';
+                preview.appendChild(canvas);
+
+                // Add rotation controls
+                let isRotating = false;
+                let previousMouse = { x: 0, y: 0 };
+
+                canvas.addEventListener('mousedown', (e) => {
+                    isRotating = true;
+                    previousMouse = { x: e.clientX, y: e.clientY };
+                });
+
+                canvas.addEventListener('mousemove', (e) => {
+                    if (isRotating) {
+                        const deltaX = e.clientX - previousMouse.x;
+                        const deltaY = e.clientY - previousMouse.y;
+
+                        mesh.rotation.y += deltaX * 0.01;
+                        mesh.rotation.x += deltaY * 0.01;
+
+                        renderer.render(scene, camera);
+                        
+                        previousMouse = { x: e.clientX, y: e.clientY };
+                    }
+                });
+
+                canvas.addEventListener('mouseup', () => {
+                    isRotating = false;
+                });
+
+                canvas.addEventListener('wheel', (e) => {
+                    const delta = e.deltaY > 0 ? 1.1 : 0.9;
+                    camera.position.multiplyScalar(delta);
+                    camera.lookAt(0, 1, 0);
+                    renderer.render(scene, camera);
+                    e.preventDefault();
+                });
+
+                // Update status and info
+                document.getElementById('status-main').textContent = 'Complete';
+                document.getElementById('time-main').textContent = `${generationTime.toFixed(1)}ms`;
+                document.getElementById('vertices-main').textContent = (finalGeometry.attributes.position.count || 0).toLocaleString();
+
+                logMessage(`✅ Character generated in ${generationTime.toFixed(1)}ms`);
+
+                // Store mesh for export
+                generatedMeshes.push({
+                    geometry: finalGeometry,
+                    specs: { ...currentCharacterSpecs },
+                    timestamp: Date.now()
+                });
+
+                // Keep only last 5 meshes to manage memory
+                if (generatedMeshes.length > 5) {
+                    const oldMesh = generatedMeshes.shift();
+                    oldMesh.geometry.dispose();
+                }
+
+                // Update statistics
+                updateStatistics();
+
+                // Cleanup
+                material.dispose();
+                renderer.dispose();
+
+            } catch (error) {
+                logMessage(`❌ Failed to generate character: ${error.message}`);
+                document.getElementById('status-main').textContent = 'Error';
+                preview.innerHTML = `<div class="error">Generation failed: ${error.message}</div>`;
+            }
+        }
+
+        /**
+         * Generate preset character variations
+         */
+        async function generatePresets() {
+            if (!systemInitialized) {
+                logMessage('⚠️ System not initialized yet');
+                return;
+            }
+
+            const presets = [
+                {
+                    name: 'Young Male European',
+                    specs: { gender: 'male', ageGroup: 'young', ethnicity: 'european' }
+                },
+                {
+                    name: 'Middle-aged Female African',
+                    specs: { gender: 'female', ageGroup: 'middle', ethnicity: 'african' }
+                },
+                {
+                    name: 'Elderly Male Asian',
+                    specs: { gender: 'male', ageGroup: 'elderly', ethnicity: 'asian' }
+                },
+                {
+                    name: 'Teen Female Hispanic',
+                    specs: { gender: 'female', ageGroup: 'teen', ethnicity: 'hispanic' }
+                }
+            ];
+
+            logMessage('🎭 Generating character presets...');
+            
+            for (const preset of presets) {
+                // Update current specs
+                Object.assign(currentCharacterSpecs, preset.specs);
+                
+                // Update UI
+                document.getElementById('genderSelect').value = preset.specs.gender;
+                document.getElementById('ageGroupSelect').value = preset.specs.ageGroup;
+                document.getElementById('ethnicitySelect').value = preset.specs.ethnicity;
+                
+                updateCharacterInfo();
+                
+                // Generate character
+                await generateCharacter();
+                
+                logMessage(`✅ Generated preset: ${preset.name}`);
+                
+                // Small delay between generations
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            logMessage('🎉 All presets generated successfully');
+        }
+
+        /**
+         * Performance test with multiple character generations
+         */
+        async function testPerformance() {
+            if (!systemInitialized) {
+                logMessage('⚠️ System not initialized yet');
+                return;
+            }
+
+            logMessage('🏃‍♂️ Running performance test...');
+            const iterations = 5;
+            const results = [];
+
+            for (let i = 0; i < iterations; i++) {
+                logMessage(`🔄 Performance test iteration ${i + 1}/${iterations}`);
+                const startTime = performance.now();
+                
+                // Randomize character specs
+                currentCharacterSpecs.gender = ['male', 'female', 'non-binary'][Math.floor(Math.random() * 3)];
+                currentCharacterSpecs.ageGroup = ['young', 'middle', 'elderly'][Math.floor(Math.random() * 3)];
+                currentCharacterSpecs.ethnicity = ['european', 'african', 'asian'][Math.floor(Math.random() * 3)];
+                
+                await generateCharacter();
+                
+                const iterationTime = performance.now() - startTime;
+                results.push(iterationTime);
+                logMessage(`⏱️ Iteration ${i + 1} completed in ${iterationTime.toFixed(1)}ms`);
+            }
+
+            const avgTime = results.reduce((a, b) => a + b, 0) / results.length;
+            const minTime = Math.min(...results);
+            const maxTime = Math.max(...results);
+
+            logMessage(`📊 Performance Test Results:`);
+            logMessage(`   Average: ${avgTime.toFixed(1)}ms`);
+            logMessage(`   Minimum: ${minTime.toFixed(1)}ms`);
+            logMessage(`   Maximum: ${maxTime.toFixed(1)}ms`);
+            logMessage(`   Variance: ${(maxTime - minTime).toFixed(1)}ms`);
+        }
+
+        /**
+         * Export generated mesh to file
+         */
+        function exportMesh() {
+            if (generatedMeshes.length === 0) {
+                logMessage('⚠️ No meshes available for export');
+                return;
+            }
+
+            const latestMesh = generatedMeshes[generatedMeshes.length - 1];
+            const geometry = latestMesh.geometry;
+
+            // Convert to OBJ format (simple export)
+            let objContent = '# Generated Character Mesh\n';
+            objContent += `# Generated at: ${new Date(latestMesh.timestamp).toISOString()}\n`;
+            objContent += `# Specs: ${JSON.stringify(latestMesh.specs)}\n\n`;
+
+            const positions = geometry.attributes.position.array;
+            const normals = geometry.attributes.normal ? geometry.attributes.normal.array : null;
+            const uvs = geometry.attributes.uv ? geometry.attributes.uv.array : null;
+
+            // Write vertices
+            for (let i = 0; i < positions.length; i += 3) {
+                objContent += `v ${positions[i]} ${positions[i + 1]} ${positions[i + 2]}\n`;
+            }
+
+            // Write normals
+            if (normals) {
+                for (let i = 0; i < normals.length; i += 3) {
+                    objContent += `vn ${normals[i]} ${normals[i + 1]} ${normals[i + 2]}\n`;
+                }
+            }
+
+            // Write UVs
+            if (uvs) {
+                for (let i = 0; i < uvs.length; i += 2) {
+                    objContent += `vt ${uvs[i]} ${uvs[i + 1]}\n`;
+                }
+            }
+
+            // Write faces (assuming triangles)
+            const indices = geometry.index ? geometry.index.array : null;
+            if (indices) {
+                for (let i = 0; i < indices.length; i += 3) {
+                    const v1 = indices[i] + 1;
+                    const v2 = indices[i + 1] + 1;
+                    const v3 = indices[i + 2] + 1;
+                    objContent += `f ${v1} ${v2} ${v3}\n`;
+                }
+            } else {
+                // No indices, write sequential triangles
+                for (let i = 0; i < positions.length / 3; i += 3) {
+                    const v1 = i + 1;
+                    const v2 = i + 2;
+                    const v3 = i + 3;
+                    objContent += `f ${v1} ${v2} ${v3}\n`;
+                }
+            }
+
+            // Create download
+            const blob = new Blob([objContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `character_${Date.now()}.obj`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            logMessage('💾 Mesh exported successfully');
+        }
+
+        /**
+         * Reset the entire system
+         */
+        async function resetSystem() {
+            logMessage('🔄 Resetting system...');
+            
+            if (meshTemplateSystem) {
+                meshTemplateSystem.dispose();
+            }
+            if (vertexDeformationEngine) {
+                vertexDeformationEngine.dispose();
+            }
+
+            // Dispose generated meshes
+            generatedMeshes.forEach(mesh => mesh.geometry.dispose());
+            generatedMeshes = [];
+
+            systemInitialized = false;
+            activeCharacterCard = null;
+
+            // Clear preview
+            document.getElementById('characterGrid').innerHTML = '';
+            document.getElementById('systemStatus').innerHTML = 
+                '<div class="loading">Reinitializing system...</div>';
+
+            // Reinitialize
+            await initializeSystem();
+        }
+
+        /**
+         * Update performance statistics display
+         */
+        function updateStatistics() {
+            if (!meshTemplateSystem || !vertexDeformationEngine) return;
+
+            const meshStats = meshTemplateSystem.getStats();
+            const deformationStats = vertexDeformationEngine.getStats();
+
+            document.getElementById('meshesGenerated').textContent = meshStats.meshesGenerated;
+            document.getElementById('templatesLoaded').textContent = meshStats.templatesLoaded;
+            document.getElementById('avgGenerationTime').textContent = 
+                `${meshStats.averageDeformationTime.toFixed(1)}ms`;
+            document.getElementById('deformationsApplied').textContent = deformationStats.deformationsApplied;
+
+            // Estimate vertex processing (rough calculation)
+            const avgVertices = 2000; // Approximate vertices per mesh
+            const totalVertices = meshStats.meshesGenerated * avgVertices;
+            document.getElementById('verticesProcessed').textContent = totalVertices.toLocaleString();
+
+            // Estimate memory usage
+            const estimatedMemory = (meshStats.meshesGenerated * 1.5 + generatedMeshes.length * 0.8);
+            document.getElementById('memoryUsage').textContent = `${estimatedMemory.toFixed(1)}MB`;
+        }
+
+        /**
+         * Add message to log panel
+         */
+        function logMessage(message) {
+            const logPanel = document.getElementById('logPanel');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logPanel.appendChild(logEntry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        // Initialize system when page loads
+        window.addEventListener('load', () => {
+            logMessage('🚀 Page loaded, starting mesh generation system initialization...');
+            initializeSystem();
+        });
+
+        // Update statistics periodically
+        setInterval(updateStatistics, 2000);
+    </script>
+</body>
+</html>

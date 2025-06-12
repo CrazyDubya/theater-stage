@@ -1,0 +1,112 @@
+<\!DOCTYPE html>
+<html>
+<head>
+    <title>Week 1 Success Check</title>
+    <style>
+        body { margin: 0; font-family: monospace; background: #000; color: #0f0; }
+        #status { position: fixed; top: 20px; left: 20px; background: rgba(0,0,0,0.8); padding: 20px; border: 1px solid #0f0; }
+        canvas { display: block; }
+    </style>
+</head>
+<body>
+    <div id="status">
+        <h2>Week 1 Success Check</h2>
+        <div>Actors: <span id="actors">0</span></div>
+        <div>FPS: <span id="fps">0</span></div>
+        <div>Status: <span id="result">Testing...</span></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    
+    <script src="js/core/StateManager.js?v=2"></script>
+    <script src="js/core/ResourceManager.js?v=2"></script>
+    <script src="js/core/SceneManager.js?v=2"></script>
+    <script src="js/core/StageBuilder.js"></script>
+    <script src="js/core/ObjectFactory.js"></script>
+    <script src="js/core/PhysicsEngine.js"></script>
+    <script src="js/core/AudioSystem.js"></script>
+    <script src="js/core/TextureManager.js"></script>
+    <script src="js/ui/UIFactory.js"></script>
+    <script src="js/core/UIManager.js"></script>
+    <script src="js/core/actors/ActorStateMachine.js"></script>
+    <script src="js/core/actors/ActorMovement.js"></script>
+    <script src="js/core/actors/ActorCollisionAvoidance.js"></script>
+    <script src="js/core/actors/ActorFactory.js"></script>
+
+    <script>
+        let fps = 0;
+        let actorCount = 0;
+        let frameCount = 0;
+        let lastTime = performance.now();
+        let testActors = [];
+
+        async function init() {
+            try {
+                await window.threeSceneManager.initialize();
+                await window.threeStageBuilder.initialize();
+                await window.threeObjectFactory.initialize();
+                await window.theatricalActorFactory.initialize();
+
+                for (let i = 0; i < 6; i++) {
+                    const x = (Math.random() - 0.5) * 8;
+                    const z = (Math.random() - 0.5) * 8;
+                    const visual = await window.threeObjectFactory.addActorAt(x, z, 'human_male');
+                    const behavioral = window.theatricalActorFactory.getActor(visual.userData.id);
+                    testActors.push(behavioral);
+                }
+
+                actorCount = testActors.length;
+                document.getElementById('actors').textContent = actorCount;
+
+                testActors.forEach((actor, i) => {
+                    const tx = (Math.random() - 0.5) * 6;
+                    const tz = (Math.random() - 0.5) * 6;
+                    actor.moveTo(tx, tz);
+                    
+                    setInterval(() => {
+                        const x = (Math.random() - 0.5) * 6;
+                        const z = (Math.random() - 0.5) * 6;
+                        actor.moveTo(x, z);
+                    }, 3000 + i * 500);
+                });
+
+                animate();
+            } catch (error) {
+                document.getElementById('result').textContent = 'ERROR: ' + error.message;
+                document.getElementById('result').style.color = '#f00';
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            window.theatricalActorFactory.update(0.016);
+
+            const { renderer, scene, camera } = window.stageState.core;
+            renderer.render(scene, camera);
+
+            frameCount++;
+            const now = performance.now();
+            if (now - lastTime >= 1000) {
+                fps = Math.round(frameCount * 1000 / (now - lastTime));
+                frameCount = 0;
+                lastTime = now;
+                
+                document.getElementById('fps').textContent = fps;
+                
+                if (actorCount >= 5 && fps >= 50) {
+                    document.getElementById('result').textContent = '✅ SUCCESS\!';
+                    document.getElementById('result').style.color = '#0f0';
+                } else {
+                    document.getElementById('result').textContent = 'Testing...';
+                    document.getElementById('result').style.color = '#ff0';
+                }
+            }
+        }
+
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
+EOF < /dev/null

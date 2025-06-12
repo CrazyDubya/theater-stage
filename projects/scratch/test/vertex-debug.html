@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vertex Range Debug</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .log {
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Vertex Range Debug</h1>
+    <div class="log" id="log"></div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- System components -->
+    <script src="../js/core/MeshTemplateSystem.js"></script>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function logMessage(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `[${timestamp}] ${message}\n`;
+            console.log(message);
+        }
+
+        async function analyzeVertexRanges() {
+            logMessage('🚀 Starting vertex range analysis...');
+            
+            try {
+                // Create mesh system
+                const meshSystem = new window.MeshTemplateSystem();
+                await meshSystem.initialize();
+                
+                // Generate a basic character
+                const characterSpecs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european'
+                };
+                
+                const geometry = await meshSystem.generateCharacterMesh(characterSpecs);
+                const positions = geometry.attributes.position.array;
+                
+                logMessage(`Total vertices: ${positions.length / 3}`);
+                
+                // Analyze vertex ranges
+                let minX = Infinity, maxX = -Infinity;
+                let minY = Infinity, maxY = -Infinity;
+                let minZ = Infinity, maxZ = -Infinity;
+                
+                // Count vertices in different regions
+                let headVertices = 0;
+                let bodyVertices = 0;
+                let armVertices = 0;
+                let legVertices = 0;
+                let faceVertices = 0;
+                let shoulderVertices = 0;
+                let hipVertices = 0;
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i];
+                    const y = positions[i + 1];
+                    const z = positions[i + 2];
+                    
+                    // Track overall ranges
+                    minX = Math.min(minX, x);
+                    maxX = Math.max(maxX, x);
+                    minY = Math.min(minY, y);
+                    maxY = Math.max(maxY, y);
+                    minZ = Math.min(minZ, z);
+                    maxZ = Math.max(maxZ, z);
+                    
+                    // Count regions
+                    if (y > 1.2) headVertices++;
+                    if (y > 0.0 && y < 1.2) bodyVertices++;
+                    if (Math.abs(x) > 0.6 && y > -0.5 && y < 1.5) armVertices++;
+                    if (y < 0.0 && y > -1.8) legVertices++;
+                    if (y > 1.2 && Math.abs(x) < 0.5 && z > 0.2) faceVertices++;
+                    if (y > 0.6 && y < 1.4 && Math.abs(x) > 0.15) shoulderVertices++;
+                    if (y > -0.5 && y < 0.5 && Math.abs(x) > 0.05) hipVertices++;
+                }
+                
+                logMessage(`\nOverall Ranges:`);
+                logMessage(`X: ${minX.toFixed(3)} to ${maxX.toFixed(3)}`);
+                logMessage(`Y: ${minY.toFixed(3)} to ${maxY.toFixed(3)}`);
+                logMessage(`Z: ${minZ.toFixed(3)} to ${maxZ.toFixed(3)}`);
+                
+                logMessage(`\nVertex Counts by Region:`);
+                logMessage(`Head (y > 1.2): ${headVertices}`);
+                logMessage(`Body (0 < y < 1.2): ${bodyVertices}`);
+                logMessage(`Arms (|x| > 0.6, -0.5 < y < 1.5): ${armVertices}`);
+                logMessage(`Legs (y < 0, y > -1.8): ${legVertices}`);
+                logMessage(`Face (head + front): ${faceVertices}`);
+                logMessage(`Shoulders (0.6 < y < 1.4, |x| > 0.15): ${shoulderVertices}`);
+                logMessage(`Hips (-0.5 < y < 0.5, |x| > 0.05): ${hipVertices}`);
+                
+                // Analyze specific face regions
+                let eyeVertices = 0;
+                let noseVertices = 0;
+                let mouthVertices = 0;
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i];
+                    const y = positions[i + 1];
+                    const z = positions[i + 2];
+                    
+                    // Eye region
+                    if (Math.abs(x) > 0.1 && Math.abs(x) < 0.35 && y > 1.55 && y < 1.75 && z > 0.3) {
+                        eyeVertices++;
+                    }
+                    
+                    // Nose region
+                    if (Math.abs(x) < 0.15 && y > 1.45 && y < 1.65 && z > 0.35) {
+                        noseVertices++;
+                    }
+                    
+                    // Mouth region
+                    if (Math.abs(x) < 0.2 && y > 1.35 && y < 1.5 && z > 0.35) {
+                        mouthVertices++;
+                    }
+                }
+                
+                logMessage(`\nFacial Feature Vertices:`);
+                logMessage(`Eye regions: ${eyeVertices}`);
+                logMessage(`Nose region: ${noseVertices}`);
+                logMessage(`Mouth region: ${mouthVertices}`);
+                
+                // Sample some vertex positions for debugging
+                logMessage(`\nSample vertex positions:`);
+                for (let i = 0; i < Math.min(20, positions.length / 3); i++) {
+                    const idx = i * 3;
+                    const x = positions[idx].toFixed(3);
+                    const y = positions[idx + 1].toFixed(3);
+                    const z = positions[idx + 2].toFixed(3);
+                    logMessage(`Vertex ${i}: (${x}, ${y}, ${z})`);
+                }
+                
+                // Cleanup
+                geometry.dispose();
+                
+                logMessage(`\n✅ Analysis complete!`);
+                
+            } catch (error) {
+                logMessage(`❌ Analysis failed: ${error.message}`);
+                logMessage(`Stack: ${error.stack}`);
+            }
+        }
+
+        // Run analysis when page loads
+        window.addEventListener('load', () => {
+            setTimeout(analyzeVertexRanges, 100);
+        });
+    </script>
+</body>
+</html>

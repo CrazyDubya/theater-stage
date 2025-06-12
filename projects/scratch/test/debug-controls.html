@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Controls</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .control {
+            margin: 10px 0;
+        }
+        .control label {
+            display: inline-block;
+            width: 150px;
+            color: #ff0;
+        }
+        .control input[type="range"] {
+            width: 200px;
+        }
+        .log {
+            white-space: pre-wrap;
+            font-size: 12px;
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug Non-Working Controls</h1>
+    
+    <div class="control">
+        <label>Jawline:</label>
+        <input type="range" id="jawline" min="0" max="1" step="0.1" value="0.5">
+        <span id="jawlineValue">0.5</span>
+    </div>
+    <div class="control">
+        <label>Cheekbones:</label>
+        <input type="range" id="cheekbones" min="0" max="1" step="0.1" value="0.3">
+        <span id="cheekbonesValue">0.3</span>
+    </div>
+    <div class="control">
+        <label>Muscle:</label>
+        <input type="range" id="muscle" min="0" max="1" step="0.1" value="0.5">
+        <span id="muscleValue">0.5</span>
+    </div>
+    <div class="control">
+        <label>Arms:</label>
+        <input type="range" id="arms" min="0.8" max="1.2" step="0.1" value="1.0">
+        <span id="armsValue">1.0</span>
+    </div>
+    <div class="control">
+        <label>Shoulders:</label>
+        <input type="range" id="shoulders" min="0.7" max="1.4" step="0.1" value="1.0">
+        <span id="shouldersValue">1.0</span>
+    </div>
+    <div class="control">
+        <label>Hips:</label>
+        <input type="range" id="hips" min="0.7" max="1.3" step="0.1" value="1.0">
+        <span id="hipsValue">1.0</span>
+    </div>
+    
+    <button onclick="testSpecificControls()">Test Specific Controls</button>
+    <button onclick="analyzeVertexRanges()">Analyze Vertex Ranges</button>
+
+    <div class="log" id="log"></div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- System components -->
+    <script src="../js/core/MeshTemplateSystem.js"></script>
+    <script src="../js/core/VertexDeformationEngine.js"></script>
+
+    <script>
+        const log = document.getElementById('log');
+        let meshSystem = null;
+        let deformationEngine = null;
+        
+        function logMessage(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `[${timestamp}] ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+            console.log(message);
+        }
+
+        // Update value displays
+        ['jawline', 'cheekbones', 'muscle', 'arms', 'shoulders', 'hips'].forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                document.getElementById(id + 'Value').textContent = e.target.value;
+            });
+        });
+
+        async function initSystems() {
+            try {
+                logMessage('🔧 Initializing systems...');
+                
+                meshSystem = new window.MeshTemplateSystem();
+                await meshSystem.initialize();
+                logMessage('✅ MeshTemplateSystem ready');
+                
+                deformationEngine = new window.VertexDeformationEngine();
+                logMessage('✅ VertexDeformationEngine ready');
+                
+            } catch (error) {
+                logMessage(`❌ System init failed: ${error.message}`);
+            }
+        }
+
+        async function testSpecificControls() {
+            if (!meshSystem || !deformationEngine) {
+                logMessage('❌ Systems not initialized');
+                return;
+            }
+
+            try {
+                logMessage('🧪 Testing specific problematic controls...');
+                
+                // Get control values
+                const jawlineValue = parseFloat(document.getElementById('jawline').value);
+                const cheekbonesValue = parseFloat(document.getElementById('cheekbones').value);
+                const muscleValue = parseFloat(document.getElementById('muscle').value);
+                const armsValue = parseFloat(document.getElementById('arms').value);
+                const shouldersValue = parseFloat(document.getElementById('shoulders').value);
+                const hipsValue = parseFloat(document.getElementById('hips').value);
+                
+                logMessage(`Control values - Jawline: ${jawlineValue}, Cheekbones: ${cheekbonesValue}, Muscle: ${muscleValue}`);
+                logMessage(`Control values - Arms: ${armsValue}, Shoulders: ${shouldersValue}, Hips: ${hipsValue}`);
+                
+                const characterSpecs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european',
+                    body: {
+                        muscle: {
+                            definition: muscleValue
+                        },
+                        proportions: {
+                            torso: 1.0,
+                            arms: armsValue,
+                            legs: 1.0,
+                            shoulders: shouldersValue,
+                            hips: hipsValue
+                        }
+                    },
+                    facial: {
+                        faceWidth: 1.0,
+                        faceHeight: 1.0,
+                        jawline: jawlineValue,
+                        cheekbones: cheekbonesValue
+                    }
+                };
+                
+                logMessage(`Full character specs: ${JSON.stringify(characterSpecs, null, 2)}`);
+                
+                // Generate base mesh
+                const baseGeometry = await meshSystem.generateCharacterMesh(characterSpecs);
+                logMessage('✅ Base mesh generated');
+                
+                // Test deformations step by step
+                const testGeometry = baseGeometry.clone();
+                
+                logMessage('🔍 Testing facial feature deformation...');
+                await deformationEngine.applyFacialFeatureDeformation({
+                    geometry: testGeometry,
+                    positions: testGeometry.attributes.position.array,
+                    facial: characterSpecs.facial
+                });
+                
+                logMessage('🔍 Testing body proportion deformation...');
+                await deformationEngine.applyBodyProportionDeformation({
+                    geometry: testGeometry,
+                    positions: testGeometry.attributes.position.array,
+                    body: characterSpecs.body
+                });
+                
+                logMessage('🔍 Testing muscular deformation...');
+                await deformationEngine.applyMuscularDeformation({
+                    geometry: testGeometry,
+                    positions: testGeometry.attributes.position.array,
+                    body: characterSpecs.body
+                });
+                
+                // Cleanup
+                baseGeometry.dispose();
+                testGeometry.dispose();
+                
+                logMessage('✅ Test complete - check console for detailed vertex counts');
+                
+            } catch (error) {
+                logMessage(`❌ Test failed: ${error.message}`);
+                logMessage(`Stack: ${error.stack}`);
+            }
+        }
+
+        async function analyzeVertexRanges() {
+            if (!meshSystem) {
+                logMessage('❌ Systems not initialized');
+                return;
+            }
+
+            try {
+                logMessage('🔍 Analyzing vertex ranges for problem areas...');
+                
+                const characterSpecs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european'
+                };
+                
+                const geometry = await meshSystem.generateCharacterMesh(characterSpecs);
+                const positions = geometry.attributes.position.array;
+                
+                logMessage(`Total vertices: ${positions.length / 3}`);
+                
+                // Count vertices in specific problem areas
+                let jawlineVertices = 0;
+                let cheekboneVertices = 0;
+                let armVertices = 0;
+                let shoulderVertices = 0;
+                let hipVertices = 0;
+                
+                for (let i = 0; i < positions.length; i += 3) {
+                    const x = positions[i];
+                    const y = positions[i + 1];
+                    const z = positions[i + 2];
+                    
+                    // Check jawline area
+                    if (Math.abs(x) > 0.15 && y > 1.25 && y < 1.45) {
+                        jawlineVertices++;
+                    }
+                    
+                    // Check cheekbone area
+                    if (Math.abs(x) > 0.2 && y > 1.5 && y < 1.7) {
+                        cheekboneVertices++;
+                    }
+                    
+                    // Check arm area (current definition)
+                    if (Math.abs(x) > 0.5) {
+                        armVertices++;
+                    }
+                    
+                    // Check shoulder area
+                    if (y > 0.8 && y < 1.2) {
+                        shoulderVertices++;
+                    }
+                    
+                    // Check hip area
+                    if (y > -0.2 && y < 0.2) {
+                        hipVertices++;
+                    }
+                }
+                
+                logMessage(`\nVertex counts in problem areas:`);
+                logMessage(`Jawline (|x| > 0.15, 1.25 < y < 1.45): ${jawlineVertices}`);
+                logMessage(`Cheekbones (|x| > 0.2, 1.5 < y < 1.7): ${cheekboneVertices}`);
+                logMessage(`Arms (|x| > 0.5): ${armVertices}`);
+                logMessage(`Shoulders (0.8 < y < 1.2): ${shoulderVertices}`);
+                logMessage(`Hips (-0.2 < y < 0.2): ${hipVertices}`);
+                
+                // Sample some vertices in each area
+                logMessage(`\nSample vertices:`);
+                let sampleCount = 0;
+                for (let i = 0; i < positions.length && sampleCount < 10; i += 3) {
+                    const x = positions[i];
+                    const y = positions[i + 1];
+                    const z = positions[i + 2];
+                    
+                    if (Math.abs(x) > 0.15 && y > 1.25 && y < 1.45) {
+                        logMessage(`Jawline vertex ${sampleCount}: (${x.toFixed(3)}, ${y.toFixed(3)}, ${z.toFixed(3)})`);
+                        sampleCount++;
+                    }
+                }
+                
+                geometry.dispose();
+                
+            } catch (error) {
+                logMessage(`❌ Analysis failed: ${error.message}`);
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            logMessage('🚀 Page loaded, initializing...');
+            initSystems();
+        });
+    </script>
+</body>
+</html>

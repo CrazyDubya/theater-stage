@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Connection Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #333;
+            border-radius: 8px;
+            max-width: 600px;
+        }
+
+        .section h3 {
+            margin: 0 0 15px 0;
+            color: #4CAF50;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        #log {
+            background: #1a1a1a;
+            height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            border: 1px solid #666;
+        }
+
+        .log-entry {
+            margin: 3px 0;
+            padding: 3px;
+            border-radius: 2px;
+        }
+
+        .log-entry.success {
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 3px solid #4CAF50;
+        }
+
+        .log-entry.error {
+            background: rgba(244, 67, 54, 0.1);
+            border-left: 3px solid #f44336;
+        }
+
+        .log-entry.info {
+            background: rgba(33, 150, 243, 0.1);
+            border-left: 3px solid #2196F3;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            background: #f44336;
+        }
+
+        .status-indicator.connected {
+            background: #4CAF50;
+        }
+
+        .status-indicator.connecting {
+            background: #ff9800;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <h1>🎭 Ollama Connection Test</h1>
+    <p>Test if Ollama is properly connected and ready for AI theater direction.</p>
+
+    <div class="section">
+        <h3>
+            <span id="ollama-status" class="status-indicator"></span>
+            Ollama Connection Status
+        </h3>
+        <div id="ollama-info">Checking...</div>
+        <button id="check-ollama" onclick="checkOllamaAvailability()">Check Ollama</button>
+        <button id="connect-ollama" onclick="connectToOllama()" disabled>Connect to Ollama</button>
+        <button id="test-function-call" onclick="testFunctionCall()" disabled>Test Function Call</button>
+    </div>
+
+    <div class="section">
+        <h3>🔧 Setup Instructions</h3>
+        <div style="font-size: 14px; color: #ccc;">
+            <p><strong>1. Install Ollama:</strong><br>
+               Visit <a href="https://ollama.ai" target="_blank" style="color: #4CAF50;">ollama.ai</a> and download</p>
+            
+            <p><strong>2. Start Ollama:</strong><br>
+               Run: <code style="background: #444; padding: 2px 5px;">ollama serve</code></p>
+            
+            <p><strong>3. Install Model:</strong><br>
+               Run: <code style="background: #444; padding: 2px 5px;">ollama pull llama3.1</code></p>
+            
+            <p><strong>4. Test Connection:</strong><br>
+               Click "Check Ollama" above</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>📊 Test Log</h3>
+        <div id="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <!-- Load Ollama Interface only -->
+    <script src="js/core/OllamaInterface.js?v=1"></script>
+
+    <script>
+        let ollamaInterface = null;
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            setTimeout(checkOllamaAvailability, 1000);
+        });
+
+        async function checkOllamaAvailability() {
+            log('Checking Ollama availability...', 'info');
+            
+            const statusEl = document.getElementById('ollama-status');
+            const infoEl = document.getElementById('ollama-info');
+            const connectBtn = document.getElementById('connect-ollama');
+
+            try {
+                // Check if OllamaInterface loaded
+                if (!window.OllamaTheaterInterface) {
+                    throw new Error('OllamaInterface.js not loaded');
+                }
+
+                // Check if Ollama server is running
+                const response = await fetch('http://localhost:11434/api/tags');
+                if (!response.ok) {
+                    throw new Error(`Ollama server not responding (${response.status})`);
+                }
+
+                const data = await response.json();
+                
+                statusEl.className = 'status-indicator connected';
+                infoEl.innerHTML = `
+                    Status: Ollama server running<br>
+                    Available models: ${data.models?.length || 0}<br>
+                    Models: ${data.models?.map(m => m.name).join(', ') || 'None'}
+                `;
+                
+                connectBtn.disabled = false;
+                log(`✓ Ollama server found with ${data.models?.length || 0} models`, 'success');
+
+            } catch (error) {
+                statusEl.className = 'status-indicator';
+                connectBtn.disabled = true;
+                
+                if (error.message.includes('CORS') || error.message.includes('fetch')) {
+                    infoEl.innerHTML = `
+                        Status: Connection failed<br>
+                        Likely cause: Ollama not running<br>
+                        Solution: Run 'ollama serve'
+                    `;
+                    log('✗ Ollama server not running. Start with: ollama serve', 'error');
+                } else if (error.message.includes('OllamaInterface')) {
+                    infoEl.innerHTML = `
+                        Status: Interface not loaded<br>
+                        Error: ${error.message}
+                    `;
+                    log('✗ OllamaInterface.js not loaded properly', 'error');
+                } else {
+                    infoEl.innerHTML = `
+                        Status: Error<br>
+                        Error: ${error.message}
+                    `;
+                    log(`✗ Error: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        async function connectToOllama() {
+            const connectBtn = document.getElementById('connect-ollama');
+            const statusEl = document.getElementById('ollama-status');
+            
+            connectBtn.disabled = true;
+            connectBtn.textContent = 'Connecting...';
+            statusEl.className = 'status-indicator connecting';
+            
+            try {
+                log('Creating Ollama interface...', 'info');
+                
+                ollamaInterface = new window.OllamaTheaterInterface();
+                
+                log('Initializing Ollama interface...', 'info');
+                const success = await ollamaInterface.initialize();
+                
+                if (success) {
+                    statusEl.className = 'status-indicator connected';
+                    connectBtn.textContent = 'Connected ✓';
+                    document.getElementById('test-function-call').disabled = false;
+                    
+                    const stats = ollamaInterface.getStats();
+                    document.getElementById('ollama-info').innerHTML = `
+                        Status: Connected<br>
+                        Model: ${stats.defaultModel}<br>
+                        Available: ${stats.availableModels.length} models<br>
+                        Response count: ${stats.responseCount}
+                    `;
+                    
+                    log(`✓ Connected to Ollama with model: ${stats.defaultModel}`, 'success');
+                    
+                } else {
+                    throw new Error('Failed to initialize Ollama interface');
+                }
+                
+            } catch (error) {
+                statusEl.className = 'status-indicator';
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Retry Connection';
+                
+                log(`✗ Connection failed: ${error.message}`, 'error');
+                
+                if (error.message.includes('model')) {
+                    log('💡 Try installing a model: ollama pull llama3.1', 'info');
+                } else if (error.message.includes('ECONNREFUSED')) {
+                    log('💡 Make sure Ollama is running: ollama serve', 'info');
+                }
+            }
+        }
+
+        async function testFunctionCall() {
+            if (!ollamaInterface) {
+                log('✗ Not connected to Ollama', 'error');
+                return;
+            }
+
+            try {
+                log('Testing function call capability...', 'info');
+                
+                const testPrompt = `
+                You are a theater director. Test your function calling capability by responding with a simple greeting.
+                If you can call functions, use the get_stage_state function to check the current stage.
+                `;
+                
+                const response = await ollamaInterface.generatePerformance(testPrompt, {
+                    temperature: 0.7,
+                    max_tokens: 200
+                });
+                
+                log('✓ Function call test completed', 'success');
+                log(`Response: ${response.content || 'Function calls executed'}`, 'info');
+                
+            } catch (error) {
+                log(`✗ Function call test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span style="color: #888;">[${new Date().toLocaleTimeString()}]</span> ${message}`;
+            
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

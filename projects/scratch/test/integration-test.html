@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Integration Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            padding: 20px;
+        }
+
+        .test-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .test-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        .test-section h3 {
+            color: #FFD700;
+            margin: 0 0 15px 0;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .test-card {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 5px;
+            border: 2px solid #333;
+        }
+
+        .test-card.running {
+            border-color: #FFD700;
+        }
+
+        .test-card.success {
+            border-color: #4CAF50;
+        }
+
+        .test-card.error {
+            border-color: #f44336;
+        }
+
+        .test-result {
+            margin: 10px 0;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .test-result.pass {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+        }
+
+        .test-result.fail {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+
+        .button {
+            background: #4CAF50;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background: #45a049;
+        }
+
+        .log-panel {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .preview-area {
+            width: 100%;
+            height: 200px;
+            background: #333;
+            border-radius: 5px;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        .preview-area canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+        }
+
+        .status {
+            font-weight: bold;
+            padding: 5px;
+            border-radius: 3px;
+            margin: 5px 0;
+        }
+
+        .status.pending { background: rgba(255, 215, 0, 0.2); color: #FFD700; }
+        .status.running { background: rgba(33, 150, 243, 0.2); color: #2196F3; }
+        .status.success { background: rgba(76, 175, 80, 0.2); color: #4CAF50; }
+        .status.error { background: rgba(244, 67, 54, 0.2); color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Complete System Integration Test</h1>
+        <p>Comprehensive testing of all procedural generation systems</p>
+
+        <div style="text-align: center; margin: 20px 0;">
+            <button class="button" onclick="runAllTests()">Run All Tests</button>
+            <button class="button" onclick="runCoreTests()">Core Systems Only</button>
+            <button class="button" onclick="runStressTest()">Stress Test</button>
+            <button class="button" onclick="clearResults()">Clear Results</button>
+        </div>
+
+        <div id="overallStatus" class="status pending">System Status: Ready for Testing</div>
+
+        <div class="test-section">
+            <h3>🔧 Core System Tests</h3>
+            <div class="test-grid" id="coreTestGrid">
+                <!-- Core test cards will be generated here -->
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎨 Generation Pipeline Tests</h3>
+            <div class="test-grid" id="pipelineTestGrid">
+                <!-- Pipeline test cards will be generated here -->
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔄 Integration Tests</h3>
+            <div class="test-grid" id="integrationTestGrid">
+                <!-- Integration test cards will be generated here -->
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Performance Tests</h3>
+            <div class="test-grid" id="performanceTestGrid">
+                <!-- Performance test cards will be generated here -->
+            </div>
+        </div>
+
+        <div class="log-panel" id="logPanel">
+            <div>🚀 Integration test system ready...</div>
+        </div>
+    </div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- All our systems -->
+    <script src="../js/core/ShaderManager.js"></script>
+    <script src="../js/core/TextureGenerator.js"></script>
+    <script src="../js/core/MeshTemplateSystem.js"></script>
+    <script src="../js/core/VertexDeformationEngine.js"></script>
+
+    <script>
+        // Global test state
+        let testResults = {};
+        let systems = {};
+        let testSuite = null;
+
+        // Test definitions
+        const testDefinitions = {
+            core: [
+                {
+                    id: 'three_js_load',
+                    name: 'Three.js Library',
+                    description: 'Verify Three.js is loaded and functional',
+                    test: async () => {
+                        if (typeof THREE === 'undefined') {
+                            throw new Error('Three.js not loaded');
+                        }
+                        const scene = new THREE.Scene();
+                        const geometry = new THREE.BoxGeometry();
+                        const material = new THREE.MeshBasicMaterial();
+                        const mesh = new THREE.Mesh(geometry, material);
+                        scene.add(mesh);
+                        geometry.dispose();
+                        material.dispose();
+                        return { status: 'pass', message: 'Three.js functional' };
+                    }
+                },
+                {
+                    id: 'shader_manager_init',
+                    name: 'ShaderManager Initialization',
+                    description: 'Initialize shader management system',
+                    test: async () => {
+                        if (typeof window.ShaderManager === 'undefined') {
+                            throw new Error('ShaderManager class not available');
+                        }
+                        systems.shaderManager = new window.ShaderManager();
+                        await systems.shaderManager.initializeIncludes();
+                        const stats = systems.shaderManager.getPerformanceStats();
+                        return { status: 'pass', message: `Initialized with ${Object.keys(systems.shaderManager.includes).length} includes` };
+                    }
+                },
+                {
+                    id: 'texture_generator_init',
+                    name: 'TextureGenerator Initialization',
+                    description: 'Initialize texture generation system',
+                    test: async () => {
+                        if (!systems.shaderManager) {
+                            throw new Error('ShaderManager required first');
+                        }
+                        systems.textureGenerator = new window.TextureGenerator(systems.shaderManager);
+                        await systems.textureGenerator.initialize();
+                        return { status: 'pass', message: 'TextureGenerator ready' };
+                    }
+                },
+                {
+                    id: 'mesh_template_init',
+                    name: 'MeshTemplateSystem Initialization',
+                    description: 'Initialize mesh template system',
+                    test: async () => {
+                        systems.meshTemplateSystem = new window.MeshTemplateSystem();
+                        await systems.meshTemplateSystem.initialize();
+                        const stats = systems.meshTemplateSystem.getStats();
+                        return { status: 'pass', message: `${stats.templatesLoaded} templates loaded` };
+                    }
+                },
+                {
+                    id: 'vertex_deformation_init',
+                    name: 'VertexDeformationEngine Initialization',
+                    description: 'Initialize vertex deformation system',
+                    test: async () => {
+                        systems.vertexDeformationEngine = new window.VertexDeformationEngine();
+                        return { status: 'pass', message: 'VertexDeformationEngine ready' };
+                    }
+                }
+            ],
+            pipeline: [
+                {
+                    id: 'basic_fabric_generation',
+                    name: 'Basic Fabric Generation',
+                    description: 'Generate a simple fabric texture',
+                    test: async () => {
+                        const neuralClothData = {
+                            fabric: 'cotton',
+                            color: '#ffffff',
+                            properties: { stiffness: 0.6, drape: 0.7, weight: 'medium' }
+                        };
+                        const textures = await systems.textureGenerator.generateFabricTextures(neuralClothData);
+                        if (!textures.albedo) {
+                            throw new Error('No albedo texture generated');
+                        }
+                        return { status: 'pass', message: 'Cotton texture generated' };
+                    }
+                },
+                {
+                    id: 'basic_mesh_generation',
+                    name: 'Basic Mesh Generation',
+                    description: 'Generate a simple character mesh',
+                    test: async () => {
+                        const characterSpecs = {
+                            gender: 'neutral',
+                            ageGroup: 'young',
+                            ethnicity: 'european'
+                        };
+                        const geometry = await systems.meshTemplateSystem.generateCharacterMesh(characterSpecs);
+                        if (!geometry || !geometry.attributes.position) {
+                            throw new Error('Invalid geometry generated');
+                        }
+                        const vertexCount = geometry.attributes.position.count;
+                        geometry.dispose();
+                        return { status: 'pass', message: `${vertexCount} vertices generated` };
+                    }
+                },
+                {
+                    id: 'vertex_deformation',
+                    name: 'Vertex Deformation',
+                    description: 'Apply deformations to character mesh',
+                    test: async () => {
+                        const characterSpecs = {
+                            gender: 'male',
+                            ageGroup: 'middle',
+                            ethnicity: 'african',
+                            facial: { faceWidth: 1.2, eyeSize: 1.1 },
+                            body: { muscle: { definition: 0.8 } }
+                        };
+                        const baseGeometry = await systems.meshTemplateSystem.generateCharacterMesh(characterSpecs);
+                        const deformedGeometry = await systems.vertexDeformationEngine.applyCharacterDeformation(
+                            baseGeometry.clone(), characterSpecs
+                        );
+                        baseGeometry.dispose();
+                        deformedGeometry.dispose();
+                        return { status: 'pass', message: 'Deformations applied successfully' };
+                    }
+                }
+            ],
+            integration: [
+                {
+                    id: 'complete_character_pipeline',
+                    name: 'Complete Character Pipeline',
+                    description: 'Generate character with mesh and textures',
+                    test: async () => {
+                        // Generate character mesh
+                        const characterSpecs = {
+                            gender: 'female',
+                            ageGroup: 'young',
+                            ethnicity: 'asian',
+                            facial: { faceWidth: 0.9, eyeSize: 1.1, cheekbones: 0.6 },
+                            body: { height: 1.65, muscle: { definition: 0.3 } }
+                        };
+                        
+                        const baseGeometry = await systems.meshTemplateSystem.generateCharacterMesh(characterSpecs);
+                        const finalGeometry = await systems.vertexDeformationEngine.applyCharacterDeformation(
+                            baseGeometry, characterSpecs
+                        );
+                        
+                        // Generate clothing texture
+                        const clothingData = {
+                            fabric: 'silk',
+                            color: '#4169E1',
+                            properties: { stiffness: 0.3, drape: 0.9, weight: 'light' }
+                        };
+                        const textures = await systems.textureGenerator.generateFabricTextures(clothingData);
+                        
+                        // Create complete character
+                        const material = new THREE.MeshLambertMaterial({
+                            map: textures.albedo,
+                            color: new THREE.Color('#ffdbac')
+                        });
+                        const character = new THREE.Mesh(finalGeometry, material);
+                        
+                        // Cleanup
+                        finalGeometry.dispose();
+                        material.dispose();
+                        
+                        return { 
+                            status: 'pass', 
+                            message: 'Complete character with mesh and textures',
+                            result: character
+                        };
+                    }
+                },
+                {
+                    id: 'multiple_demographics',
+                    name: 'Multiple Demographics',
+                    description: 'Generate characters of different demographics',
+                    test: async () => {
+                        const demographics = [
+                            { gender: 'male', ageGroup: 'child', ethnicity: 'european' },
+                            { gender: 'female', ageGroup: 'elderly', ethnicity: 'african' },
+                            { gender: 'non-binary', ageGroup: 'teen', ethnicity: 'hispanic' }
+                        ];
+                        
+                        const results = [];
+                        for (const demo of demographics) {
+                            const geometry = await systems.meshTemplateSystem.generateCharacterMesh(demo);
+                            const deformed = await systems.vertexDeformationEngine.applyCharacterDeformation(
+                                geometry.clone(), demo
+                            );
+                            results.push({
+                                demo,
+                                vertices: deformed.attributes.position.count
+                            });
+                            geometry.dispose();
+                            deformed.dispose();
+                        }
+                        
+                        return { 
+                            status: 'pass', 
+                            message: `Generated ${results.length} demographic variations`,
+                            results
+                        };
+                    }
+                },
+                {
+                    id: 'fabric_variety',
+                    name: 'Fabric Variety Test',
+                    description: 'Generate multiple fabric types',
+                    test: async () => {
+                        const fabrics = ['cotton', 'silk', 'wool', 'denim', 'leather'];
+                        const results = [];
+                        
+                        for (const fabric of fabrics) {
+                            const clothData = {
+                                fabric,
+                                color: '#ffffff',
+                                properties: { stiffness: 0.5, drape: 0.7, weight: 'medium' }
+                            };
+                            const textures = await systems.textureGenerator.generateFabricTextures(clothData);
+                            results.push({ fabric, hasTexture: !!textures.albedo });
+                        }
+                        
+                        const successCount = results.filter(r => r.hasTexture).length;
+                        return { 
+                            status: 'pass', 
+                            message: `${successCount}/${fabrics.length} fabrics generated`,
+                            results
+                        };
+                    }
+                }
+            ],
+            performance: [
+                {
+                    id: 'mesh_generation_speed',
+                    name: 'Mesh Generation Speed',
+                    description: 'Measure mesh generation performance',
+                    test: async () => {
+                        const iterations = 5;
+                        const times = [];
+                        
+                        for (let i = 0; i < iterations; i++) {
+                            const start = performance.now();
+                            const geometry = await systems.meshTemplateSystem.generateCharacterMesh({
+                                gender: 'neutral', ageGroup: 'young', ethnicity: 'european'
+                            });
+                            const time = performance.now() - start;
+                            times.push(time);
+                            geometry.dispose();
+                        }
+                        
+                        const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+                        const acceptable = avgTime < 1000; // Should be under 1 second
+                        
+                        return {
+                            status: acceptable ? 'pass' : 'fail',
+                            message: `Average: ${avgTime.toFixed(1)}ms (${acceptable ? 'GOOD' : 'SLOW'})`,
+                            details: { times, average: avgTime }
+                        };
+                    }
+                },
+                {
+                    id: 'texture_generation_speed',
+                    name: 'Texture Generation Speed',
+                    description: 'Measure texture generation performance',
+                    test: async () => {
+                        const iterations = 3;
+                        const times = [];
+                        
+                        for (let i = 0; i < iterations; i++) {
+                            const start = performance.now();
+                            await systems.textureGenerator.generateFabricTextures({
+                                fabric: 'cotton',
+                                color: '#ffffff',
+                                properties: { stiffness: 0.6, drape: 0.7 }
+                            });
+                            const time = performance.now() - start;
+                            times.push(time);
+                        }
+                        
+                        const avgTime = times.reduce((a, b) => a + b, 0) / times.length;
+                        const acceptable = avgTime < 2000; // Should be under 2 seconds
+                        
+                        return {
+                            status: acceptable ? 'pass' : 'fail',
+                            message: `Average: ${avgTime.toFixed(1)}ms (${acceptable ? 'GOOD' : 'SLOW'})`,
+                            details: { times, average: avgTime }
+                        };
+                    }
+                },
+                {
+                    id: 'memory_usage',
+                    name: 'Memory Usage',
+                    description: 'Monitor memory usage during generation',
+                    test: async () => {
+                        const initialMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                        
+                        // Generate several objects
+                        const geometries = [];
+                        for (let i = 0; i < 5; i++) {
+                            const geometry = await systems.meshTemplateSystem.generateCharacterMesh({
+                                gender: 'neutral', ageGroup: 'young', ethnicity: 'european'
+                            });
+                            geometries.push(geometry);
+                        }
+                        
+                        const midMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                        
+                        // Cleanup
+                        geometries.forEach(g => g.dispose());
+                        
+                        const finalMemory = performance.memory ? performance.memory.usedJSHeapSize : 0;
+                        const memoryUsed = midMemory - initialMemory;
+                        const memoryRecovered = midMemory - finalMemory;
+                        
+                        return {
+                            status: 'pass',
+                            message: `Used: ${(memoryUsed / 1024 / 1024).toFixed(1)}MB, Recovered: ${(memoryRecovered / 1024 / 1024).toFixed(1)}MB`,
+                            details: { used: memoryUsed, recovered: memoryRecovered }
+                        };
+                    }
+                }
+            ]
+        };
+
+        /**
+         * Initialize test interface
+         */
+        function initializeTestInterface() {
+            createTestCards('coreTestGrid', testDefinitions.core);
+            createTestCards('pipelineTestGrid', testDefinitions.pipeline);
+            createTestCards('integrationTestGrid', testDefinitions.integration);
+            createTestCards('performanceTestGrid', testDefinitions.performance);
+        }
+
+        /**
+         * Create test cards for a category
+         */
+        function createTestCards(containerId, tests) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+
+            tests.forEach(test => {
+                const card = document.createElement('div');
+                card.className = 'test-card';
+                card.id = `card-${test.id}`;
+
+                card.innerHTML = `
+                    <h4>${test.name}</h4>
+                    <p style="font-size: 12px; color: #ccc;">${test.description}</p>
+                    <div class="status pending" id="status-${test.id}">Pending</div>
+                    <div id="results-${test.id}"></div>
+                    <div class="preview-area" id="preview-${test.id}" style="display: none;"></div>
+                    <button class="button" onclick="runSingleTest('${test.id}')">Run Test</button>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        /**
+         * Run a single test
+         */
+        async function runSingleTest(testId) {
+            const test = findTestById(testId);
+            if (!test) return;
+
+            const card = document.getElementById(`card-${testId}`);
+            const status = document.getElementById(`status-${testId}`);
+            const results = document.getElementById(`results-${testId}`);
+
+            // Update UI
+            card.className = 'test-card running';
+            status.className = 'status running';
+            status.textContent = 'Running...';
+            results.innerHTML = '';
+
+            logMessage(`🧪 Running test: ${test.name}`);
+
+            try {
+                const startTime = performance.now();
+                const result = await test.test();
+                const duration = performance.now() - startTime;
+
+                // Update UI with success
+                card.className = 'test-card success';
+                status.className = 'status success';
+                status.textContent = `✅ PASS (${duration.toFixed(1)}ms)`;
+
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'test-result pass';
+                resultDiv.textContent = result.message;
+                results.appendChild(resultDiv);
+
+                // Store result
+                testResults[testId] = { ...result, duration, timestamp: Date.now() };
+
+                logMessage(`✅ ${test.name}: ${result.message}`);
+
+                // Handle preview if result includes renderable object
+                if (result.result && result.result.isObject3D) {
+                    showPreview(testId, result.result);
+                }
+
+            } catch (error) {
+                // Update UI with failure
+                card.className = 'test-card error';
+                status.className = 'status error';
+                status.textContent = '❌ FAIL';
+
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'test-result fail';
+                resultDiv.textContent = error.message;
+                results.appendChild(resultDiv);
+
+                testResults[testId] = { status: 'fail', error: error.message, timestamp: Date.now() };
+
+                logMessage(`❌ ${test.name}: ${error.message}`);
+            }
+
+            updateOverallStatus();
+        }
+
+        /**
+         * Show 3D preview for test result
+         */
+        function showPreview(testId, object) {
+            const preview = document.getElementById(`preview-${testId}`);
+            preview.style.display = 'block';
+            preview.innerHTML = '';
+
+            const canvas = document.createElement('canvas');
+            canvas.width = 280;
+            canvas.height = 200;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, 280 / 200, 0.1, 1000);
+            camera.position.set(2, 1.6, 3);
+            camera.lookAt(0, 1, 0);
+
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            scene.add(directionalLight);
+
+            scene.add(object);
+
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(280, 200);
+            renderer.setClearColor(0x333333);
+            renderer.render(scene, camera);
+
+            preview.appendChild(canvas);
+        }
+
+        /**
+         * Find test definition by ID
+         */
+        function findTestById(testId) {
+            for (const category of Object.values(testDefinitions)) {
+                const test = category.find(t => t.id === testId);
+                if (test) return test;
+            }
+            return null;
+        }
+
+        /**
+         * Run all tests in sequence
+         */
+        async function runAllTests() {
+            logMessage('🚀 Starting complete test suite...');
+            
+            const allTests = [
+                ...testDefinitions.core,
+                ...testDefinitions.pipeline,
+                ...testDefinitions.integration,
+                ...testDefinitions.performance
+            ];
+
+            for (const test of allTests) {
+                await runSingleTest(test.id);
+                // Small delay between tests
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            logMessage('🎉 Complete test suite finished!');
+            generateTestReport();
+        }
+
+        /**
+         * Run only core system tests
+         */
+        async function runCoreTests() {
+            logMessage('🔧 Running core system tests...');
+            
+            for (const test of testDefinitions.core) {
+                await runSingleTest(test.id);
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            logMessage('✅ Core system tests completed');
+        }
+
+        /**
+         * Run stress test
+         */
+        async function runStressTest() {
+            logMessage('💪 Running stress test...');
+            
+            try {
+                // Generate many characters rapidly
+                const characters = [];
+                for (let i = 0; i < 10; i++) {
+                    const geometry = await systems.meshTemplateSystem.generateCharacterMesh({
+                        gender: ['male', 'female', 'non-binary'][i % 3],
+                        ageGroup: ['young', 'middle', 'elderly'][Math.floor(i / 3)],
+                        ethnicity: 'european'
+                    });
+                    characters.push(geometry);
+                }
+
+                // Generate many textures
+                const textures = [];
+                const fabrics = ['cotton', 'silk', 'wool', 'denim', 'leather'];
+                for (let i = 0; i < 5; i++) {
+                    const texture = await systems.textureGenerator.generateFabricTextures({
+                        fabric: fabrics[i],
+                        color: '#ffffff',
+                        properties: { stiffness: 0.5, drape: 0.7 }
+                    });
+                    textures.push(texture);
+                }
+
+                // Cleanup
+                characters.forEach(g => g.dispose());
+
+                logMessage('✅ Stress test completed successfully');
+
+            } catch (error) {
+                logMessage(`❌ Stress test failed: ${error.message}`);
+            }
+        }
+
+        /**
+         * Update overall system status
+         */
+        function updateOverallStatus() {
+            const totalTests = Object.values(testDefinitions).flat().length;
+            const completedTests = Object.keys(testResults).length;
+            const passedTests = Object.values(testResults).filter(r => r.status === 'pass').length;
+            const failedTests = completedTests - passedTests;
+
+            const status = document.getElementById('overallStatus');
+            
+            if (completedTests === 0) {
+                status.className = 'status pending';
+                status.textContent = 'System Status: Ready for Testing';
+            } else if (completedTests < totalTests) {
+                status.className = 'status running';
+                status.textContent = `System Status: Testing in Progress (${completedTests}/${totalTests})`;
+            } else if (failedTests === 0) {
+                status.className = 'status success';
+                status.textContent = `System Status: ALL TESTS PASSED ✅ (${passedTests}/${totalTests})`;
+            } else {
+                status.className = 'status error';
+                status.textContent = `System Status: ${failedTests} TESTS FAILED ❌ (${passedTests} passed, ${failedTests} failed)`;
+            }
+        }
+
+        /**
+         * Generate test report
+         */
+        function generateTestReport() {
+            const report = {
+                timestamp: new Date().toISOString(),
+                totalTests: Object.values(testDefinitions).flat().length,
+                results: testResults,
+                summary: {
+                    passed: Object.values(testResults).filter(r => r.status === 'pass').length,
+                    failed: Object.values(testResults).filter(r => r.status === 'fail').length,
+                    avgDuration: Object.values(testResults)
+                        .filter(r => r.duration)
+                        .reduce((acc, r, _, arr) => acc + r.duration / arr.length, 0)
+                }
+            };
+
+            logMessage('📊 TEST REPORT GENERATED:');
+            logMessage(`   Total Tests: ${report.totalTests}`);
+            logMessage(`   Passed: ${report.summary.passed}`);
+            logMessage(`   Failed: ${report.summary.failed}`);
+            logMessage(`   Avg Duration: ${report.summary.avgDuration.toFixed(1)}ms`);
+        }
+
+        /**
+         * Clear all test results
+         */
+        function clearResults() {
+            testResults = {};
+            
+            // Reset all cards
+            document.querySelectorAll('.test-card').forEach(card => {
+                card.className = 'test-card';
+            });
+            
+            document.querySelectorAll('[id^="status-"]').forEach(status => {
+                status.className = 'status pending';
+                status.textContent = 'Pending';
+            });
+            
+            document.querySelectorAll('[id^="results-"]').forEach(results => {
+                results.innerHTML = '';
+            });
+            
+            document.querySelectorAll('[id^="preview-"]').forEach(preview => {
+                preview.style.display = 'none';
+                preview.innerHTML = '';
+            });
+
+            updateOverallStatus();
+            logMessage('🧹 Test results cleared');
+        }
+
+        /**
+         * Add message to log panel
+         */
+        function logMessage(message) {
+            const logPanel = document.getElementById('logPanel');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logPanel.appendChild(logEntry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            logMessage('🚀 Integration test system loading...');
+            initializeTestInterface();
+            logMessage('✅ Test interface ready');
+        });
+    </script>
+</body>
+</html>

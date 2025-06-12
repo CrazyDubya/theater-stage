@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick System Check</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .log {
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        .error { color: #f44; }
+        .success { color: #4f4; }
+        .warning { color: #ff4; }
+    </style>
+</head>
+<body>
+    <div class="log" id="log"></div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- System components -->
+    <script src="../js/core/ShaderManager.js"></script>
+    <script src="../js/core/TextureGenerator.js"></script>
+    <script src="../js/core/MeshTemplateSystem.js"></script>
+    <script src="../js/core/VertexDeformationEngine.js"></script>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function logMessage(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            log.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            console.log(message);
+        }
+
+        async function quickCheck() {
+            logMessage('🚀 Starting quick system check...');
+            
+            try {
+                // Check Three.js
+                logMessage('Checking Three.js...', 'info');
+                if (typeof THREE === 'undefined') {
+                    logMessage('❌ Three.js not loaded', 'error');
+                    return;
+                }
+                logMessage('✅ Three.js loaded successfully', 'success');
+                
+                // Check ShaderManager
+                logMessage('Checking ShaderManager...', 'info');
+                if (typeof window.ShaderManager === 'undefined') {
+                    logMessage('❌ ShaderManager class not found', 'error');
+                    return;
+                }
+                const shaderManager = new window.ShaderManager();
+                logMessage('✅ ShaderManager instantiated', 'success');
+                
+                // Check TextureGenerator
+                logMessage('Checking TextureGenerator...', 'info');
+                if (typeof window.TextureGenerator === 'undefined') {
+                    logMessage('❌ TextureGenerator class not found', 'error');
+                    return;
+                }
+                logMessage('✅ TextureGenerator class available', 'success');
+                
+                // Check MeshTemplateSystem
+                logMessage('Checking MeshTemplateSystem...', 'info');
+                if (typeof window.MeshTemplateSystem === 'undefined') {
+                    logMessage('❌ MeshTemplateSystem class not found', 'error');
+                    return;
+                }
+                const meshSystem = new window.MeshTemplateSystem();
+                logMessage('✅ MeshTemplateSystem instantiated', 'success');
+                
+                // Check VertexDeformationEngine
+                logMessage('Checking VertexDeformationEngine...', 'info');
+                if (typeof window.VertexDeformationEngine === 'undefined') {
+                    logMessage('❌ VertexDeformationEngine class not found', 'error');
+                    return;
+                }
+                const deformationEngine = new window.VertexDeformationEngine();
+                logMessage('✅ VertexDeformationEngine instantiated', 'success');
+                
+                // Test basic functionality
+                logMessage('Testing basic functionality...', 'info');
+                await shaderManager.initializeIncludes();
+                logMessage('✅ ShaderManager initialized', 'success');
+                
+                await meshSystem.initialize();
+                const stats = meshSystem.getStats();
+                logMessage(`✅ MeshTemplateSystem initialized (${stats.templatesLoaded} templates)`, 'success');
+                
+                // Quick mesh generation test
+                logMessage('Testing mesh generation...', 'info');
+                const characterSpecs = {
+                    gender: 'neutral',
+                    ageGroup: 'young',
+                    ethnicity: 'european'
+                };
+                
+                const startTime = performance.now();
+                const geometry = await meshSystem.generateCharacterMesh(characterSpecs);
+                const duration = performance.now() - startTime;
+                
+                if (!geometry || !geometry.attributes.position) {
+                    logMessage('❌ Mesh generation failed', 'error');
+                    return;
+                }
+                
+                const vertexCount = geometry.attributes.position.count;
+                logMessage(`✅ Mesh generated: ${vertexCount} vertices in ${duration.toFixed(1)}ms`, 'success');
+                
+                // Test deformation
+                logMessage('Testing vertex deformation...', 'info');
+                const deformedGeometry = await deformationEngine.applyCharacterDeformation(
+                    geometry.clone(), 
+                    {
+                        ...characterSpecs,
+                        facial: { faceWidth: 1.1, eyeSize: 1.0 },
+                        body: { muscle: { definition: 0.6 } }
+                    }
+                );
+                logMessage('✅ Vertex deformation applied successfully', 'success');
+                
+                // Cleanup
+                geometry.dispose();
+                deformedGeometry.dispose();
+                
+                logMessage('', 'info');
+                logMessage('🎉 ALL SYSTEMS OPERATIONAL!', 'success');
+                logMessage('The complete procedural generation system is ready for use.', 'success');
+                
+            } catch (error) {
+                logMessage(`❌ System check failed: ${error.message}`, 'error');
+                logMessage(`Stack trace: ${error.stack}`, 'error');
+            }
+        }
+
+        // Run check when page loads
+        window.addEventListener('load', () => {
+            setTimeout(quickCheck, 100);
+        });
+    </script>
+</body>
+</html>

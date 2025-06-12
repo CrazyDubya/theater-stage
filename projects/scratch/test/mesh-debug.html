@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesh System Debug</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .log {
+            white-space: pre-wrap;
+            font-size: 12px;
+        }
+        .error { color: #f44; }
+        .success { color: #4f4; }
+        .warning { color: #ff4; }
+        .info { color: #44f; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Mesh System Debug Console</h1>
+    <div class="log" id="log"></div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- System components -->
+    <script src="../js/core/MeshTemplateSystem.js"></script>
+    <script src="../js/core/VertexDeformationEngine.js"></script>
+
+    <script>
+        const log = document.getElementById('log');
+        
+        function logMessage(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : type === 'info' ? 'info' : '';
+            log.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            console.log(message);
+        }
+
+        async function debugMeshSystem() {
+            logMessage('🚀 Starting mesh system debug...', 'info');
+            
+            try {
+                // Check Three.js
+                logMessage('Checking Three.js...', 'info');
+                if (typeof THREE === 'undefined') {
+                    logMessage('❌ Three.js not loaded', 'error');
+                    return;
+                }
+                logMessage('✅ Three.js loaded successfully', 'success');
+                
+                // Check MeshTemplateSystem
+                logMessage('Checking MeshTemplateSystem class...', 'info');
+                if (typeof window.MeshTemplateSystem === 'undefined') {
+                    logMessage('❌ MeshTemplateSystem class not found', 'error');
+                    return;
+                }
+                logMessage('✅ MeshTemplateSystem class available', 'success');
+                
+                // Create instance
+                logMessage('Creating MeshTemplateSystem instance...', 'info');
+                const meshSystem = new window.MeshTemplateSystem();
+                
+                // Check initial state
+                logMessage('Checking initial state...', 'info');
+                logMessage(`Demographics: ${JSON.stringify(meshSystem.demographicTemplates, null, 2)}`, 'info');
+                logMessage(`Template cache size: ${meshSystem.templateCache.size}`, 'info');
+                
+                // Initialize system
+                logMessage('Initializing system...', 'info');
+                await meshSystem.initialize();
+                
+                // Check post-initialization state
+                logMessage('Post-initialization state:', 'info');
+                logMessage(`Template cache size: ${meshSystem.templateCache.size}`, 'info');
+                logMessage(`Available templates: ${Array.from(meshSystem.templateCache.keys()).join(', ')}`, 'info');
+                
+                const stats = meshSystem.getStats();
+                logMessage(`Templates loaded: ${stats.templatesLoaded}`, 'info');
+                
+                // Test template selection
+                logMessage('Testing template selection...', 'info');
+                const testSpecs = [
+                    { gender: 'male', ageGroup: 'young', ethnicity: 'european' },
+                    { gender: 'female', ageGroup: 'adult', ethnicity: 'african' },
+                    { gender: 'non-binary', ageGroup: 'young', ethnicity: 'asian' },
+                    { gender: 'neutral', ageGroup: 'young', ethnicity: 'european' },
+                    {}  // Empty specs to test defaults
+                ];
+                
+                for (const specs of testSpecs) {
+                    try {
+                        const templateId = meshSystem.selectTemplate(specs);
+                        const template = meshSystem.getTemplate(templateId);
+                        const hasTemplate = template ? '✅' : '❌';
+                        logMessage(`${hasTemplate} Specs: ${JSON.stringify(specs)} -> Template: ${templateId} -> Exists: ${!!template}`, specs && Object.keys(specs).length ? 'info' : 'warning');
+                    } catch (error) {
+                        logMessage(`❌ Template selection failed for ${JSON.stringify(specs)}: ${error.message}`, 'error');
+                    }
+                }
+                
+                // Test mesh generation
+                logMessage('Testing mesh generation...', 'info');
+                const characterSpecs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european'
+                };
+                
+                try {
+                    const startTime = performance.now();
+                    const geometry = await meshSystem.generateCharacterMesh(characterSpecs);
+                    const duration = performance.now() - startTime;
+                    
+                    if (geometry && geometry.attributes && geometry.attributes.position) {
+                        const vertexCount = geometry.attributes.position.count;
+                        logMessage(`✅ Mesh generated successfully: ${vertexCount} vertices in ${duration.toFixed(1)}ms`, 'success');
+                        geometry.dispose();
+                    } else {
+                        logMessage('❌ Invalid geometry generated', 'error');
+                    }
+                } catch (error) {
+                    logMessage(`❌ Mesh generation failed: ${error.message}`, 'error');
+                    logMessage(`Stack: ${error.stack}`, 'error');
+                }
+                
+                // Test VertexDeformationEngine if available
+                if (typeof window.VertexDeformationEngine !== 'undefined') {
+                    logMessage('Testing VertexDeformationEngine...', 'info');
+                    const deformationEngine = new window.VertexDeformationEngine();
+                    
+                    try {
+                        const testGeometry = new THREE.BoxGeometry(1, 2, 1);
+                        const deformed = await deformationEngine.applyCharacterDeformation(testGeometry, characterSpecs);
+                        logMessage('✅ Vertex deformation test passed', 'success');
+                        testGeometry.dispose();
+                        deformed.dispose();
+                    } catch (error) {
+                        logMessage(`❌ Vertex deformation failed: ${error.message}`, 'error');
+                    }
+                } else {
+                    logMessage('⚠️ VertexDeformationEngine not available', 'warning');
+                }
+                
+                logMessage('🎉 Debug session completed!', 'success');
+                
+            } catch (error) {
+                logMessage(`❌ Debug session failed: ${error.message}`, 'error');
+                logMessage(`Stack trace: ${error.stack}`, 'error');
+            }
+        }
+
+        // Run debug when page loads
+        window.addEventListener('load', () => {
+            setTimeout(debugMeshSystem, 100);
+        });
+    </script>
+</body>
+</html>

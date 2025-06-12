@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Director Demo - Ollama-Powered Theater</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: white;
+            display: flex;
+            height: 100vh;
+        }
+
+        #theater-container {
+            flex: 2;
+            position: relative;
+        }
+
+        #ai-panel {
+            flex: 1;
+            background: #2a2a2a;
+            padding: 20px;
+            overflow-y: auto;
+            border-left: 2px solid #444;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #333;
+            border-radius: 8px;
+        }
+
+        .section h3 {
+            margin: 0 0 15px 0;
+            color: #4CAF50;
+            display: flex;
+            align-items: center;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            background: #f44336;
+        }
+
+        .status-indicator.connected {
+            background: #4CAF50;
+        }
+
+        .status-indicator.connecting {
+            background: #ff9800;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            background: #444;
+            border: 1px solid #666;
+            color: white;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        #ai-log {
+            background: #1a1a1a;
+            height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            border: 1px solid #666;
+        }
+
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .log-entry.info {
+            background: rgba(76, 175, 80, 0.1);
+            border-left: 3px solid #4CAF50;
+        }
+
+        .log-entry.error {
+            background: rgba(244, 67, 54, 0.1);
+            border-left: 3px solid #f44336;
+        }
+
+        .log-entry.ai {
+            background: rgba(33, 150, 243, 0.1);
+            border-left: 3px solid #2196F3;
+        }
+
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 300px;
+        }
+
+        .quick-prompt {
+            background: #444;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            border: 1px solid #666;
+        }
+
+        .quick-prompt:hover {
+            background: #555;
+        }
+
+        .ai-stats {
+            font-size: 12px;
+            color: #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div id="theater-container">
+        <div id="info">
+            <h4>🎭 AI Director Demo</h4>
+            <p>Experience autonomous AI theater direction powered by local Ollama.</p>
+            <p><strong>Phase 4A:</strong> Foundation Integration</p>
+        </div>
+    </div>
+
+    <div id="ai-panel">
+        <div class="section">
+            <h3>
+                <span id="ollama-status" class="status-indicator"></span>
+                Ollama Connection
+            </h3>
+            <div class="ai-stats" id="ollama-info">
+                Status: Checking connection...
+            </div>
+            <button id="connect-ollama" onclick="initializeOllama()" style="display: block !important; visibility: visible !important; opacity: 1 !important; position: relative !important; z-index: 99999 !important; background: #4CAF50 !important; color: white !important; border: none !important; padding: 10px 15px !important; border-radius: 5px !important; cursor: pointer !important; margin: 5px !important; font-size: 14px !important;">Connect to Ollama</button>
+            <button id="test-ai" onclick="testAICapabilities()" disabled>Test AI</button>
+        </div>
+
+        <div class="section">
+            <h3>
+                <span id="director-status" class="status-indicator"></span>
+                AI Director
+            </h3>
+            <div class="ai-stats" id="director-info">
+                Director: Not initialized
+            </div>
+            <button id="start-director" onclick="startAIDirector()" disabled>Start AI Director</button>
+            <button id="stop-director" onclick="stopAIDirector()" disabled>Stop Director</button>
+            
+            <div style="margin-top: 15px;">
+                <label>Director Personality:</label>
+                <select id="director-personality" style="background: #444; color: white; border: 1px solid #666; padding: 5px;">
+                    <option value="collaborative">Collaborative</option>
+                    <option value="dramatic">Dramatic</option>
+                    <option value="experimental">Experimental</option>
+                    <option value="classical">Classical</option>
+                    <option value="comedic">Comedy</option>
+                </select>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <label>
+                    <input type="checkbox" id="enable-phase4b" checked> 
+                    Enable Phase 4B (Live Scripts & Intelligent Analysis)
+                </label>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🎬 Performance Control</h3>
+            <textarea id="performance-prompt" placeholder="Describe the performance you want the AI to create... (e.g., 'Create a dramatic scene with 3 actors representing the three stages of life')" rows="3"></textarea>
+            <button onclick="generatePerformance()" id="generate-btn" disabled>Generate Performance</button>
+            
+            <div style="margin-top: 15px;">
+                <strong>Quick Prompts (Phase 4B Enhanced):</strong>
+                <div class="quick-prompt" onclick="setPrompt('Create a dramatic scene with 3 actors representing past, present, and future')">
+                    🎭 Time Trilogy Drama
+                </div>
+                <div class="quick-prompt" onclick="setPrompt('Romeo and Juliet balcony scene with intelligent staging')">
+                    🎬 Romeo & Juliet (Live Script)
+                </div>
+                <div class="quick-prompt" onclick="setPrompt('Create a modern dance piece about AI and humanity')">
+                    🤖 AI & Humanity Dance
+                </div>
+                <div class="quick-prompt" onclick="setPrompt('Improvised comedy show with audience participation')">
+                    🎪 Interactive Comedy Show
+                </div>
+                <div class="quick-prompt" onclick="setPrompt('Mystery thriller: someone has stolen the crown jewels')">
+                    🕵️ Crown Jewels Mystery
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🤖 Live AI Interaction</h3>
+            <input type="text" id="live-input" placeholder="Give the AI director a live suggestion..." onkeypress="handleLiveInput(event)">
+            <button onclick="sendLiveInput()" id="live-btn" disabled>Send to AI</button>
+        </div>
+
+        <div class="section">
+            <h3>📊 AI Activity Log</h3>
+            <div id="ai-log"></div>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="section">
+            <h3>⚙️ Setup Instructions</h3>
+            <div style="font-size: 12px; color: #ccc;">
+                <p><strong>1. Install Ollama:</strong><br>
+                   Visit <a href="https://ollama.ai" target="_blank" style="color: #4CAF50;">ollama.ai</a> and download</p>
+                
+                <p><strong>2. Start Ollama:</strong><br>
+                   Run: <code style="background: #444; padding: 2px 5px;">ollama serve</code></p>
+                
+                <p><strong>3. Install Model:</strong><br>
+                   Run: <code style="background: #444; padding: 2px 5px;">ollama pull llama3.1</code></p>
+                
+                <p><strong>4. Test Connection:</strong><br>
+                   Click "Connect to Ollama" above</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js and Theater System -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.6.7/lib/three-vrm.js"></script>
+    
+    <!-- Theater System Core -->
+    <script src="js/core/StateManager.js?v=3"></script>
+    <script src="js/core/ResourceManager.js?v=3"></script>
+    <script src="js/core/SceneManager.js?v=3"></script>
+    <script src="js/core/StageBuilder.js?v=8"></script>
+    <script src="js/core/ObjectFactory.js?v=3"></script>
+    <script src="js/core/PhysicsEngine.js?v=4"></script>
+    <script src="js/core/AudioSystem.js?v=3"></script>
+    <script src="js/core/TextureManager.js?v=3"></script>
+    <script src="js/core/CommandManager.js?v=3"></script>
+    <script src="js/core/ActorCreationManager.js?v=3"></script>
+    <script src="js/core/actors/ActorStateMachine.js?v=3"></script>
+    <script src="js/core/actors/ActorMovement.js?v=3"></script>
+    <script src="js/core/actors/ActorCollisionAvoidance.js?v=3"></script>
+    <script src="js/core/actors/ActorFactory.js?v=7"></script>
+    <script src="js/core/UIManager.js?v=7"></script>
+    <script src="js/core/RenderLoop.js?v=3"></script>
+    <script src="js/ui/UIFactory.js?v=3"></script>
+    
+    <!-- API and Agent System -->
+    <script src="js/core/TheaterAPI.js?v=1"></script>
+    <script src="js/core/TheaterAPIMiddleware.js?v=1"></script>
+    <script src="js/agents/AgentInterface.js?v=1"></script>
+    <script src="js/agents/ExampleAgents.js?v=1"></script>
+    
+    <!-- Ollama Integration - Phase 4A & 4B -->
+    <script src="js/core/OllamaInterface.js?v=1"></script>
+    <script src="js/core/LiveScriptGenerator.js?v=1"></script>
+    <script src="js/core/ContextualDirector.js?v=1"></script>
+    <script src="js/agents/AIDirectorAgent.js?v=2"></script>
+    
+    <!-- Main Application -->
+    <script src="js/stage.js?v=7"></script>
+
+    <script>
+        // Global variables for demo
+        let aiDirector = null;
+        let isConnected = false;
+
+        // Initialize theater with minimal UI for AI focus
+        window.addEventListener('load', async () => {
+            console.log('🎭 AI Director Demo: Starting initialization...');
+            await initializeTheater();
+            updateStatus();
+        });
+
+        async function initializeTheater() {
+            // Wait for theater system to load
+            if (typeof window.stageManager === 'undefined') {
+                setTimeout(initializeTheater, 100);
+                return;
+            }
+
+            // Hide UI elements to focus on AI
+            const uiContainer = document.getElementById('ui-container');
+            if (uiContainer) {
+                uiContainer.style.display = 'none';
+            }
+
+            log('Theater system initialized', 'info');
+            
+            // Check if Ollama interface is available
+            console.log('🎭 AI Director Demo: Checking for Ollama in 2 seconds...');
+            setTimeout(() => {
+                console.log('🎭 AI Director Demo: Running Ollama availability check...');
+                checkOllamaAvailability();
+            }, 2000);
+        }
+
+        async function checkOllamaAvailability() {
+            log('Checking Ollama availability...', 'info');
+            
+            const statusEl = document.getElementById('ollama-status');
+            const infoEl = document.getElementById('ollama-info');
+            const connectBtn = document.getElementById('connect-ollama');
+
+            console.log('🔧 DEBUG: Elements found:', {
+                statusEl: !!statusEl,
+                infoEl: !!infoEl, 
+                connectBtn: !!connectBtn
+            });
+
+            if (!connectBtn) {
+                console.error('🔧 DEBUG: CONNECT BUTTON NOT FOUND!');
+                console.log('🔧 DEBUG: Available elements:', document.querySelectorAll('button'));
+                return;
+            }
+
+            // ALWAYS enable the connect button
+            connectBtn.disabled = false;
+            connectBtn.style.display = 'block !important';
+            connectBtn.style.visibility = 'visible !important';
+            console.log('🔧 DEBUG: Button forced visible');
+
+            try {
+                // Check if OllamaInterface loaded
+                if (!window.OllamaTheaterInterface) {
+                    statusEl.className = 'status-indicator';
+                    infoEl.innerHTML = `
+                        Status: OllamaInterface.js not loaded<br>
+                        Action: Click Connect to try anyway
+                    `;
+                    log('⚠️ OllamaInterface.js not loaded, but button enabled', 'info');
+                    return;
+                }
+
+                // Check if Ollama server is running
+                const response = await fetch('http://localhost:11434/api/tags');
+                if (!response.ok) {
+                    throw new Error(`Ollama server not responding (${response.status})`);
+                }
+
+                const data = await response.json();
+                
+                statusEl.className = 'status-indicator connected';
+                infoEl.innerHTML = `
+                    Status: Ollama server detected<br>
+                    Available models: ${data.models?.length || 0}<br>
+                    Ready to connect
+                `;
+                
+                log(`✓ Ollama server found with ${data.models?.length || 0} models`, 'info');
+
+            } catch (error) {
+                statusEl.className = 'status-indicator';
+                
+                if (error.message.includes('CORS') || error.message.includes('fetch')) {
+                    infoEl.innerHTML = `
+                        Status: Ollama server not detected<br>
+                        Action: Start Ollama, then click Connect
+                    `;
+                    log('ℹ️ Ollama server not running. Start with: ollama serve', 'info');
+                } else {
+                    infoEl.innerHTML = `
+                        Status: ${error.message}<br>
+                        Action: Click Connect to try anyway
+                    `;
+                    log(`ℹ️ ${error.message}`, 'info');
+                }
+            }
+        }
+
+        async function initializeOllama() {
+            const connectBtn = document.getElementById('connect-ollama');
+            const statusEl = document.getElementById('ollama-status');
+            
+            connectBtn.disabled = true;
+            connectBtn.textContent = 'Connecting...';
+            statusEl.className = 'status-indicator connecting';
+            
+            try {
+                log('Connecting to Ollama...', 'info');
+                
+                // Try to create the interface if it doesn't exist
+                if (!window.ollamaTheaterInterface) {
+                    if (window.OllamaTheaterInterface) {
+                        log('Creating new OllamaTheaterInterface instance...', 'info');
+                        window.ollamaTheaterInterface = new window.OllamaTheaterInterface();
+                    } else {
+                        throw new Error('OllamaInterface.js not loaded');
+                    }
+                }
+
+                const success = await window.ollamaTheaterInterface.initialize();
+                
+                if (success) {
+                    isConnected = true;
+                    statusEl.className = 'status-indicator connected';
+                    
+                    const stats = window.ollamaTheaterInterface.getStats();
+                    document.getElementById('ollama-info').innerHTML = `
+                        Status: Connected<br>
+                        Model: ${stats.defaultModel}<br>
+                        Available: ${stats.availableModels.length} models
+                    `;
+                    
+                    document.getElementById('test-ai').disabled = false;
+                    document.getElementById('start-director').disabled = false;
+                    connectBtn.textContent = 'Connected ✓';
+                    
+                    log(`Connected to Ollama with model: ${stats.defaultModel}`, 'info');
+                } else {
+                    throw new Error('Failed to connect to Ollama');
+                }
+                
+            } catch (error) {
+                statusEl.className = 'status-indicator';
+                connectBtn.disabled = false;
+                connectBtn.textContent = 'Retry Connection';
+                
+                document.getElementById('ollama-info').innerHTML = `
+                    Status: Connection Failed<br>
+                    Error: ${error.message}
+                `;
+                
+                log(`Ollama connection failed: ${error.message}`, 'error');
+                
+                // Show helpful instructions
+                if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch')) {
+                    log('💡 Make sure Ollama is running: ollama serve', 'info');
+                } else if (error.message.includes('model')) {
+                    log('💡 Install a model: ollama pull llama3.1', 'info');
+                }
+            }
+        }
+
+        async function testAICapabilities() {
+            if (!isConnected) return;
+            
+            try {
+                log('Testing AI capabilities...', 'info');
+                
+                const response = await window.ollamaTheaterInterface.generatePerformance(
+                    'Quick test: You are directing a theater. Create a simple greeting.',
+                    { temperature: 0.5, max_tokens: 100 }
+                );
+                
+                log('AI test successful ✓', 'ai');
+                log(`AI Response: ${response.content || 'Function calls executed'}`, 'ai');
+                
+            } catch (error) {
+                log(`AI test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function startAIDirector() {
+            if (!isConnected) return;
+            
+            try {
+                const personality = document.getElementById('director-personality').value;
+                const enablePhase4B = document.getElementById('enable-phase4b').checked;
+                
+                log(`Starting AI Director with ${personality} personality...`, 'info');
+                
+                aiDirector = new AIDirectorAgent({
+                    personality: personality,
+                    creativity: 0.7,
+                    style: 'adaptive',
+                    intelligentAnalysis: enablePhase4B
+                });
+                
+                await aiDirector.initialize();
+                
+                const directorStatus = document.getElementById('director-status');
+                directorStatus.className = 'status-indicator connected';
+                
+                // Get Phase 4B status
+                const stats = aiDirector.getDirectorStats();
+                const phase4BStatus = stats.phase4B || {};
+                
+                document.getElementById('director-info').innerHTML = `
+                    Director: Active<br>
+                    Personality: ${personality}<br>
+                    Phase 4B: ${enablePhase4B ? 'Enabled' : 'Disabled'}<br>
+                    Live Scripts: ${phase4BStatus.liveScriptGenerator?.available ? '✓' : '✗'}<br>
+                    Smart Analysis: ${phase4BStatus.contextualDirector?.available ? '✓' : '✗'}<br>
+                    Status: Ready for commands
+                `;
+                
+                document.getElementById('start-director').disabled = true;
+                document.getElementById('stop-director').disabled = false;
+                document.getElementById('generate-btn').disabled = false;
+                document.getElementById('live-btn').disabled = false;
+                
+                log('AI Director started successfully ✓', 'ai');
+                
+                if (enablePhase4B) {
+                    if (phase4BStatus.liveScriptGenerator?.available) {
+                        log('🎬 Live Script Generator available', 'info');
+                    }
+                    if (phase4BStatus.contextualDirector?.available) {
+                        log('🎭 Contextual Director available', 'info');
+                    }
+                }
+                
+                // Subscribe to director narratives
+                window.addEventListener('ai-director-narrative', (event) => {
+                    log(`🎭 AI Director: ${event.detail.content}`, 'ai');
+                });
+                
+            } catch (error) {
+                log(`Failed to start AI Director: ${error.message}`, 'error');
+            }
+        }
+
+        async function stopAIDirector() {
+            if (aiDirector) {
+                aiDirector.stop();
+                aiDirector = null;
+                
+                const directorStatus = document.getElementById('director-status');
+                directorStatus.className = 'status-indicator';
+                
+                document.getElementById('director-info').textContent = 'Director: Stopped';
+                document.getElementById('start-director').disabled = false;
+                document.getElementById('stop-director').disabled = true;
+                document.getElementById('generate-btn').disabled = true;
+                document.getElementById('live-btn').disabled = true;
+                
+                log('AI Director stopped', 'info');
+            }
+        }
+
+        async function generatePerformance() {
+            if (!aiDirector) return;
+            
+            const prompt = document.getElementById('performance-prompt').value.trim();
+            if (!prompt) {
+                log('Please enter a performance description', 'error');
+                return;
+            }
+            
+            try {
+                log(`Generating performance: "${prompt}"`, 'info');
+                
+                await aiDirector.generateFullPerformance(prompt);
+                
+                log('Performance generation completed ✓', 'ai');
+                
+                // Clear the prompt
+                document.getElementById('performance-prompt').value = '';
+                
+            } catch (error) {
+                log(`Performance generation failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function sendLiveInput() {
+            if (!aiDirector) return;
+            
+            const input = document.getElementById('live-input').value.trim();
+            if (!input) return;
+            
+            try {
+                log(`Live input: "${input}"`, 'info');
+                
+                await aiDirector.handleUserInput(input);
+                
+                log('Live input processed ✓', 'ai');
+                
+                // Clear the input
+                document.getElementById('live-input').value = '';
+                
+            } catch (error) {
+                log(`Live input failed: ${error.message}`, 'error');
+            }
+        }
+
+        function handleLiveInput(event) {
+            if (event.key === 'Enter') {
+                sendLiveInput();
+            }
+        }
+
+        function setPrompt(prompt) {
+            document.getElementById('performance-prompt').value = prompt;
+        }
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('ai-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span style="color: #888;">[${new Date().toLocaleTimeString()}]</span> ${message}`;
+            
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('ai-log').innerHTML = '';
+        }
+
+        function updateStatus() {
+            // Update connection status periodically
+            setTimeout(() => {
+                if (window.ollamaTheaterInterface && window.ollamaTheaterInterface.isConnected) {
+                    const stats = window.ollamaTheaterInterface.getStats();
+                    if (stats.responseCount > 0) {
+                        document.getElementById('ollama-info').innerHTML += `<br>Responses: ${stats.responseCount}<br>Avg Time: ${stats.avgResponseTime}ms`;
+                    }
+                }
+                updateStatus();
+            }, 5000);
+        }
+
+        // Remove all the debug bullshit and just force the button to exist
+        setInterval(function() {
+            const btn = document.getElementById('connect-ollama');
+            if (btn) {
+                btn.disabled = false;
+                btn.style.setProperty('display', 'block', 'important');
+                btn.style.setProperty('visibility', 'visible', 'important');
+                btn.style.setProperty('opacity', '1', 'important');
+            }
+        }, 100);
+    </script>
+</body>
+</html>

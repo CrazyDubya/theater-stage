@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Fix Test</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: monospace;
+            background: #000;
+            color: #0f0;
+            padding: 20px;
+        }
+        .controls {
+            background: #111;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .control {
+            margin: 10px 0;
+        }
+        .control label {
+            display: inline-block;
+            width: 150px;
+            color: #ff0;
+        }
+        .control input[type="range"] {
+            width: 200px;
+        }
+        .preview {
+            width: 400px;
+            height: 300px;
+            background: #333;
+            margin: 20px 0;
+            border: 2px solid #555;
+        }
+        .log {
+            white-space: pre-wrap;
+            font-size: 12px;
+            background: #111;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 Basic Functionality Test</h1>
+    
+    <div class="controls">
+        <div class="control">
+            <label>Torso Scale:</label>
+            <input type="range" id="torsoScale" min="0.5" max="2.0" step="0.1" value="1.0">
+            <span id="torsoValue">1.0</span>
+        </div>
+        <div class="control">
+            <label>Arms Scale:</label>
+            <input type="range" id="armsScale" min="0.5" max="2.0" step="0.1" value="1.0">
+            <span id="armsValue">1.0</span>
+        </div>
+        <div class="control">
+            <label>Face Width:</label>
+            <input type="range" id="faceWidth" min="0.5" max="2.0" step="0.1" value="1.0">
+            <span id="faceValue">1.0</span>
+        </div>
+        <button onclick="generateTest()">Generate Test Character</button>
+        <button onclick="testBasicMesh()">Test Basic Mesh Only</button>
+    </div>
+
+    <div class="preview" id="preview"></div>
+    <div class="log" id="log"></div>
+
+    <!-- Three.js library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- System components -->
+    <script src="../js/core/MeshTemplateSystem.js"></script>
+    <script src="../js/core/VertexDeformationEngine.js"></script>
+
+    <script>
+        const log = document.getElementById('log');
+        let meshSystem = null;
+        let deformationEngine = null;
+        
+        function logMessage(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `[${timestamp}] ${message}\n`;
+            log.scrollTop = log.scrollHeight;
+            console.log(message);
+        }
+
+        // Update value displays
+        document.getElementById('torsoScale').addEventListener('input', (e) => {
+            document.getElementById('torsoValue').textContent = e.target.value;
+        });
+        document.getElementById('armsScale').addEventListener('input', (e) => {
+            document.getElementById('armsValue').textContent = e.target.value;
+        });
+        document.getElementById('faceWidth').addEventListener('input', (e) => {
+            document.getElementById('faceValue').textContent = e.target.value;
+        });
+
+        async function initSystems() {
+            try {
+                logMessage('🔧 Initializing systems...');
+                
+                meshSystem = new window.MeshTemplateSystem();
+                await meshSystem.initialize();
+                logMessage('✅ MeshTemplateSystem ready');
+                
+                deformationEngine = new window.VertexDeformationEngine();
+                logMessage('✅ VertexDeformationEngine ready');
+                
+            } catch (error) {
+                logMessage(`❌ System init failed: ${error.message}`);
+            }
+        }
+
+        async function testBasicMesh() {
+            if (!meshSystem) {
+                logMessage('❌ Systems not initialized');
+                return;
+            }
+
+            try {
+                logMessage('🏭 Testing basic mesh generation...');
+                
+                const characterSpecs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european'
+                };
+                
+                const geometry = await meshSystem.generateCharacterMesh(characterSpecs);
+                
+                if (geometry && geometry.attributes && geometry.attributes.position) {
+                    const vertexCount = geometry.attributes.position.count;
+                    logMessage(`✅ Basic mesh generated: ${vertexCount} vertices`);
+                    
+                    // Show the mesh
+                    showMesh(geometry, '✅ Basic Mesh (No Deformations)');
+                    
+                } else {
+                    logMessage('❌ Invalid geometry generated');
+                }
+                
+            } catch (error) {
+                logMessage(`❌ Basic mesh test failed: ${error.message}`);
+                logMessage(`Stack: ${error.stack}`);
+            }
+        }
+
+        async function generateTest() {
+            if (!meshSystem || !deformationEngine) {
+                logMessage('❌ Systems not initialized');
+                return;
+            }
+
+            try {
+                logMessage('🧪 Testing with deformations...');
+                
+                // Get control values
+                const torsoValue = parseFloat(document.getElementById('torsoScale').value);
+                const armsValue = parseFloat(document.getElementById('armsScale').value);
+                const faceValue = parseFloat(document.getElementById('faceWidth').value);
+                
+                logMessage(`Control values: torso=${torsoValue}, arms=${armsValue}, face=${faceValue}`);
+                
+                const characterSpecs = {
+                    gender: 'non-binary',
+                    ageGroup: 'young',
+                    ethnicity: 'european',
+                    body: {
+                        proportions: {
+                            torso: torsoValue,
+                            arms: armsValue,
+                            legs: 1.0,
+                            shoulders: 1.0,
+                            hips: 1.0
+                        }
+                    },
+                    facial: {
+                        faceWidth: faceValue,
+                        faceHeight: 1.0
+                    }
+                };
+                
+                logMessage(`Character specs: ${JSON.stringify(characterSpecs, null, 2)}`);
+                
+                // Generate base mesh
+                const baseGeometry = await meshSystem.generateCharacterMesh(characterSpecs);
+                logMessage('✅ Base mesh generated');
+                
+                // Apply deformations
+                const deformedGeometry = await deformationEngine.applyCharacterDeformation(
+                    baseGeometry.clone(), 
+                    characterSpecs
+                );
+                logMessage('✅ Deformations applied');
+                
+                // Show the result
+                showMesh(deformedGeometry, '🧪 With Deformations');
+                
+                // Cleanup
+                baseGeometry.dispose();
+                
+            } catch (error) {
+                logMessage(`❌ Test failed: ${error.message}`);
+                logMessage(`Stack: ${error.stack}`);
+            }
+        }
+
+        function showMesh(geometry, title) {
+            const preview = document.getElementById('preview');
+            preview.innerHTML = '';
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 300;
+            
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, 400 / 300, 0.1, 1000);
+            camera.position.set(2, 1.6, 3);
+            camera.lookAt(0, 1, 0);
+            
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 10, 5);
+            scene.add(directionalLight);
+            
+            const material = new THREE.MeshLambertMaterial({
+                color: 0xffdbac,
+                wireframe: false
+            });
+            
+            const mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(400, 300);
+            renderer.setClearColor(0x333333);
+            renderer.render(scene, camera);
+            
+            preview.appendChild(canvas);
+            
+            // Add title
+            const titleDiv = document.createElement('div');
+            titleDiv.textContent = title;
+            titleDiv.style.color = '#4f4';
+            titleDiv.style.textAlign = 'center';
+            titleDiv.style.marginTop = '10px';
+            preview.appendChild(titleDiv);
+            
+            // Cleanup
+            material.dispose();
+            renderer.dispose();
+            
+            logMessage(`📺 Displayed: ${title}`);
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            logMessage('🚀 Page loaded, initializing...');
+            initSystems();
+        });
+    </script>
+</body>
+</html>
