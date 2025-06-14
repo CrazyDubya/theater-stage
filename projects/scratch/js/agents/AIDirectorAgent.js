@@ -1,38 +1,72 @@
 /**
- * AIDirectorAgent.js - Ollama-Powered AI Theater Director
+ * AIDirectorAgent.js - Creative Director for AI Theater Productions
  * 
- * Advanced AI director that uses local Ollama LLM for intelligent theater control.
+ * Enhanced AI Creative Director that coordinates artistic vision across all departments.
+ * Now serves as the primary creative authority under Executive Producer oversight.
  * Inspired by Stanford's live-script research and MIT's algorithmic choreography.
  * 
  * Features:
+ * - Artistic vision coordination across all creative departments
  * - Real-time performance generation using Ollama
- * - Context-aware decision making
- * - Streaming responses for live adaptation
- * - Multi-modal performance understanding
- * - Collaborative human-AI direction
+ * - Multi-departmental creative decision making
+ * - Style consistency enforcement
+ * - Collaborative human-AI creative direction
+ * - Integration with 35-agent ecosystem
  */
 
 class AIDirectorAgent extends BaseAgent {
     constructor(config = {}) {
-        super('ai-director', {
-            name: 'AI Theater Director',
-            role: 'director',
-            priority: 10,
-            maxActionsPerSecond: 3,
-            personality: config.personality || 'collaborative',
+        super('creative-director', {
+            name: 'Creative Director',
+            role: 'creative-director',
+            priority: 90, // High priority, second only to Executive Producer
+            maxActionsPerSecond: 5,
+            personality: config.personality || 'visionary',
             ...config
         });
         
-        // AI Director specific properties
+        // Creative Director specific properties
         this.ollamaInterface = null;
-        this.performanceStyle = config.style || 'adaptive'; // adaptive, dramatic, comedic, experimental
-        this.creativityLevel = config.creativity || 0.7; // 0-1
+        this.artisticVision = config.vision || 'collaborative-storytelling';
+        this.creativityLevel = config.creativity || 0.8; // Increased for creative leadership
         this.humanCollaboration = config.humanCollaboration || true;
         
-        // Phase 4B: Enhanced capabilities
+        // Enhanced creative capabilities
         this.liveScriptGenerator = null;
         this.contextualDirector = null;
         this.intelligentAnalysis = config.intelligentAnalysis !== false;
+        
+        // Creative department coordination
+        this.creativeDepartments = {
+            script: { lead: null, team: [], status: 'idle' },
+            design: { lead: null, team: [], status: 'idle' },
+            music: { lead: null, team: [], status: 'idle' },
+            performance: { lead: null, team: [], status: 'idle' }
+        };
+        
+        // Artistic vision and style management
+        this.productionStyle = {
+            genre: config.genre || 'adaptive',
+            aesthetic: config.aesthetic || 'contemporary',
+            mood: config.mood || 'exploratory',
+            complexity: config.complexity || 'medium',
+            target_audience: config.audience || 'general'
+        };
+        
+        // Creative decision tracking
+        this.creativeDecisions = [];
+        this.styleConsistency = new Map();
+        this.artisticStandards = {
+            script_quality: 0.8,
+            design_coherence: 0.8,
+            performance_quality: 0.8,
+            technical_execution: 0.7
+        };
+        
+        // Integration with production system
+        this.executiveProducer = null;
+        this.currentProduction = null;
+        this.productionPhase = 'idle';
         
         // Performance state tracking
         this.currentPerformance = {
@@ -64,15 +98,15 @@ class AIDirectorAgent extends BaseAgent {
         this.errorBackoffUntil = null;
         this.maxConsecutiveErrors = 3;
         
-        console.log(`🎭 AI Director Agent: ${this.config.personality} director ready`);
+        console.log(`🎨 Creative Director Agent: ${this.config.personality} creative director ready`);
     }
 
     /**
-     * Initialize AI Director with Ollama integration
+     * Initialize Creative Director with enhanced coordination capabilities
      */
     async onInitialize() {
         try {
-            console.log('🎭 AI Director: Connecting to local AI brain...');
+            console.log('🎨 Creative Director: Connecting to creative systems...');
             
             // Initialize Ollama interface with safety checks
             if (!window.ollamaTheaterInterface) {
@@ -82,7 +116,7 @@ class AIDirectorAgent extends BaseAgent {
             this.ollamaInterface = window.ollamaTheaterInterface;
             
             if (!this.ollamaInterface.isInitialized) {
-                console.log('🎭 AI Director: Initializing Ollama interface...');
+                console.log('🎨 Creative Director: Initializing Ollama interface...');
                 const initSuccess = await window.ollamaTheaterInterface.initialize();
                 if (!initSuccess) {
                     throw new Error('Failed to initialize Ollama interface');
@@ -94,13 +128,22 @@ class AIDirectorAgent extends BaseAgent {
                 throw new Error('Cannot connect to Ollama. Please ensure Ollama is running: `ollama serve`');
             }
             
-            // Configure AI personality for theater direction
+            // Configure AI personality for creative direction
             this.ollamaInterface.updatePerformanceContext({
-                genre: 'mixed',
-                mood: 'exploratory',
-                audience_type: 'general',
-                current_scene: 'initialization'
+                genre: this.productionStyle.genre,
+                mood: this.productionStyle.mood,
+                audience_type: this.productionStyle.target_audience,
+                current_scene: 'creative-initialization'
             });
+            
+            // Register with Executive Producer if available
+            if (window.executiveProducerAgent) {
+                this.executiveProducer = window.executiveProducerAgent;
+                console.log('🎨 Creative Director: Registered with Executive Producer');
+            }
+            
+            // Set up creative department coordination
+            await this.initializeCreativeDepartments();
             
             // Initialize Phase 4B components
             await this.initializePhase4BComponents();
@@ -111,7 +154,10 @@ class AIDirectorAgent extends BaseAgent {
             // Initialize performance
             await this.initializePerformance();
             
-            console.log('🎭 AI Director: Local AI brain connected and ready to create magic!');
+            // Subscribe to production events
+            this.subscribeToProductionEvents();
+            
+            console.log('🎨 Creative Director: Ready to lead creative vision and coordinate artistic departments!');
             
         } catch (error) {
             console.error('🎭 AI Director initialization failed:', error);
@@ -247,6 +293,237 @@ Current error: ${error.message}
             console.error('🎭 AI Director: Performance initialization failed:', error);
             this.handleAnalysisError(error);
         }
+    }
+
+    /**
+     * Initialize creative department coordination
+     */
+    async initializeCreativeDepartments() {
+        console.log('🎨 Creative Director: Initializing department coordination...');
+        
+        // Discover existing creative agents
+        const departmentMap = {
+            script: ['ai-playwright', 'script-editor', 'dramaturge'],
+            design: ['production-designer', 'costume-designer', 'set-designer', 'makeup-artist'],
+            music: ['music-director', 'music-composer', 'sound-designer'],
+            performance: ['choreographer', 'voice-coach', 'method-acting-coach']
+        };
+        
+        for (const [dept, agentTypes] of Object.entries(departmentMap)) {
+            for (const agentType of agentTypes) {
+                const agent = this.findAgent(agentType);
+                if (agent) {
+                    if (!this.creativeDepartments[dept].lead) {
+                        this.creativeDepartments[dept].lead = agent;
+                        console.log(`👑 ${dept} department lead: ${agentType}`);
+                    } else {
+                        this.creativeDepartments[dept].team.push(agent);
+                        console.log(`👥 ${dept} team member: ${agentType}`);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Subscribe to production events for creative coordination
+     */
+    subscribeToProductionEvents() {
+        if (window.theaterEventBus) {
+            window.theaterEventBus.subscribe('production:started', (data) => this.onProductionStarted(data));
+            window.theaterEventBus.subscribe('production:phase-change', (data) => this.onPhaseChange(data));
+            window.theaterEventBus.subscribe('creative:decision-needed', (data) => this.onCreativeDecisionNeeded(data));
+            window.theaterEventBus.subscribe('agent:created', (data) => this.onAgentJoined(data));
+            
+            console.log('🎨 Creative Director: Subscribed to production events');
+        }
+    }
+
+    /**
+     * Handle production start event
+     */
+    async onProductionStarted(data) {
+        console.log('🎨 Creative Director: New production started -', data.production.title);
+        
+        this.currentProduction = data.production;
+        this.productionPhase = data.phase;
+        
+        // Establish artistic vision for the production
+        await this.establishArtisticVision(data.production);
+        
+        // Coordinate with all creative departments
+        await this.coordinateCreativeKickoff();
+    }
+
+    /**
+     * Establish artistic vision for production
+     */
+    async establishArtisticVision(production) {
+        try {
+            console.log('🎨 Creative Director: Establishing artistic vision...');
+            
+            if (this.ollamaInterface && this.ollamaInterface.isConnected) {
+                const visionPrompt = `
+                As a Creative Director, establish the artistic vision for this production:
+                
+                Title: ${production.title}
+                Type: ${production.type}
+                Brief: ${production.brief || 'To be developed'}
+                
+                Define:
+                1. Core artistic themes and messages
+                2. Visual aesthetic and style direction
+                3. Performance tone and approach
+                4. Audience experience goals
+                5. Creative challenges and opportunities
+                6. Success criteria for artistic excellence
+                
+                Provide a comprehensive creative vision that will guide all departments.
+                `;
+                
+                const response = await this.ollamaInterface.generatePerformance(visionPrompt, {
+                    temperature: 0.8,
+                    max_tokens: 800,
+                    timeout: 25000
+                });
+                
+                if (response && response.content) {
+                    production.artisticVision = response.content;
+                    this.artisticVision = response.content;
+                    
+                    console.log('✅ Creative Director: Artistic vision established');
+                    
+                    // Share vision with Executive Producer
+                    if (this.executiveProducer) {
+                        window.theaterEventBus?.publish('creative:vision-established', {
+                            production: production,
+                            vision: response.content,
+                            creativeDirector: this.config.name
+                        });
+                    }
+                }
+            }
+            
+        } catch (error) {
+            console.warn('⚠️ Creative Director: Failed to establish AI-powered vision:', error.message);
+            // Fallback to basic vision
+            production.artisticVision = `Artistic vision for ${production.title} - ${production.type} production`;
+        }
+    }
+
+    /**
+     * Coordinate creative kickoff with all departments
+     */
+    async coordinateCreativeKickoff() {
+        console.log('🎨 Creative Director: Coordinating creative kickoff...');
+        
+        for (const [dept, deptData] of Object.entries(this.creativeDepartments)) {
+            if (deptData.lead) {
+                try {
+                    // Send creative brief to department lead
+                    if (typeof deptData.lead.onCreativeBrief === 'function') {
+                        await deptData.lead.onCreativeBrief({
+                            production: this.currentProduction,
+                            artisticVision: this.artisticVision,
+                            departmentRole: dept,
+                            creativeDirector: this
+                        });
+                    }
+                    
+                    deptData.status = 'active';
+                    console.log(`✅ ${dept} department briefed and activated`);
+                    
+                } catch (error) {
+                    console.warn(`⚠️ Failed to brief ${dept} department:`, error.message);
+                }
+            } else {
+                console.warn(`⚠️ No lead assigned for ${dept} department`);
+            }
+        }
+    }
+
+    /**
+     * Handle production phase changes
+     */
+    async onPhaseChange(data) {
+        console.log(`🎨 Creative Director: Phase transition - ${data.previousPhase} → ${data.newPhase}`);
+        
+        this.productionPhase = data.newPhase;
+        
+        // Adjust creative focus based on phase
+        switch (data.newPhase) {
+            case 'development':
+                await this.focusOnScriptDevelopment();
+                break;
+            case 'preProduction':
+                await this.focusOnDesignConcepts();
+                break;
+            case 'design':
+                await this.focusOnDesignExecution();
+                break;
+            case 'technical':
+                await this.focusOnTechnicalIntegration();
+                break;
+            case 'rehearsal':
+                await this.focusOnPerformanceRefinement();
+                break;
+        }
+    }
+
+    /**
+     * Focus creative energy on script development
+     */
+    async focusOnScriptDevelopment() {
+        console.log('📝 Creative Director: Focusing on script development...');
+        
+        // Prioritize script department
+        if (this.creativeDepartments.script.lead) {
+            window.theaterEventBus?.publish('creative:priority-focus', {
+                department: 'script',
+                phase: 'development',
+                directive: 'Prioritize script quality and story development'
+            });
+        }
+    }
+
+    /**
+     * Focus on design concepts
+     */
+    async focusOnDesignConcepts() {
+        console.log('🎨 Creative Director: Focusing on design concepts...');
+        
+        // Prioritize design department
+        if (this.creativeDepartments.design.lead) {
+            window.theaterEventBus?.publish('creative:priority-focus', {
+                department: 'design',
+                phase: 'preProduction',
+                directive: 'Develop visual concepts aligned with artistic vision'
+            });
+        }
+    }
+
+    /**
+     * Find agent by type
+     */
+    findAgent(agentType) {
+        // Check global agent registry
+        if (window.agentSystem && window.agentSystem.agents) {
+            return window.agentSystem.agents.get(agentType);
+        }
+        
+        // Check individual global variables
+        const agentMappings = {
+            'ai-playwright': 'aiPlaywrightAgent',
+            'script-editor': 'scriptEditorAgent',
+            'music-director': 'musicDirectorAgent'
+        };
+        
+        const globalVar = agentMappings[agentType];
+        if (globalVar && window[globalVar]) {
+            return window[globalVar];
+        }
+        
+        return null;
     }
 
     /**

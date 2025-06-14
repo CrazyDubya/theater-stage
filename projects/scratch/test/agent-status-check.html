@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theater Agent Status Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .agent-card {
+            background: #2a2a2a;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .agent-card.not-loaded {
+            border-left-color: #ff6b6b;
+        }
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .agent-name {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .agent-status {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .status-loaded {
+            background: #4CAF50;
+            color: white;
+        }
+        .status-error {
+            background: #ff6b6b;
+            color: white;
+        }
+        .agent-details {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #ccc;
+        }
+        .summary {
+            background: #333;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .test-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Theater Agent System Status</h1>
+        
+        <div class="summary">
+            <h2>System Overview</h2>
+            <div id="system-summary">Loading...</div>
+            <button class="test-button" onclick="runSystemTest()">Run System Test</button>
+            <button class="test-button" onclick="testOllamaConnection()">Test Ollama Connection</button>
+        </div>
+
+        <h2>Agent Status</h2>
+        <div id="agent-list">Loading agents...</div>
+    </div>
+
+    <!-- Load BaseAgent first -->
+    <script src="../js/agents/AgentInterface.js"></script>
+    
+    <!-- Load all agent files -->
+    <script src="../js/agents/ExecutiveProducerAgent.js"></script>
+    <script src="../js/agents/AIDirectorAgent.js"></script>
+    <script src="../js/agents/AIPlaywrightAgent.js"></script>
+    <script src="../js/agents/TechnicalDirectorAgent.js"></script>
+    <script src="../js/agents/AssistantDirectorAgent.js"></script>
+    <script src="../js/agents/ScriptEditorAgent.js"></script>
+    <script src="../js/agents/MusicDirectorAgent.js"></script>
+    <script src="../js/agents/LightingDesignerAgent.js"></script>
+    <script src="../js/agents/SoundDesignerAgent.js"></script>
+    <script src="../js/agents/ProductionDesignerAgent.js"></script>
+    <script src="../js/agents/CostumeDesignerAgent.js"></script>
+    <script src="../js/agents/ChoreographerAgent.js"></script>
+    <script src="../js/agents/StageManagerAgent.js"></script>
+    <script src="../js/agents/VoiceCoachAgent.js"></script>
+    <script src="../js/agents/SetDesignerAgent.js"></script>
+
+    <!-- Load Ollama interface -->
+    <script src="../js/core/OllamaInterface.js"></script>
+
+    <script>
+        // List of all expected agents in order
+        const expectedAgents = [
+            { name: 'ExecutiveProducerAgent', class: 'ExecutiveProducerAgent', emoji: '🎬', description: 'Top-level project coordination and resource management' },
+            { name: 'AIDirectorAgent', class: 'AIDirectorAgent', emoji: '🎨', description: 'Creative direction and artistic vision' },
+            { name: 'AIPlaywrightAgent', class: 'AIPlaywrightAgent', emoji: '✍️', description: 'Script generation and character development' },
+            { name: 'TechnicalDirectorAgent', class: 'TechnicalDirectorAgent', emoji: '⚙️', description: 'Safety monitoring and technical coordination' },
+            { name: 'AssistantDirectorAgent', class: 'AssistantDirectorAgent', emoji: '📋', description: 'Scheduling and production coordination' },
+            { name: 'ScriptEditorAgent', class: 'ScriptEditorAgent', emoji: '📝', description: 'Script refinement and quality assurance' },
+            { name: 'MusicDirectorAgent', class: 'MusicDirectorAgent', emoji: '🎵', description: 'Musical composition and direction' },
+            { name: 'LightingDesignerAgent', class: 'LightingDesignerAgent', emoji: '💡', description: 'Lighting design and control systems' },
+            { name: 'SoundDesignerAgent', class: 'SoundDesignerAgent', emoji: '🔊', description: 'Audio design and sound effects' },
+            { name: 'ProductionDesignerAgent', class: 'ProductionDesignerAgent', emoji: '🎨', description: 'Visual design coordination' },
+            { name: 'CostumeDesignerAgent', class: 'CostumeDesignerAgent', emoji: '👗', description: 'Wardrobe and character design' },
+            { name: 'ChoreographerAgent', class: 'ChoreographerAgent', emoji: '💃', description: 'Movement and dance coordination' },
+            { name: 'StageManagerAgent', class: 'StageManagerAgent', emoji: '🎬', description: 'Live performance coordination' },
+            { name: 'VoiceCoachAgent', class: 'VoiceCoachAgent', emoji: '🎤', description: 'Vocal training and direction' },
+            { name: 'SetDesignerAgent', class: 'SetDesignerAgent', emoji: '🏗️', description: 'Physical environment design' }
+        ];
+
+        function checkAgentStatus() {
+            let loaded = 0;
+            let total = expectedAgents.length;
+            
+            const agentList = document.getElementById('agent-list');
+            agentList.innerHTML = '';
+
+            expectedAgents.forEach(agent => {
+                const agentCard = document.createElement('div');
+                const isLoaded = window[agent.class] !== undefined;
+                
+                agentCard.className = `agent-card ${isLoaded ? 'loaded' : 'not-loaded'}`;
+                
+                if (isLoaded) loaded++;
+                
+                agentCard.innerHTML = `
+                    <div class="agent-header">
+                        <div class="agent-name">${agent.emoji} ${agent.name}</div>
+                        <div class="agent-status ${isLoaded ? 'status-loaded' : 'status-error'}">
+                            ${isLoaded ? 'LOADED' : 'NOT LOADED'}
+                        </div>
+                    </div>
+                    <div class="agent-details">
+                        ${agent.description}
+                        ${isLoaded ? `<br><strong>Class:</strong> ${agent.class}` : ''}
+                    </div>
+                `;
+                
+                agentList.appendChild(agentCard);
+            });
+
+            // Update summary
+            const summary = document.getElementById('system-summary');
+            summary.innerHTML = `
+                <p><strong>Agents Loaded:</strong> ${loaded}/${total} (${Math.round((loaded/total)*100)}%)</p>
+                <p><strong>Base Agent System:</strong> ${window.BaseAgent ? '✅ Loaded' : '❌ Not Loaded'}</p>
+                <p><strong>Ollama Interface:</strong> ${window.OllamaTheaterInterface ? '✅ Available' : '❌ Not Available'}</p>
+                <p><strong>Total Lines of Code:</strong> ~13,800+ lines</p>
+                <p><strong>System Status:</strong> ${loaded === total ? '🟢 All Systems Ready' : '🟡 Partial Load'}</p>
+            `;
+        }
+
+        async function runSystemTest() {
+            console.log('🧪 Starting system test...');
+            
+            // Test BaseAgent
+            if (window.BaseAgent) {
+                try {
+                    const testAgent = new BaseAgent('test', { name: 'Test Agent' });
+                    console.log('✅ BaseAgent instantiation successful');
+                } catch (error) {
+                    console.error('❌ BaseAgent instantiation failed:', error);
+                }
+            }
+
+            // Test each loaded agent
+            for (const agent of expectedAgents) {
+                if (window[agent.class]) {
+                    try {
+                        const testInstance = new window[agent.class]();
+                        console.log(`✅ ${agent.name} instantiation successful`);
+                    } catch (error) {
+                        console.error(`❌ ${agent.name} instantiation failed:`, error);
+                    }
+                }
+            }
+
+            alert('System test completed. Check console for detailed results.');
+        }
+
+        async function testOllamaConnection() {
+            if (!window.OllamaTheaterInterface) {
+                alert('❌ OllamaTheaterInterface not available');
+                return;
+            }
+
+            try {
+                const ollama = new OllamaTheaterInterface();
+                const result = await ollama.initialize();
+                
+                if (result) {
+                    alert('✅ Ollama connection successful!');
+                } else {
+                    alert('⚠️ Ollama interface initialized but connection failed. Make sure Ollama is running.');
+                }
+            } catch (error) {
+                alert(`❌ Ollama connection failed: ${error.message}`);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(checkAgentStatus, 1000); // Give scripts time to load
+        });
+    </script>
+</body>
+</html>

@@ -159,6 +159,73 @@ class EventBus {
     }
     
     /**
+     * Subscribe to multiple topics with a single handler
+     */
+    subscribeToTopics(topics, handler) {
+        const unsubscribeFunctions = topics.map(topic => this.subscribe(topic, handler));
+        
+        // Return function to unsubscribe from all topics
+        return () => {
+            unsubscribeFunctions.forEach(unsub => unsub());
+        };
+    }
+    
+    /**
+     * Publish to multiple topics
+     */
+    publishToTopics(topics, data = {}) {
+        return Promise.all(topics.map(topic => this.publish(topic, data)));
+    }
+    
+    /**
+     * Get recent events for analysis
+     */
+    getRecentEvents(minutes = 5) {
+        const cutoff = Date.now() - (minutes * 60 * 1000);
+        return this.eventHistory.filter(event => event.timestamp >= cutoff);
+    }
+    
+    /**
+     * Get event patterns and flows
+     */
+    analyzeEventPatterns() {
+        const recentEvents = this.getRecentEvents(10);
+        const patterns = {};
+        
+        // Analyze event sequences
+        for (let i = 0; i < recentEvents.length - 1; i++) {
+            const current = recentEvents[i].topic;
+            const next = recentEvents[i + 1].topic;
+            const pattern = `${current} -> ${next}`;
+            
+            patterns[pattern] = (patterns[pattern] || 0) + 1;
+        }
+        
+        // Sort by frequency
+        return Object.entries(patterns)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 10)
+            .map(([pattern, count]) => ({ pattern, count }));
+    }
+    
+    /**
+     * Get topics by category
+     */
+    getTopicsByCategory() {
+        const categories = {};
+        
+        for (const topic of this.subscribers.keys()) {
+            const category = topic.split(':')[0];
+            if (!categories[category]) {
+                categories[category] = [];
+            }
+            categories[category].push(topic);
+        }
+        
+        return categories;
+    }
+    
+    /**
      * Get bus statistics
      */
     getStats() {
@@ -167,7 +234,10 @@ class EventBus {
             totalEvents: this.metrics.totalEvents,
             activeTopics: Array.from(this.subscribers.keys()),
             eventsByTopic: Object.fromEntries(this.metrics.eventsByTopic),
-            historySize: this.eventHistory.length
+            historySize: this.eventHistory.length,
+            topicCategories: this.getTopicsByCategory(),
+            recentEventCount: this.getRecentEvents().length,
+            eventPatterns: this.analyzeEventPatterns()
         };
     }
 }
