@@ -294,8 +294,108 @@ class BaseAgent {
                 successRate: this.metrics.totalActions > 0 
                     ? (this.metrics.successfulActions / this.metrics.totalActions) * 100 
                     : 0
-            }
+            },
+            integrations: this.getIntegrationStatus(),
+            specialization: this.getSpecializationStatus()
         };
+    }
+    
+    /**
+     * Get integration status with other agents
+     */
+    getIntegrationStatus() {
+        const integrations = {};
+        
+        // Check for common agent connections
+        const commonConnections = [
+            'creativeDirector', 'technicalDirector', 'stageManager',
+            'voiceCoach', 'choreographer', 'lightingDesigner',
+            'soundDesigner', 'costumeDesigner', 'setDesigner'
+        ];
+        
+        commonConnections.forEach(connection => {
+            if (this[connection]) {
+                integrations[connection] = {
+                    connected: true,
+                    agentId: this[connection].id || 'unknown'
+                };
+            }
+        });
+        
+        return integrations;
+    }
+    
+    /**
+     * Get specialization-specific status (override in subclasses)
+     */
+    getSpecializationStatus() {
+        return {
+            type: this.config.role,
+            capabilities: this.capabilities || {},
+            currentProject: this.currentProject || null
+        };
+    }
+    
+    /**
+     * Add common project management functionality
+     */
+    initializeProject(production) {
+        this.currentProject = {
+            production: production,
+            status: 'initializing',
+            createdAt: new Date(),
+            lastUpdate: new Date()
+        };
+        
+        this.publishEvent('project:initialized', {
+            agent: this.id,
+            production: production
+        });
+    }
+    
+    /**
+     * Update project status
+     */
+    updateProjectStatus(status, details = {}) {
+        if (this.currentProject) {
+            this.currentProject.status = status;
+            this.currentProject.lastUpdate = new Date();
+            
+            this.publishEvent('project:status-updated', {
+                agent: this.id,
+                status: status,
+                details: details
+            });
+        }
+    }
+    
+    /**
+     * Add common integration patterns
+     */
+    connectToAgent(agentType, agent) {
+        this[agentType] = agent;
+        console.log(`[${this.config.name}] Connected to ${agentType}: ${agent.config?.name || 'unknown'}`);
+        
+        this.publishEvent('agent:connected', {
+            sourceAgent: this.id,
+            targetAgent: agent.id,
+            connectionType: agentType
+        });
+    }
+    
+    /**
+     * Add common collaboration request
+     */
+    requestCollaboration(targetAgentType, requestType, data) {
+        if (this[targetAgentType]) {
+            this.publishEvent(`${targetAgentType}:collaboration-request`, {
+                requestingAgent: this.id,
+                requestType: requestType,
+                data: data
+            });
+        } else {
+            console.warn(`[${this.config.name}] Cannot collaborate with ${targetAgentType} - not connected`);
+        }
     }
     
     // Lifecycle hooks (to be overridden by subclasses)
