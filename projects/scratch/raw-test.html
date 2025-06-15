@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Raw Theater System Test</title>
+    <style>
+        body { font-family: monospace; background: black; color: lime; padding: 20px; }
+        pre { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <h1>RAW THEATER SYSTEM OUTPUT</h1>
+    <pre id="output"></pre>
+
+    <!-- Load Core Systems -->
+    <script src="js/core/EventBus.js"></script>
+    <script src="js/core/OllamaTheaterInterface.js"></script>
+    <script src="js/core/BaseAgent.js"></script>
+    <script src="js/core/AgentManager.js"></script>
+    <script src="js/core/OrchestrationResourceManager.js"></script>
+    <script src="js/core/DecisionEngine.js"></script>
+    <script src="js/core/SyncManager.js"></script>
+    <script src="js/core/TaskManager.js"></script>
+    <script src="js/core/ProductionOrchestrator.js"></script>
+
+    <!-- Load Sample Agents -->
+    <script src="js/agents/ExecutiveProducerAgent.js"></script>
+    <script src="js/agents/AIDirectorAgent.js"></script>
+    <script src="js/agents/TechnicalDirectorAgent.js"></script>
+
+    <script>
+        const output = document.getElementById('output');
+        const originalConsole = {};
+        
+        // Capture all console output
+        ['log', 'warn', 'error'].forEach(method => {
+            originalConsole[method] = console[method];
+            console[method] = function(...args) {
+                output.textContent += `[${method.toUpperCase()}] ${args.join(' ')}\n`;
+                originalConsole[method](...args);
+            };
+        });
+
+        async function runRawTest() {
+            console.log('=== RAW THEATER SYSTEM TEST ===');
+            console.log('Starting real system initialization...');
+            
+            try {
+                // Initialize Agent Manager
+                console.log('Initializing AgentManager...');
+                await window.theaterAgentManager.initialize();
+                
+                // Initialize Orchestration
+                console.log('Initializing OrchestrationResourceManager...');
+                const resourceManager = new OrchestrationResourceManager();
+                await resourceManager.initialize({ budget: 50000 });
+                
+                console.log('Initializing TaskManager...');
+                const taskManager = new TaskManager();
+                
+                console.log('Initializing ProductionOrchestrator...');
+                const orchestrator = new ProductionOrchestrator();
+                await orchestrator.initialize();
+                
+                // Create real agents
+                console.log('Creating ExecutiveProducerAgent...');
+                const execProducer = new ExecutiveProducerAgent();
+                await execProducer.initialize();
+                window.theaterAgentManager.registerAgent(execProducer);
+                
+                console.log('Creating TechnicalDirectorAgent...');
+                const techDirector = new TechnicalDirectorAgent();
+                await techDirector.initialize();
+                window.theaterAgentManager.registerAgent(techDirector);
+                
+                // Test resource allocation
+                console.log('Testing budget allocation...');
+                const allocation = resourceManager.allocateBudget('technical', 10000, 'Equipment');
+                console.log('Allocation result:', JSON.stringify(allocation));
+                
+                // Test task creation
+                console.log('Testing task creation...');
+                const task = taskManager.createTask({
+                    name: 'Setup Lighting',
+                    requiredRoles: ['technical-director'],
+                    priority: 'high'
+                });
+                console.log('Task created:', JSON.stringify(task));
+                
+                // Get system status
+                console.log('Getting system status...');
+                const status = window.theaterAgentManager.getSystemStatus();
+                console.log('System status:', JSON.stringify(status, null, 2));
+                
+                console.log('=== TEST COMPLETE ===');
+                
+            } catch (error) {
+                console.error('TEST FAILED:', error.message);
+                console.error('Stack:', error.stack);
+            }
+        }
+        
+        // Run test
+        runRawTest();
+    </script>
+</body>
+</html>

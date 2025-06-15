@@ -163,6 +163,14 @@
                         <div class="metric-label">Productions</div>
                     </div>
                     <div class="metric">
+                        <div class="metric-value" id="active-tasks">0</div>
+                        <div class="metric-label">Active Tasks</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="current-phase">None</div>
+                        <div class="metric-label">Current Phase</div>
+                    </div>
+                    <div class="metric">
                         <div class="metric-value" id="health-status">Unknown</div>
                         <div class="metric-label">Health</div>
                     </div>
@@ -195,6 +203,13 @@
     <script src="js/core/OllamaTheaterInterface.js"></script>
     <script src="js/core/BaseAgent.js"></script>
     <script src="js/core/AgentManager.js"></script>
+    
+    <!-- Load Orchestration Layer -->
+    <script src="js/core/OrchestrationResourceManager.js"></script>
+    <script src="js/core/DecisionEngine.js"></script>
+    <script src="js/core/SyncManager.js"></script>
+    <script src="js/core/TaskManager.js"></script>
+    <script src="js/core/ProductionOrchestrator.js?v=20250614"></script>
     
     <!-- Load All Agents -->
     <script src="js/agents/ExecutiveProducerAgent.js"></script>
@@ -256,6 +271,20 @@
             document.getElementById('event-count').textContent = eventStats.totalEvents || 0;
             document.getElementById('production-count').textContent = systemStats.productions.active;
             document.getElementById('health-status').textContent = systemStats.state.healthStatus || 'Unknown';
+            
+            // Show orchestration status if available
+            if (window.productionOrchestrator) {
+                const orchStatus = window.productionOrchestrator.getOrchestratorStatus();
+                document.getElementById('active-tasks').textContent = orchStatus.execution.activeTasks || 0;
+                
+                // Show current phase
+                if (window.productionOrchestrator.productionWorkflow) {
+                    const currentPhase = window.productionOrchestrator.productionWorkflow.phases.find(p => p.status === 'executing');
+                    document.getElementById('current-phase').textContent = currentPhase ? currentPhase.name : 'Planning';
+                } else {
+                    document.getElementById('current-phase').textContent = 'None';
+                }
+            }
         }
         
         function updateAgentDisplay() {
@@ -327,6 +356,41 @@
                 await window.theaterAgentManager.initialize();
                 logMessage('Agent Manager initialized');
                 
+                // Setup event listeners for real-time updates
+                setupWorkflowEventListeners();
+                
+                // Initialize Orchestration Layer
+                logMessage('Initializing orchestration systems...');
+                
+                // Initialize Resource Manager
+                window.orchestrationResourceManager = new OrchestrationResourceManager();
+                await window.orchestrationResourceManager.initialize({
+                    budget: 100000,
+                    timeline: { development: 6, preProduction: 6, rehearsal: 4, technical: 1, performance: 8 }
+                });
+                logMessage('Resource Manager initialized');
+                
+                // Initialize Decision Engine
+                window.decisionEngine = new DecisionEngine();
+                await window.decisionEngine.initialize();
+                logMessage('Decision Engine initialized');
+                
+                // Initialize Sync Manager
+                window.syncManager = new SyncManager();
+                await window.syncManager.initialize();
+                logMessage('Sync Manager initialized');
+                
+                // Initialize Task Manager
+                window.taskManager = new TaskManager();
+                logMessage('Task Manager initialized');
+                
+                // Initialize Production Orchestrator
+                window.productionOrchestrator = new ProductionOrchestrator();
+                await window.productionOrchestrator.initialize();
+                logMessage('Production Orchestrator initialized');
+                
+                logMessage('✅ Orchestration layer fully initialized');
+                
                 // Create and register all agents
                 const agentClasses = [
                     { class: ExecutiveProducerAgent, role: 'executive-producer' },
@@ -390,25 +454,93 @@
             if (!systemInitialized) return;
             
             const production = {
-                title: 'AI Theater Demo',
-                type: 'contemporary drama',
-                description: 'A demonstration of AI-powered theater production',
-                budget: {
-                    total: 100000,
-                    marketing: 15000,
-                    props: 8000,
-                    makeup: 5000
+                id: `demo-production-${Date.now()}`,
+                title: 'AI Theater Demo Production',
+                type: 'musical_theater',
+                description: 'A demonstration of AI-powered theater production orchestration',
+                budget: 100000,
+                timeline: {
+                    development: 6,
+                    preProduction: 6, 
+                    rehearsal: 4,
+                    technical: 1,
+                    performance: 8
+                },
+                requirements: {
+                    cast_size: 8,
+                    orchestra_size: 12,
+                    technical_complexity: 'high'
                 }
             };
             
-            logMessage(`Starting demo production: "${production.title}"`);
+            logMessage(`🎭 Starting orchestrated demo production: "${production.title}"`);
             
-            const result = await window.theaterAgentManager.startProduction(production);
-            
-            if (result) {
-                logMessage(`Production "${result.title}" started successfully with ${result.agents.size} agents`);
-            } else {
-                logMessage('Failed to start production', 'Error');
+            try {
+                // Use Production Orchestrator for full workflow management
+                const orchestrationResult = await window.productionOrchestrator.executeProduction(production);
+                
+                if (orchestrationResult) {
+                    logMessage(`✅ Production orchestration initiated successfully`);
+                    logMessage(`📊 Workflow ID: ${orchestrationResult.workflowId}`);
+                    logMessage(`⏰ Expected completion: ${orchestrationResult.expectedCompletion?.toLocaleDateString()}`);
+                    
+                    // Also start through Agent Manager for agent coordination
+                    const agentResult = await window.theaterAgentManager.startProduction(production);
+                    
+                    if (agentResult) {
+                        logMessage(`🎪 ${agentResult.agents.size} agents engaged in production`);
+                        
+                        // Show resource allocation status
+                        logMessage('💰 Checking production resource allocation...');
+                        
+                        // Show budget status instead of double-allocating
+                        const resourceStatus = window.orchestrationResourceManager.getResourceStatus();
+                        logMessage(`💰 Budget allocated: $${resourceStatus.budget.allocated.toLocaleString()} of $${resourceStatus.budget.total.toLocaleString()}`);
+                        logMessage(`📊 Department allocations: ${Object.keys(resourceStatus.budget.departments).length} departments`);
+                        
+                        logMessage('📋 Creating production tasks...');
+                        
+                        // Create sample tasks
+                        const scriptTask = window.taskManager.createTask({
+                            name: 'Script Development',
+                            type: 'creative',
+                            priority: 'high',
+                            requiredRoles: ['ai-playwright', 'script-editor'],
+                            deliverables: ['final_script', 'character_descriptions'],
+                            estimatedDuration: 80 // hours
+                        });
+                        
+                        const designTask = window.taskManager.createTask({
+                            name: 'Production Design',
+                            type: 'design',
+                            priority: 'high',
+                            requiredRoles: ['production-designer', 'set-designer', 'costume-designer'],
+                            deliverables: ['design_concepts', 'technical_drawings'],
+                            dependencies: [scriptTask.id],
+                            estimatedDuration: 120
+                        });
+                        
+                        logMessage(`✅ Created ${scriptTask.name} and ${designTask.name} tasks`);
+                        
+                        // Demonstrate coordination barriers
+                        logMessage('🚧 Setting up coordination barriers...');
+                        
+                        await window.syncManager.createBarrier('creative_alignment', {
+                            requiredParticipants: ['executive-producer', 'creative-director', 'ai-playwright'],
+                            timeout: 300000,
+                            description: 'Creative vision alignment check'
+                        });
+                        
+                        logMessage('🎯 Demo production fully orchestrated and running!');
+                        
+                    } else {
+                        logMessage('⚠️ Agent coordination failed', 'Warning');
+                    }
+                } else {
+                    logMessage('❌ Production orchestration failed', 'Error');
+                }
+            } catch (error) {
+                logMessage(`❌ Production start failed: ${error.message}`, 'Error');
             }
             
             updateMetrics();
@@ -417,6 +549,31 @@
         function toggleAgentView() {
             showingAgents = !showingAgents;
             updateAgentDisplay();
+        }
+        
+        // Subscribe to workflow events for real-time dashboard updates
+        function setupWorkflowEventListeners() {
+            if (window.theaterEventBus) {
+                window.theaterEventBus.subscribe('task:assigned', (data) => {
+                    logMessage(`📋 Task assigned: ${data.task.name} to ${data.assignedAgents.length} agents`, 'Orchestrator');
+                });
+                
+                window.theaterEventBus.subscribe('task:completed', (data) => {
+                    logMessage(`✅ Task completed: ${data.task.name}`, 'Orchestrator');
+                });
+                
+                window.theaterEventBus.subscribe('orchestration:workflow-started', (data) => {
+                    logMessage(`🚀 Workflow started: ${data.workflowId}`, 'Orchestrator');
+                });
+                
+                window.theaterEventBus.subscribe('production:phase-ready', (data) => {
+                    logMessage(`🎯 Phase ready: ${data.phase}`, 'Orchestrator');
+                });
+                
+                window.theaterEventBus.subscribe('production:milestone-achieved', (data) => {
+                    logMessage(`🏆 Milestone: ${data.milestone}`, 'Orchestrator');
+                });
+            }
         }
         
         // Update display every 2 seconds

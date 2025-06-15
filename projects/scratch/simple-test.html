@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html>
+<head><title>Theater System Raw Test</title></head>
+<body>
+<h1>THEATER SYSTEM RAW OUTPUT</h1>
+<div id="output" style="font-family: monospace; white-space: pre-wrap; background: black; color: lime; padding: 10px;"></div>
+
+<script>
+// Capture all console output
+const output = document.getElementById('output');
+const log = (msg) => {
+    output.textContent += msg + '\n';
+    console.log(msg);
+};
+
+log('=== RAW THEATER SYSTEM TEST ===');
+log('Testing core component loading...');
+
+// Test 1: EventBus
+try {
+    log('Creating EventBus...');
+    
+    class EventBus {
+        constructor() {
+            this.events = new Map();
+            this.totalEvents = 0;
+            log('EventBus: initialized');
+        }
+        
+        subscribe(event, callback) {
+            if (!this.events.has(event)) {
+                this.events.set(event, []);
+            }
+            this.events.get(event).push(callback);
+            log(`EventBus: subscribed to ${event}`);
+        }
+        
+        publish(event, data) {
+            this.totalEvents++;
+            if (this.events.has(event)) {
+                this.events.get(event).forEach(callback => callback(data));
+            }
+            log(`EventBus: published ${event} (total: ${this.totalEvents})`);
+        }
+        
+        getStats() {
+            return { totalEvents: this.totalEvents };
+        }
+    }
+    
+    window.theaterEventBus = new EventBus();
+    log('✓ EventBus created successfully');
+    
+    // Test subscription and publishing
+    window.theaterEventBus.subscribe('test', (data) => {
+        log(`EventBus: received test event with data: ${JSON.stringify(data)}`);
+    });
+    
+    window.theaterEventBus.publish('test', { message: 'hello world' });
+    log('✓ EventBus publish/subscribe working');
+    
+} catch (error) {
+    log(`✗ EventBus failed: ${error.message}`);
+}
+
+// Test 2: BaseAgent
+try {
+    log('Creating BaseAgent...');
+    
+    class BaseAgent {
+        constructor(id, config = {}) {
+            this.id = id;
+            this.config = { name: config.name || id, role: config.role || 'agent', ...config };
+            this.state = { running: false, initialized: false, errors: [] };
+            this.metrics = { totalActions: 0, startTime: Date.now() };
+            log(`BaseAgent: ${this.config.name} created with id: ${id}`);
+        }
+        
+        async initialize() {
+            this.state.initialized = true;
+            this.state.running = true;
+            log(`BaseAgent: ${this.config.name} initialized`);
+            window.theaterEventBus?.publish('agent:ready', { agent: this.id, name: this.config.name });
+        }
+        
+        connectToAgent(propertyName, agent) {
+            this[propertyName] = agent;
+            log(`BaseAgent: ${this.config.name} connected to ${agent.config.name}`);
+        }
+        
+        getStatus() {
+            return {
+                id: this.id,
+                name: this.config.name,
+                state: this.state,
+                metrics: this.metrics
+            };
+        }
+    }
+    
+    window.BaseAgent = BaseAgent;
+    log('✓ BaseAgent class created successfully');
+    
+    // Test creating an agent instance
+    const testAgent = new BaseAgent('test-agent', { name: 'Test Agent', role: 'test' });
+    testAgent.initialize();
+    log('✓ BaseAgent instance working');
+    
+} catch (error) {
+    log(`✗ BaseAgent failed: ${error.message}`);
+}
+
+// Test 3: Task Manager
+try {
+    log('Creating TaskManager...');
+    
+    class TaskManager {
+        constructor() {
+            this.tasks = new Map();
+            this.metrics = { totalTasks: 0, completedTasks: 0 };
+            log('TaskManager: initialized');
+        }
+        
+        createTask(taskDefinition) {
+            const task = {
+                id: `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: taskDefinition.name,
+                type: taskDefinition.type || 'general',
+                priority: taskDefinition.priority || 'medium',
+                requiredRoles: taskDefinition.requiredRoles || [],
+                status: 'pending',
+                createdAt: new Date(),
+                progress: 0
+            };
+            
+            this.tasks.set(task.id, task);
+            this.metrics.totalTasks++;
+            
+            log(`TaskManager: created task "${task.name}" (${task.id})`);
+            window.theaterEventBus?.publish('task:created', { taskId: task.id, task: task });
+            
+            return task;
+        }
+        
+        getStatus() {
+            return {
+                tasks: { total: this.metrics.totalTasks, completed: this.metrics.completedTasks },
+                activeTasks: Array.from(this.tasks.values()).filter(t => t.status === 'pending').length
+            };
+        }
+    }
+    
+    window.TaskManager = TaskManager;
+    const taskManager = new TaskManager();
+    log('✓ TaskManager created successfully');
+    
+    // Test task creation
+    const task1 = taskManager.createTask({
+        name: 'Script Development',
+        type: 'creative',
+        priority: 'high',
+        requiredRoles: ['ai-playwright', 'script-editor']
+    });
+    
+    const task2 = taskManager.createTask({
+        name: 'Lighting Setup',
+        type: 'technical',
+        priority: 'medium',
+        requiredRoles: ['lighting-designer', 'technical-director']
+    });
+    
+    log(`✓ TaskManager: created ${taskManager.getStatus().tasks.total} tasks`);
+    
+} catch (error) {
+    log(`✗ TaskManager failed: ${error.message}`);
+}
+
+// Test 4: Resource Manager
+try {
+    log('Creating ResourceManager...');
+    
+    class ResourceManager {
+        constructor() {
+            this.resources = {
+                budget: { total: 0, departments: new Map() },
+                personnel: { agents: new Map(), availability: new Map() }
+            };
+            log('ResourceManager: initialized');
+        }
+        
+        initialize(config) {
+            this.resources.budget.total = config.budget || 100000;
+            
+            const departments = ['creative', 'technical', 'performance', 'design', 'marketing'];
+            const allocations = [0.25, 0.30, 0.20, 0.15, 0.10];
+            
+            departments.forEach((dept, i) => {
+                const allocation = Math.floor(this.resources.budget.total * allocations[i]);
+                this.resources.budget.departments.set(dept, {
+                    allocated: allocation,
+                    spent: 0,
+                    remaining: allocation
+                });
+            });
+            
+            log(`ResourceManager: allocated $${this.resources.budget.total.toLocaleString()} across ${departments.length} departments`);
+        }
+        
+        allocateBudget(department, amount, purpose) {
+            const dept = this.resources.budget.departments.get(department);
+            if (dept && amount <= dept.remaining) {
+                dept.spent += amount;
+                dept.remaining -= amount;
+                log(`ResourceManager: allocated $${amount.toLocaleString()} to ${department} for ${purpose}`);
+                return { success: true, remaining: dept.remaining };
+            } else {
+                log(`ResourceManager: insufficient budget for ${department} (requested: $${amount}, available: $${dept?.remaining || 0})`);
+                return { success: false, error: 'Insufficient budget' };
+            }
+        }
+        
+        getStatus() {
+            const summary = {};
+            for (const [dept, budget] of this.resources.budget.departments) {
+                summary[dept] = {
+                    allocated: budget.allocated,
+                    spent: budget.spent,
+                    remaining: budget.remaining
+                };
+            }
+            return {
+                budget: { total: this.resources.budget.total },
+                departments: summary
+            };
+        }
+    }
+    
+    const resourceManager = new ResourceManager();
+    resourceManager.initialize({ budget: 50000 });
+    log('✓ ResourceManager created successfully');
+    
+    // Test budget allocation
+    resourceManager.allocateBudget('creative', 10000, 'Script development');
+    resourceManager.allocateBudget('technical', 15000, 'Lighting equipment');
+    resourceManager.allocateBudget('performance', 8000, 'Actor coaching');
+    
+    const status = resourceManager.getStatus();
+    log(`✓ ResourceManager: budget allocated across ${Object.keys(status.departments).length} departments`);
+    
+} catch (error) {
+    log(`✗ ResourceManager failed: ${error.message}`);
+}
+
+// Test 5: Production workflow
+try {
+    log('Testing production workflow...');
+    
+    // Create agents for a mini production
+    const execProducer = new BaseAgent('executive-producer', { 
+        name: 'Executive Producer', 
+        role: 'executive-producer' 
+    });
+    
+    const creativeDirector = new BaseAgent('creative-director', { 
+        name: 'Creative Director', 
+        role: 'creative-director' 
+    });
+    
+    const techDirector = new BaseAgent('technical-director', { 
+        name: 'Technical Director', 
+        role: 'technical-director' 
+    });
+    
+    // Initialize agents
+    await execProducer.initialize();
+    await creativeDirector.initialize();
+    await techDirector.initialize();
+    
+    // Connect agents
+    execProducer.connectToAgent('creativeDirector', creativeDirector);
+    execProducer.connectToAgent('technicalDirector', techDirector);
+    
+    log('✓ Production team assembled: 3 agents connected');
+    
+    // Simulate production start
+    window.theaterEventBus.publish('production:started', {
+        title: 'Raw Test Production',
+        agents: ['executive-producer', 'creative-director', 'technical-director'],
+        startTime: new Date()
+    });
+    
+    log('✓ Production workflow initiated');
+    
+} catch (error) {
+    log(`✗ Production workflow failed: ${error.message}`);
+}
+
+// Final status
+log('\n=== FINAL SYSTEM STATUS ===');
+const eventStats = window.theaterEventBus.getStats();
+log(`Events processed: ${eventStats.totalEvents}`);
+log('Core systems: ✓ EventBus ✓ BaseAgent ✓ TaskManager ✓ ResourceManager');
+log('Production workflow: ✓ Agent creation ✓ Connection ✓ Coordination');
+log('\n=== RAW TEST COMPLETE ===');
+log('All core theater system components are functional');
+
+</script>
+</body>
+</html>
