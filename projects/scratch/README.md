@@ -38,6 +38,13 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - Collision detection with scenery panels
 - Passthrough detection for midstage cutout
 
+### 💾 Save/Load System
+- **Save Scene**: Export complete stage configuration to JSON file
+- **Load Scene**: Import previously saved scenes
+- **Preserves**: All actor and prop positions, IDs, stage element states, lighting, camera settings
+- **Version Compatibility**: Handles different scene file versions
+- **Scene Naming**: Add names and descriptions to saved scenes
+
 ## Getting Started
 
 1. Open `index.html` in a modern web browser
@@ -67,6 +74,8 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Toggle Trap Doors**: Open/close trap doors
 - **Show/Hide Elements**: Toggle optional stage elements
 - **Scenery Panels**: Slide panels to various positions (Off, 1/4, 1/2, 3/4, Full)
+- **Save Scene**: Export current stage setup to JSON file
+- **Load Scene**: Import previously saved scene from JSON file
 
 ## Architecture
 
@@ -93,10 +102,8 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 ## Known Issues
 - Props/actors may hover slightly when on elevated platforms
 - Collision detection is simplified (bounding box based)
-- No save/load functionality yet
 
 ## Future Enhancements
-- Save/load scenes
 - AI actor movement scripting
 - Advanced prop interactions
 - Sound system integration
