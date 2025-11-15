@@ -31,6 +31,20 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Stage Props**: Crate, Barrel
 - **Decorative**: Potted Plant, Stage Lamp
 
+### 💾 Save/Load System
+- **Save Scene**: Export complete scene configuration to JSON
+- **Load Scene**: Import previously saved scenes
+- **Version Control**: Scene format versioning for compatibility
+- **Metadata**: Scene name and description support
+
+### 📦 3D Export Formats
+- **GLTF/GLB Export**: Export to GL Transmission Format for modern 3D applications
+- **OBJ Export**: Export to Wavefront OBJ format for traditional 3D software
+- **Material Support**: Includes materials, colors, and textures
+- **Animation Export**: Batch export multiple frames for animations
+- **Scene Hierarchy**: Organized export with named groups
+- See [EXPORT_GUIDE.md](EXPORT_GUIDE.md) for detailed instructions
+
 ### ⚙️ Physics System
 - Props and actors elevate with platforms
 - Rotating stage carries objects in circular motion
@@ -72,10 +86,16 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 
 ### File Structure
 ```
-├── index.html          # Main HTML file
+├── index.html              # Main HTML file
 ├── js/
-│   └── stage.js       # Main JavaScript file with all logic
-└── README.md          # This file
+│   ├── stage.js           # Main JavaScript file with all logic
+│   ├── stage-save-load.js # Save/load functionality helpers
+│   └── stage-3d-export.js # 3D export functionality (GLTF, OBJ)
+├── lib/
+│   ├── GLTFExporter.js    # GLTF/GLB export library
+│   └── OBJExporter.js     # OBJ export library
+├── README.md              # This file
+└── EXPORT_GUIDE.md        # Detailed 3D export documentation
 ```
 
 ### Key Components
@@ -93,15 +113,14 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 ## Known Issues
 - Props/actors may hover slightly when on elevated platforms
 - Collision detection is simplified (bounding box based)
-- No save/load functionality yet
 
 ## Future Enhancements
-- Save/load scenes
 - AI actor movement scripting
 - Advanced prop interactions
 - Sound system integration
 - Multi-user collaboration
-- Export to standard 3D formats
+- FBX export format support
+- Animation timeline system
 
 ## Dependencies
 - Three.js r128
