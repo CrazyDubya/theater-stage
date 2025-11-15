@@ -27,9 +27,17 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 
 ### 🎯 Prop Catalog
 - **Basic**: Cube, Sphere, Cylinder
-- **Furniture**: Chair, Table
+- **Furniture**: Chair, Table, Door
 - **Stage Props**: Crate, Barrel
 - **Decorative**: Potted Plant, Stage Lamp
+
+### 🤝 Prop Interaction System
+- **Pick Up/Put Down**: Actors can grab and carry props
+- **Throw Mechanics**: Physics-based throwing with gravity and collision
+- **Sit on Furniture**: Actors can sit on chairs and other furniture
+- **State Changes**: Toggle lamps on/off, open/close doors
+- **Smart Positioning**: Held props follow actor movements
+- See [PROP_INTERACTIONS.md](PROP_INTERACTIONS.md) for detailed usage
 
 ### ⚙️ Physics System
 - Props and actors elevate with platforms
@@ -37,6 +45,7 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - Trap doors make objects disappear
 - Collision detection with scenery panels
 - Passthrough detection for midstage cutout
+- Thrown prop physics with gravity and bounce
 
 ## Getting Started
 
@@ -93,15 +102,19 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 ## Known Issues
 - Props/actors may hover slightly when on elevated platforms
 - Collision detection is simplified (bounding box based)
-- No save/load functionality yet
+
+## Recent Enhancements
+- ✓ Save/load scene functionality
+- ✓ Advanced prop interaction system
+- ✓ Undo/Redo support
+- ✓ Physics-based push system
 
 ## Future Enhancements
-- Save/load scenes
 - AI actor movement scripting
-- Advanced prop interactions
 - Sound system integration
 - Multi-user collaboration
 - Export to standard 3D formats
+- Advanced catching mechanics
 
 ## Dependencies
 - Three.js r128
