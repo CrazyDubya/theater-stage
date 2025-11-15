@@ -1,0 +1,67 @@
+{
+  "actor_1": [
+    {
+      "action": "walk_to",
+      "position": "SL",
+      "speed": "normal"
+    },
+    {
+      "action": "turn",
+      "direction": "right"
+    },
+    {
+      "action": "wait",
+      "duration": 1
+    },
+    {
+      "action": "walk_to",
+      "position": "SR",
+      "speed": "normal"
+    },
+    {
+      "action": "turn",
+      "direction": "left"
+    },
+    {
+      "action": "wait",
+      "duration": 1
+    },
+    {
+      "action": "walk_to",
+      "position": "C",
+      "speed": "fast"
+    },
+    {
+      "action": "turn",
+      "direction": "audience"
+    }
+  ],
+  "actor_2": [
+    {
+      "action": "wait",
+      "duration": 2
+    },
+    {
+      "action": "walk_to",
+      "position": "DSL",
+      "speed": "slow"
+    },
+    {
+      "action": "turn",
+      "direction": "audience"
+    },
+    {
+      "action": "gesture",
+      "duration": 1.5
+    },
+    {
+      "action": "walk_to",
+      "position": "DSR",
+      "speed": "normal"
+    },
+    {
+      "action": "turn",
+      "direction": "stage-left"
+    }
+  ]
+}

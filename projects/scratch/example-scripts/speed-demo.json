@@ -1,0 +1,37 @@
+{
+  "actor_1": [
+    {
+      "action": "walk_to",
+      "position": "DSL",
+      "speed": "run"
+    },
+    {
+      "action": "walk_to",
+      "position": "DSR",
+      "speed": "run"
+    },
+    {
+      "action": "walk_to",
+      "position": "USR",
+      "speed": "run"
+    },
+    {
+      "action": "walk_to",
+      "position": "USL",
+      "speed": "run"
+    },
+    {
+      "action": "walk_to",
+      "position": "C",
+      "speed": "slow"
+    },
+    {
+      "action": "turn",
+      "direction": "audience"
+    },
+    {
+      "action": "gesture",
+      "duration": 2
+    }
+  ]
+}

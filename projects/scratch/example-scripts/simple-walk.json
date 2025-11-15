@@ -1,0 +1,30 @@
+{
+  "actor_1": [
+    {
+      "action": "walk_to",
+      "position": "DSC",
+      "speed": "normal"
+    },
+    {
+      "action": "turn",
+      "direction": "audience"
+    },
+    {
+      "action": "wait",
+      "duration": 2
+    },
+    {
+      "action": "gesture",
+      "duration": 1
+    },
+    {
+      "action": "walk_to",
+      "position": "USC",
+      "speed": "slow"
+    },
+    {
+      "action": "turn",
+      "direction": "audience"
+    }
+  ]
+}

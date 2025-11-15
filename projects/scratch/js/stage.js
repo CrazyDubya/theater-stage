@@ -21,6 +21,9 @@ let propPlatformRelations = new Map(); // prop -> platform
 let propRotatingStageRelations = new Set(); // props on rotating stage
 let propTrapDoorRelations = new Map(); // prop -> trapdoor
 
+// AI Actor Scripting System
+let scriptEngine = null;
+
 // Scene serializer for save/load functionality
 class SceneSerializer {
     constructor() {
@@ -391,6 +394,9 @@ function init() {
     createPlacementMarker();
     addControls();
     setupUI();
+
+    // Initialize script engine
+    scriptEngine = new ScriptEngine();
 
     window.addEventListener('resize', onWindowResize, false);
     window.addEventListener('click', onStageClick, false);
@@ -1310,6 +1316,21 @@ function setupUI() {
     // Store reference for global access
     window.updateUndoRedoButtons = updateUndoRedoButtons;
 
+    // Actor Script Controls
+    const scriptLabel = document.createElement('div');
+    scriptLabel.innerHTML = '<strong>Actor Scripts</strong>';
+    scriptLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const loadScriptButton = document.createElement('button');
+    loadScriptButton.textContent = 'Load Script';
+    loadScriptButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer; width: 150px;';
+    loadScriptButton.addEventListener('click', loadActorScript);
+    
+    const stopScriptButton = document.createElement('button');
+    stopScriptButton.textContent = 'Stop Script';
+    stopScriptButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer; width: 150px;';
+    stopScriptButton.addEventListener('click', stopActorScript);
+
     const cameraSelect = document.createElement('select');
     cameraSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
     cameraSelect.innerHTML = `
@@ -1370,6 +1391,10 @@ function setupUI() {
     uiContainer.appendChild(undoButton);
     uiContainer.appendChild(document.createTextNode(' '));
     uiContainer.appendChild(redoButton);
+    uiContainer.appendChild(scriptLabel);
+    uiContainer.appendChild(loadScriptButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(stopScriptButton);
 
     document.body.appendChild(toggleButton);
     document.body.appendChild(uiContainer);
@@ -2699,6 +2724,11 @@ function animate() {
         controls.update();
     }
     
+    // Update script engine for actor movements
+    if (scriptEngine) {
+        scriptEngine.update();
+    }
+    
     renderer.render(scene, camera);
 }
 
@@ -2758,6 +2788,96 @@ function loadScene() {
     };
     
     input.click();
+}
+
+// Script execution functions
+function loadActorScript() {
+    // Create file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const scriptData = JSON.parse(e.target.result);
+                executeActorScript(scriptData);
+            } catch (error) {
+                alert(`Error loading script: ${error.message}`);
+                console.error('Script load error:', error);
+            }
+        };
+        reader.readAsText(file);
+    };
+    
+    input.click();
+}
+
+function executeActorScript(scriptData) {
+    if (!scriptEngine) {
+        console.error('Script engine not initialized');
+        return;
+    }
+
+    // Get all obstacles (props and scenery)
+    const obstacles = [...props, ...sceneryPanels];
+    
+    // Resolve prop positions in script
+    const resolvedScript = resolveScriptPositions(scriptData);
+    
+    // Load and start script
+    const success = scriptEngine.loadScript(resolvedScript, actors, obstacles);
+    
+    if (success) {
+        scriptEngine.start();
+        console.log('Script execution started');
+        alert('Actor script loaded and started!');
+    } else {
+        alert('Failed to load script');
+    }
+}
+
+function resolveScriptPositions(scriptData) {
+    // Resolve prop references to actual positions
+    const resolved = {};
+    
+    for (const [actorId, actions] of Object.entries(scriptData)) {
+        resolved[actorId] = actions.map(action => {
+            if (action.action === 'walk_to' && typeof action.position === 'string') {
+                // Check if it's a prop reference
+                if (action.position.startsWith('prop_')) {
+                    const prop = props.find(p => p.userData.id === action.position);
+                    if (prop) {
+                        return {
+                            ...action,
+                            position: { x: prop.position.x, z: prop.position.z }
+                        };
+                    }
+                }
+            }
+            return action;
+        });
+    }
+    
+    return resolved;
+}
+
+function stopActorScript() {
+    if (scriptEngine) {
+        scriptEngine.stopAll();
+        console.log('Script execution stopped');
+    }
+}
+
+function getScriptStatus() {
+    if (scriptEngine) {
+        return scriptEngine.getStatus();
+    }
+    return null;
 }
 
 init();
