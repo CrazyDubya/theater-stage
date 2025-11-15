@@ -21,6 +21,18 @@ let propPlatformRelations = new Map(); // prop -> platform
 let propRotatingStageRelations = new Set(); // props on rotating stage
 let propTrapDoorRelations = new Map(); // prop -> trapdoor
 
+// Measurement and grid tools
+let gridHelper = null;
+let gridVisible = false;
+let snapToGrid = false;
+let gridSize = 1; // Grid cell size in units
+let measurementMode = false;
+let measurementStart = null;
+let measurementLine = null;
+let measurementLabel = null;
+let coordinateDisplay = null;
+let selectedObjectForMeasurement = null;
+
 // Scene serializer for save/load functionality
 class SceneSerializer {
     constructor() {
@@ -405,6 +417,8 @@ function init() {
     createSceneryPanels();
     updateCurtains();
     createPlacementMarker();
+    createGridHelper();
+    createCoordinateDisplay();
     addControls();
     setupUI();
 
@@ -891,7 +905,230 @@ function createPlacementMarker() {
     placementMarker = markerGroup;
 }
 
+function createGridHelper() {
+    // Create a grid helper overlaying the stage
+    const stageWidth = 20;
+    const stageDepth = 15;
+    const divisions = Math.max(stageWidth, stageDepth);
+    
+    gridHelper = new THREE.GridHelper(25, 25, 0x00ff00, 0x404040);
+    gridHelper.position.y = 0.05; // Slightly above stage to be visible
+    gridHelper.visible = gridVisible;
+    scene.add(gridHelper);
+}
+
+function toggleGrid() {
+    gridVisible = !gridVisible;
+    if (gridHelper) {
+        gridHelper.visible = gridVisible;
+    }
+    console.log(`Grid ${gridVisible ? 'enabled' : 'disabled'}`);
+}
+
+function toggleSnapToGrid() {
+    snapToGrid = !snapToGrid;
+    console.log(`Snap-to-grid ${snapToGrid ? 'enabled' : 'disabled'}`);
+}
+
+function snapPositionToGrid(position) {
+    if (!snapToGrid) return position;
+    
+    return {
+        x: Math.round(position.x / gridSize) * gridSize,
+        y: position.y,
+        z: Math.round(position.z / gridSize) * gridSize
+    };
+}
+
+function createCoordinateDisplay() {
+    // Create HTML overlay for coordinate display
+    const coordDiv = document.createElement('div');
+    coordDiv.id = 'coordinate-display';
+    coordDiv.style.cssText = `
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        font-size: 12px;
+        display: none;
+    `;
+    document.body.appendChild(coordDiv);
+    coordinateDisplay = coordDiv;
+}
+
+function updateCoordinateDisplay(x, y, z) {
+    if (coordinateDisplay) {
+        coordinateDisplay.style.display = 'block';
+        coordinateDisplay.innerHTML = `
+            <strong>Cursor Position:</strong><br>
+            X: ${x.toFixed(2)}<br>
+            Y: ${y.toFixed(2)}<br>
+            Z: ${z.toFixed(2)}
+        `;
+    }
+}
+
+function hideCoordinateDisplay() {
+    if (coordinateDisplay) {
+        coordinateDisplay.style.display = 'none';
+    }
+}
+
+function toggleMeasurementMode() {
+    measurementMode = !measurementMode;
+    
+    if (measurementMode) {
+        console.log('Measurement mode enabled. Click on two objects to measure distance.');
+        placementMode = null;
+        placementMarker.visible = false;
+        selectedObjectForMeasurement = null;
+        
+        // Clear previous measurement
+        if (measurementLine) {
+            scene.remove(measurementLine);
+            measurementLine = null;
+        }
+        if (measurementLabel) {
+            document.body.removeChild(measurementLabel);
+            measurementLabel = null;
+        }
+    } else {
+        console.log('Measurement mode disabled.');
+        selectedObjectForMeasurement = null;
+        
+        // Clear measurement visuals
+        if (measurementLine) {
+            scene.remove(measurementLine);
+            measurementLine = null;
+        }
+        if (measurementLabel) {
+            document.body.removeChild(measurementLabel);
+            measurementLabel = null;
+        }
+    }
+}
+
+function measureDistance(obj1, obj2) {
+    const pos1 = obj1.position;
+    const pos2 = obj2.position;
+    
+    const distance = pos1.distanceTo(pos2);
+    
+    // Create line between objects
+    const lineGeometry = new THREE.BufferGeometry();
+    const vertices = new Float32Array([
+        pos1.x, pos1.y, pos1.z,
+        pos2.x, pos2.y, pos2.z
+    ]);
+    lineGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
+    
+    if (measurementLine) {
+        scene.remove(measurementLine);
+    }
+    measurementLine = new THREE.Line(lineGeometry, lineMaterial);
+    scene.add(measurementLine);
+    
+    // Create label for distance
+    if (measurementLabel) {
+        document.body.removeChild(measurementLabel);
+    }
+    
+    measurementLabel = document.createElement('div');
+    measurementLabel.style.cssText = `
+        position: absolute;
+        background: rgba(255,0,255,0.8);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 3px;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        pointer-events: none;
+        z-index: 1000;
+    `;
+    measurementLabel.textContent = `Distance: ${distance.toFixed(2)} units`;
+    document.body.appendChild(measurementLabel);
+    
+    // Position label in the middle of the line
+    const midPoint = new THREE.Vector3(
+        (pos1.x + pos2.x) / 2,
+        (pos1.y + pos2.y) / 2,
+        (pos1.z + pos2.z) / 2
+    );
+    
+    // Update label position every frame
+    updateMeasurementLabelPosition(midPoint);
+    
+    console.log(`Distance between ${obj1.userData.id || obj1.userData.name} and ${obj2.userData.id || obj2.userData.name}: ${distance.toFixed(2)} units`);
+    
+    return distance;
+}
+
+function updateMeasurementLabelPosition(worldPosition) {
+    if (!measurementLabel) return;
+    
+    const vector = worldPosition.clone();
+    vector.project(camera);
+    
+    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+    const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
+    
+    measurementLabel.style.left = x + 'px';
+    measurementLabel.style.top = y + 'px';
+}
+
+function calculateAngleBetweenObjects(obj1, obj2, referencePoint) {
+    // Calculate angle between two objects relative to a reference point (usually camera or origin)
+    const vec1 = new THREE.Vector3().subVectors(obj1.position, referencePoint);
+    const vec2 = new THREE.Vector3().subVectors(obj2.position, referencePoint);
+    
+    vec1.y = 0; // Project to horizontal plane
+    vec2.y = 0;
+    
+    const angle = vec1.angleTo(vec2) * (180 / Math.PI);
+    
+    console.log(`Angle between objects: ${angle.toFixed(2)}°`);
+    return angle;
+}
+
 function onStageClick(event) {
+    // Handle measurement mode
+    if (measurementMode) {
+        const mouse = new THREE.Vector2();
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, camera);
+        
+        // Check intersection with all objects
+        const allObjects = [...props, ...actors];
+        const intersects = raycaster.intersectObjects(allObjects, true);
+        
+        if (intersects.length > 0) {
+            // Find the root object (not child meshes)
+            let targetObj = intersects[0].object;
+            while (targetObj.parent && targetObj.parent !== scene) {
+                targetObj = targetObj.parent;
+            }
+            
+            if (!selectedObjectForMeasurement) {
+                // First object selected
+                selectedObjectForMeasurement = targetObj;
+                console.log(`First object selected: ${targetObj.userData.id || targetObj.userData.name}`);
+            } else {
+                // Second object selected - measure distance
+                measureDistance(selectedObjectForMeasurement, targetObj);
+                selectedObjectForMeasurement = null;
+            }
+        }
+        return;
+    }
+    
     if (!placementMode) return;
     
     // Calculate mouse position in normalized device coordinates
@@ -946,17 +1183,20 @@ function onStageClick(event) {
     if (intersects.length > 0) {
         const point = intersects[0].point;
         
+        // Apply snap-to-grid if enabled
+        const snappedPoint = snapPositionToGrid({ x: point.x, y: 0, z: point.z });
+        
         if (placementMode === 'prop') {
             const command = new PlaceObjectCommand('prop', 
                 { propType: selectedPropType }, 
-                { x: point.x, y: 0, z: point.z }
+                snappedPoint
             );
             commandManager.executeCommand(command);
             window.updateUndoRedoButtons();
         } else if (placementMode === 'actor') {
             const command = new PlaceObjectCommand('actor', 
                 {}, 
-                { x: point.x, y: 0, z: point.z }
+                snappedPoint
             );
             commandManager.executeCommand(command);
             window.updateUndoRedoButtons();
@@ -969,8 +1209,6 @@ function onStageClick(event) {
 }
 
 function onMouseMove(event) {
-    if (!placementMode || !placementMarker.visible) return;
-    
     // Calculate mouse position in normalized device coordinates
     const mouse = new THREE.Vector2();
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -984,7 +1222,22 @@ function onMouseMove(event) {
     const intersects = raycaster.intersectObject(stage);
     if (intersects.length > 0) {
         const point = intersects[0].point;
-        placementMarker.position.set(point.x, 0.1, point.z);
+        
+        // Update coordinate display if grid is visible
+        if (gridVisible) {
+            updateCoordinateDisplay(point.x, point.y, point.z);
+        } else {
+            hideCoordinateDisplay();
+        }
+        
+        // Update placement marker if in placement mode
+        if (placementMode && placementMarker.visible) {
+            // Apply snap-to-grid if enabled
+            const snappedPoint = snapPositionToGrid({ x: point.x, y: point.y, z: point.z });
+            placementMarker.position.set(snappedPoint.x, 0.1, snappedPoint.z);
+        }
+    } else {
+        hideCoordinateDisplay();
     }
 }
 
@@ -1428,6 +1681,50 @@ function setupUI() {
     
     // Store reference for global access
     window.updateUndoRedoButtons = updateUndoRedoButtons;
+    
+    // Grid and Measurement Tools
+    const gridToolsLabel = document.createElement('div');
+    gridToolsLabel.innerHTML = '<strong>Grid & Measurement</strong>';
+    gridToolsLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const gridToggleButton = document.createElement('button');
+    gridToggleButton.textContent = 'Toggle Grid';
+    gridToggleButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    gridToggleButton.addEventListener('click', toggleGrid);
+    
+    const snapToggleButton = document.createElement('button');
+    snapToggleButton.textContent = 'Snap to Grid';
+    snapToggleButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    snapToggleButton.addEventListener('click', () => {
+        toggleSnapToGrid();
+        snapToggleButton.style.background = snapToGrid ? '#4CAF50' : '';
+        snapToggleButton.style.color = snapToGrid ? 'white' : '';
+    });
+    
+    const measureButton = document.createElement('button');
+    measureButton.textContent = 'Measure Distance';
+    measureButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    measureButton.addEventListener('click', () => {
+        toggleMeasurementMode();
+        measureButton.style.background = measurementMode ? '#FF00FF' : '';
+        measureButton.style.color = measurementMode ? 'white' : '';
+    });
+    
+    const gridSizeLabel = document.createElement('div');
+    gridSizeLabel.textContent = 'Grid Size:';
+    gridSizeLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
+    
+    const gridSizeSlider = document.createElement('input');
+    gridSizeSlider.type = 'range';
+    gridSizeSlider.min = '0.5';
+    gridSizeSlider.max = '5';
+    gridSizeSlider.step = '0.5';
+    gridSizeSlider.value = '1';
+    gridSizeSlider.style.cssText = 'margin: 5px 0; width: 150px;';
+    gridSizeSlider.addEventListener('input', (e) => {
+        gridSize = parseFloat(e.target.value);
+        console.log(`Grid size set to ${gridSize} units`);
+    });
 
     const cameraSelect = document.createElement('select');
     cameraSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
@@ -1498,6 +1795,14 @@ function setupUI() {
     uiContainer.appendChild(undoButton);
     uiContainer.appendChild(document.createTextNode(' '));
     uiContainer.appendChild(redoButton);
+    uiContainer.appendChild(gridToolsLabel);
+    uiContainer.appendChild(gridToggleButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(snapToggleButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(measureButton);
+    uiContainer.appendChild(gridSizeLabel);
+    uiContainer.appendChild(gridSizeSlider);
 
     document.body.appendChild(toggleButton);
     document.body.appendChild(uiContainer);
@@ -3290,6 +3595,17 @@ function animate() {
     
     if (controls) {
         controls.update();
+    }
+    
+    // Update measurement label position if active
+    if (measurementLine && measurementLabel) {
+        const vertices = measurementLine.geometry.attributes.position.array;
+        const midPoint = new THREE.Vector3(
+            (vertices[0] + vertices[3]) / 2,
+            (vertices[1] + vertices[4]) / 2,
+            (vertices[2] + vertices[5]) / 2
+        );
+        updateMeasurementLabelPosition(midPoint);
     }
     
     renderer.render(scene, camera);
