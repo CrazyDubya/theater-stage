@@ -1140,6 +1140,33 @@ function onStageClick(event) {
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, camera);
     
+    if (placementMode === 'delete') {
+        // Check intersection with all objects
+        const allObjects = [...props, ...actors];
+        const intersects = raycaster.intersectObjects(allObjects, true);
+        
+        if (intersects.length > 0) {
+            // Find the root object (not child meshes)
+            let targetObj = intersects[0].object;
+            while (targetObj.parent && targetObj.parent !== scene) {
+                targetObj = targetObj.parent;
+            }
+            
+            // Determine object type
+            const objectType = props.includes(targetObj) ? 'prop' : 'actor';
+            
+            // Create delete command
+            const command = new DeleteObjectCommand(objectType, targetObj);
+            commandManager.executeCommand(command);
+            window.updateUndoRedoButtons();
+            
+            console.log(`Deleted ${objectType}: ${targetObj.userData.name || targetObj.userData.id}`);
+        }
+        
+        // Stay in delete mode for multiple deletions
+        return;
+    }
+    
     if (placementMode === 'push') {
         // Check intersection with all objects
         const allObjects = [...props, ...actors];
@@ -1374,6 +1401,15 @@ function setupUI() {
     actorButton.addEventListener('click', () => {
         placementMode = 'actor';
         placementMarker.visible = true;
+    });
+    
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'Delete Object';
+    deleteButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    deleteButton.addEventListener('click', () => {
+        placementMode = 'delete';
+        placementMarker.visible = true;
+        alert('Click on an object to delete it!');
     });
 
     const markerToggle = document.createElement('button');
@@ -1708,6 +1744,51 @@ function setupUI() {
         redoButton.disabled = !commandManager.canRedo();
         undoButton.style.opacity = commandManager.canUndo() ? '1' : '0.5';
         redoButton.style.opacity = commandManager.canRedo() ? '1' : '0.5';
+        updateHistoryPanel();
+    }
+    
+    // Create history panel
+    const historyPanel = document.createElement('div');
+    historyPanel.style.cssText = `
+        max-height: 150px;
+        overflow-y: auto;
+        border: 1px solid rgba(255,255,255,0.3);
+        border-radius: 3px;
+        margin-top: 5px;
+        padding: 5px;
+        font-size: 11px;
+        background: rgba(0,0,0,0.3);
+    `;
+    
+    function updateHistoryPanel() {
+        const history = commandManager.getHistory();
+        if (history.length === 0) {
+            historyPanel.innerHTML = '<div style="color: #888;">No actions yet</div>';
+            return;
+        }
+        
+        historyPanel.innerHTML = '';
+        history.forEach((item, index) => {
+            const historyItem = document.createElement('div');
+            historyItem.style.cssText = `
+                padding: 2px 4px;
+                margin: 1px 0;
+                ${item.isCurrent ? 'background: rgba(100,150,255,0.3); font-weight: bold;' : 'color: #aaa;'}
+                cursor: pointer;
+            `;
+            historyItem.textContent = `${index + 1}. ${item.description}`;
+            historyItem.addEventListener('click', () => {
+                // Jump to this point in history
+                while (commandManager.currentIndex > index) {
+                    commandManager.undo();
+                }
+                while (commandManager.currentIndex < index) {
+                    commandManager.redo();
+                }
+                updateUndoRedoButtons();
+            });
+            historyPanel.appendChild(historyItem);
+        });
     }
     
     // Initialize button states
@@ -1785,6 +1866,8 @@ function setupUI() {
     uiContainer.appendChild(document.createTextNode(' '));
     uiContainer.appendChild(actorButton);
     uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(deleteButton);
+    uiContainer.appendChild(document.createElement('br'));
     uiContainer.appendChild(markerToggle);
     uiContainer.appendChild(document.createElement('br'));
     uiContainer.appendChild(curtainButton);
@@ -1833,6 +1916,7 @@ function setupUI() {
     uiContainer.appendChild(undoButton);
     uiContainer.appendChild(document.createTextNode(' '));
     uiContainer.appendChild(redoButton);
+    uiContainer.appendChild(historyPanel);
     uiContainer.appendChild(gridToolsLabel);
     uiContainer.appendChild(gridToggleButton);
     uiContainer.appendChild(document.createTextNode(' '));
@@ -1846,7 +1930,7 @@ function setupUI() {
     document.body.appendChild(uiContainer);
 }
 
-function applyLightingPreset(preset) {
+function applyLightingPresetDirect(preset) {
     currentLightingPreset = preset;
     
     switch(preset) {
@@ -1881,6 +1965,13 @@ function applyLightingPreset(preset) {
                 light.color.setHex(0xffffff);
             });
     }
+}
+
+function applyLightingPreset(preset) {
+    const oldPreset = currentLightingPreset;
+    const command = new LightingCommand(preset, oldPreset);
+    commandManager.executeCommand(command);
+    window.updateUndoRedoButtons();
 }
 
 // Prop catalog definitions
@@ -2298,10 +2389,18 @@ function setCameraPreset(preset) {
 }
 
 function toggleCurtains() {
+    const oldState = { curtainState: curtainState };
+    const newState = { curtainState: curtainState === 'closed' ? 'open' : 'closed' };
+    
+    const command = new StageElementCommand('curtains', {}, newState, oldState);
+    commandManager.executeCommand(command);
+    window.updateUndoRedoButtons();
+    
+    // Animate the curtains
     const duration = 2500;
     const startTime = Date.now();
     
-    if (curtainState === 'closed') {
+    if (curtainState === 'open') {
         curtainState = 'opening';
         
         function openCurtains() {
@@ -2343,53 +2442,89 @@ function toggleCurtains() {
 }
 
 function movePlatforms() {
+    const oldState = {
+        platforms: moveablePlatforms.map(p => ({ height: p.position.y }))
+    };
+    const newState = {
+        platforms: moveablePlatforms.map(p => ({ 
+            height: p.userData.targetY === p.userData.baseY ? p.userData.baseY + 3 : p.userData.baseY 
+        }))
+    };
+    
+    const command = new StageElementCommand('platforms', {}, newState, oldState);
+    commandManager.executeCommand(command);
+    window.updateUndoRedoButtons();
+    
+    // Trigger the animation
     moveablePlatforms.forEach((platform, index) => {
         const userData = platform.userData;
         userData.moving = true;
-        userData.targetY = userData.targetY === userData.baseY ? userData.baseY + 3 : userData.baseY;
+        userData.targetY = newState.platforms[index].height;
     });
 }
 
 function rotateCenter() {
     if (rotatingStage && rotatingStage.visible) {
-        const userData = rotatingStage.userData;
-        userData.rotating = !userData.rotating;
-        console.log(`Rotating stage is now ${userData.rotating ? 'rotating' : 'stopped'}`);
+        const oldState = {
+            visible: rotatingStage.visible,
+            rotating: rotatingStage.userData.rotating
+        };
+        const newState = {
+            visible: rotatingStage.visible,
+            rotating: !rotatingStage.userData.rotating
+        };
+        
+        const command = new StageElementCommand('rotatingStage', {}, newState, oldState);
+        commandManager.executeCommand(command);
+        window.updateUndoRedoButtons();
+        
+        console.log(`Rotating stage is now ${rotatingStage.userData.rotating ? 'rotating' : 'stopped'}`);
     } else {
         alert('Please show the rotating stage first using "Show/Hide Rotating Stage" button');
     }
 }
 
 function toggleTrapDoors() {
-    trapDoors.forEach(trapDoor => {
-        if (trapDoor.visible) {
-            const userData = trapDoor.userData;
-            userData.open = !userData.open;
-            userData.targetRotation = userData.open ? Math.PI / 2 : 0;
-        }
-    });
+    const oldState = {
+        trapDoors: trapDoors.map(td => ({ open: td.userData.open }))
+    };
+    const newState = {
+        trapDoors: trapDoors.map(td => ({ open: !td.userData.open }))
+    };
+    
+    const command = new StageElementCommand('trapDoors', {}, newState, oldState);
+    commandManager.executeCommand(command);
+    window.updateUndoRedoButtons();
 }
 
 function toggleRotatingStageVisibility() {
     if (rotatingStage) {
-        rotatingStage.visible = !rotatingStage.visible;
-        if (!rotatingStage.visible) {
-            rotatingStage.userData.rotating = false;
-        }
+        const oldState = {
+            visible: rotatingStage.visible,
+            rotating: rotatingStage.userData.rotating
+        };
+        const newState = {
+            visible: !rotatingStage.visible,
+            rotating: rotatingStage.visible ? false : rotatingStage.userData.rotating
+        };
+        
+        const command = new StageElementCommand('rotatingStage', {}, newState, oldState);
+        commandManager.executeCommand(command);
+        window.updateUndoRedoButtons();
     }
 }
 
 function toggleTrapDoorsVisibility() {
-    trapDoors.forEach(trapDoor => {
-        trapDoor.visible = !trapDoor.visible;
-        if (!trapDoor.visible) {
-            trapDoor.userData.open = false;
-            trapDoor.userData.targetRotation = 0;
-            trapDoor.children[0].rotation.x = 0;
-            trapDoor.children[0].position.z = 0;
-            trapDoor.children[0].position.y = 0;
-        }
-    });
+    const oldState = {
+        visible: trapDoors.length > 0 ? trapDoors[0].visible : false
+    };
+    const newState = {
+        visible: !oldState.visible
+    };
+    
+    const command = new StageElementCommand('trapDoorsVisibility', {}, newState, oldState);
+    commandManager.executeCommand(command);
+    window.updateUndoRedoButtons();
 }
 
 function updatePropRelationships(prop) {
@@ -2455,11 +2590,23 @@ function updateAllPropRelationships() {
     });
 }
 
-function moveSceneryPanel(index, position) {
+function moveSceneryPanelDirect(index, position) {
     if (index < sceneryPanels.length) {
         const panel = sceneryPanels[index];
         panel.userData.targetPosition = position;
         panel.userData.moving = true;
+    }
+}
+
+function moveSceneryPanel(index, position) {
+    if (index < sceneryPanels.length) {
+        const panel = sceneryPanels[index];
+        const oldState = { position: panel.userData.currentPosition || 0 };
+        const newState = { position: position };
+        
+        const command = new StageElementCommand('scenery', { index }, newState, oldState);
+        commandManager.executeCommand(command);
+        window.updateUndoRedoButtons();
     }
 }
 
@@ -2845,6 +2992,57 @@ class MoveObjectCommand extends Command {
     }
 }
 
+class DeleteObjectCommand extends Command {
+    constructor(objectType, object) {
+        super();
+        this.objectType = objectType; // 'prop' or 'actor'
+        this.object = object;
+        this.position = { x: object.position.x, y: object.position.y, z: object.position.z };
+        this.rotation = { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z };
+        this.userData = JSON.parse(JSON.stringify(object.userData)); // Deep copy
+    }
+    
+    execute() {
+        scene.remove(this.object);
+        if (this.objectType === 'prop') {
+            const index = props.indexOf(this.object);
+            if (index > -1) props.splice(index, 1);
+        } else if (this.objectType === 'actor') {
+            const index = actors.indexOf(this.object);
+            if (index > -1) actors.splice(index, 1);
+        }
+    }
+    
+    undo() {
+        // Restore the object to the scene
+        this.object.position.set(this.position.x, this.position.y, this.position.z);
+        this.object.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
+        scene.add(this.object);
+        
+        if (this.objectType === 'prop') {
+            props.push(this.object);
+        } else if (this.objectType === 'actor') {
+            actors.push(this.object);
+        }
+    }
+}
+
+class LightingCommand extends Command {
+    constructor(newPreset, oldPreset) {
+        super();
+        this.newPreset = newPreset;
+        this.oldPreset = oldPreset;
+    }
+    
+    execute() {
+        applyLightingPresetDirect(this.newPreset);
+    }
+    
+    undo() {
+        applyLightingPresetDirect(this.oldPreset);
+    }
+}
+
 class StageElementCommand extends Command {
     constructor(elementType, elementData, newState, oldState) {
         super();
@@ -2865,22 +3063,58 @@ class StageElementCommand extends Command {
     applyState(state) {
         switch(this.elementType) {
             case 'curtains':
-                curtainState = state;
-                // Don't call updateCurtainPositions here - let the animation handle it
-                break;
-            case 'platform':
-                const platform = moveablePlatforms[this.elementData.index];
-                if (platform) {
-                    platform.position.y = state.height;
-                    platform.userData.targetY = state.height;
+                // Apply curtain state immediately
+                const oldState = curtainState;
+                curtainState = state.curtainState;
+                if (state.curtainState === 'open') {
+                    curtainLeft.position.x = -20;
+                    curtainRight.position.x = 20;
+                } else if (state.curtainState === 'closed') {
+                    curtainLeft.position.x = -2;
+                    curtainRight.position.x = 2;
                 }
                 break;
+            case 'platforms':
+                // Apply to all platforms
+                moveablePlatforms.forEach((platform, index) => {
+                    const platformState = state.platforms[index];
+                    if (platformState) {
+                        platform.position.y = platformState.height;
+                        platform.userData.targetY = platformState.height;
+                        platform.userData.moving = false;
+                    }
+                });
+                break;
             case 'rotatingStage':
-                rotatingStage.visible = state.visible;
-                rotatingStage.userData.rotating = state.rotating;
+                if (rotatingStage) {
+                    rotatingStage.visible = state.visible;
+                    rotatingStage.userData.rotating = state.rotating;
+                }
+                break;
+            case 'trapDoors':
+                trapDoors.forEach((trapDoor, index) => {
+                    const doorState = state.trapDoors[index];
+                    if (doorState) {
+                        trapDoor.userData.open = doorState.open;
+                        trapDoor.userData.targetRotation = doorState.open ? Math.PI / 2 : 0;
+                        trapDoor.children[0].rotation.x = doorState.open ? Math.PI / 2 : 0;
+                    }
+                });
+                break;
+            case 'trapDoorsVisibility':
+                trapDoors.forEach(trapDoor => {
+                    trapDoor.visible = state.visible;
+                    if (!state.visible) {
+                        trapDoor.userData.open = false;
+                        trapDoor.userData.targetRotation = 0;
+                        trapDoor.children[0].rotation.x = 0;
+                        trapDoor.children[0].position.z = 0;
+                        trapDoor.children[0].position.y = 0;
+                    }
+                });
                 break;
             case 'scenery':
-                moveSceneryPanel(this.elementData.index, state.position);
+                moveSceneryPanelDirect(this.elementData.index, state.position);
                 break;
         }
     }
@@ -2955,6 +3189,37 @@ class CommandManager {
     
     canRedo() {
         return this.currentIndex < this.history.length - 1;
+    }
+    
+    getHistory() {
+        return this.history.map((command, index) => ({
+            description: this.getCommandDescription(command),
+            isCurrent: index === this.currentIndex,
+            index: index
+        }));
+    }
+    
+    getCommandDescription(command) {
+        if (command instanceof PlaceObjectCommand) {
+            return `Place ${command.objectType}`;
+        } else if (command instanceof DeleteObjectCommand) {
+            return `Delete ${command.objectType}`;
+        } else if (command instanceof MoveObjectCommand) {
+            return `Move object`;
+        } else if (command instanceof LightingCommand) {
+            return `Change lighting to ${command.newPreset}`;
+        } else if (command instanceof StageElementCommand) {
+            switch(command.elementType) {
+                case 'curtains': return 'Toggle curtains';
+                case 'platforms': return 'Move platforms';
+                case 'rotatingStage': return 'Toggle rotating stage';
+                case 'trapDoors': return 'Toggle trap doors';
+                case 'trapDoorsVisibility': return 'Toggle trap doors visibility';
+                case 'scenery': return `Move scenery panel ${command.elementData.index}`;
+                default: return 'Stage element change';
+            }
+        }
+        return 'Unknown command';
     }
 }
 
