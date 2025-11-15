@@ -38,6 +38,16 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - Collision detection with scenery panels
 - Passthrough detection for midstage cutout
 
+### 🔊 Sound System
+- **3D Positional Audio**: Sounds originate from specific locations on stage using Web Audio API
+- **Background Music/Ambience**: Looping background audio support
+- **Sound Effects**: Trigger sound effects at specific positions
+- **Actor Voice Playback**: Positional audio for actor voices
+- **Volume Controls**: Separate volume controls for master, background, effects, and voices
+- **Audio Cue System**: Schedule audio events to be triggered at specific times
+- **Pause/Resume**: Global audio control
+- **Dynamic Listener**: Audio listener position updates with camera movement
+
 ## Getting Started
 
 1. Open `index.html` in a modern web browser
@@ -67,6 +77,13 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Toggle Trap Doors**: Open/close trap doors
 - **Show/Hide Elements**: Toggle optional stage elements
 - **Scenery Panels**: Slide panels to various positions (Off, 1/4, 1/2, 3/4, Full)
+- **Audio System**: Initialize and control the sound system
+  - **Master Volume**: Overall volume control
+  - **Background Volume**: Volume for background music/ambience
+  - **Effects Volume**: Volume for sound effects
+  - **Voices Volume**: Volume for actor voice playback
+  - **Pause/Resume**: Suspend or resume all audio playback
+  - **Stop All**: Stop all currently playing sounds
 
 ## Architecture
 
@@ -82,6 +99,7 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Scene Management**: Three.js scene, camera, renderer setup
 - **Object Management**: Arrays for props, actors, platforms, etc.
 - **Physics System**: Relationship tracking between objects and stage elements
+- **Sound System**: Web Audio API-based 3D positional audio with volume controls
 - **Animation Loop**: Continuous updates for movements and effects
 - **Event Handlers**: Mouse/keyboard input processing
 

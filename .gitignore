@@ -41,3 +41,6 @@ npm-debug.log*
 build/
 dist/
 out/
+
+# Test files
+test-*.html

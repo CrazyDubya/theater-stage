@@ -21,6 +21,273 @@ let propPlatformRelations = new Map(); // prop -> platform
 let propRotatingStageRelations = new Set(); // props on rotating stage
 let propTrapDoorRelations = new Map(); // prop -> trapdoor
 
+// Sound System
+let soundSystem = null;
+
+// Sound System for 3D positional audio
+class SoundSystem {
+    constructor() {
+        this.audioContext = null;
+        this.listener = null;
+        this.sounds = {
+            background: [],
+            effects: [],
+            voices: []
+        };
+        this.volumes = {
+            master: 1.0,
+            background: 0.5,
+            effects: 0.7,
+            voices: 0.8
+        };
+        this.initialized = false;
+        this.audioCues = []; // Array of scheduled audio cues
+    }
+
+    // Initialize the audio context (requires user gesture)
+    initialize() {
+        if (this.initialized) return;
+        
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.listener = this.audioContext.listener;
+            
+            // Set listener to camera position initially
+            if (camera) {
+                this.updateListenerPosition(camera.position);
+            }
+            
+            this.initialized = true;
+            console.log('Sound system initialized');
+        } catch (error) {
+            console.error('Failed to initialize sound system:', error);
+        }
+    }
+
+    // Update listener position (call this when camera moves)
+    updateListenerPosition(position, forward = null, up = null) {
+        if (!this.initialized || !this.listener) return;
+        
+        this.listener.positionX.value = position.x;
+        this.listener.positionY.value = position.y;
+        this.listener.positionZ.value = position.z;
+        
+        if (forward && up) {
+            this.listener.forwardX.value = forward.x;
+            this.listener.forwardY.value = forward.y;
+            this.listener.forwardZ.value = forward.z;
+            this.listener.upX.value = up.x;
+            this.listener.upY.value = up.y;
+            this.listener.upZ.value = up.z;
+        }
+    }
+
+    // Load audio file and create a sound source
+    async loadSound(url, category = 'effects', loop = false) {
+        if (!this.initialized) {
+            console.warn('Sound system not initialized');
+            return null;
+        }
+
+        try {
+            const response = await fetch(url);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+            
+            const sound = {
+                buffer: audioBuffer,
+                category: category,
+                loop: loop,
+                source: null,
+                gainNode: null,
+                pannerNode: null,
+                isPlaying: false,
+                url: url
+            };
+            
+            this.sounds[category].push(sound);
+            return sound;
+        } catch (error) {
+            console.error('Failed to load sound:', url, error);
+            return null;
+        }
+    }
+
+    // Play a sound at a specific 3D position
+    playSound(sound, position = null, volume = 1.0) {
+        if (!this.initialized || !sound || !sound.buffer) return null;
+
+        // Stop existing source if playing
+        if (sound.isPlaying && sound.source) {
+            sound.source.stop();
+        }
+
+        // Create new source
+        const source = this.audioContext.createBufferSource();
+        source.buffer = sound.buffer;
+        source.loop = sound.loop;
+
+        // Create gain node for volume control
+        const gainNode = this.audioContext.createGain();
+        const categoryVolume = this.volumes[sound.category] || 1.0;
+        gainNode.gain.value = volume * categoryVolume * this.volumes.master;
+
+        // Create panner for 3D audio if position is provided
+        let pannerNode = null;
+        if (position) {
+            pannerNode = this.audioContext.createPanner();
+            pannerNode.panningModel = 'HRTF';
+            pannerNode.distanceModel = 'inverse';
+            pannerNode.refDistance = 1;
+            pannerNode.maxDistance = 100;
+            pannerNode.rolloffFactor = 1;
+            pannerNode.coneInnerAngle = 360;
+            pannerNode.coneOuterAngle = 0;
+            pannerNode.coneOuterGain = 0;
+            
+            pannerNode.positionX.value = position.x;
+            pannerNode.positionY.value = position.y;
+            pannerNode.positionZ.value = position.z;
+            
+            // Connect: source -> panner -> gain -> destination
+            source.connect(pannerNode);
+            pannerNode.connect(gainNode);
+        } else {
+            // Connect: source -> gain -> destination
+            source.connect(gainNode);
+        }
+        
+        gainNode.connect(this.audioContext.destination);
+
+        // Store references
+        sound.source = source;
+        sound.gainNode = gainNode;
+        sound.pannerNode = pannerNode;
+        sound.isPlaying = true;
+
+        // Handle sound end
+        source.onended = () => {
+            sound.isPlaying = false;
+            sound.source = null;
+        };
+
+        source.start(0);
+        return sound;
+    }
+
+    // Stop a sound
+    stopSound(sound) {
+        if (sound && sound.isPlaying && sound.source) {
+            sound.source.stop();
+            sound.isPlaying = false;
+        }
+    }
+
+    // Play background music/ambience
+    playBackground(url, volume = 0.5) {
+        this.loadSound(url, 'background', true).then(sound => {
+            if (sound) {
+                this.playSound(sound, null, volume);
+            }
+        });
+    }
+
+    // Play sound effect at a position
+    playSoundEffect(url, position, volume = 1.0) {
+        this.loadSound(url, 'effects', false).then(sound => {
+            if (sound) {
+                this.playSound(sound, position, volume);
+            }
+        });
+    }
+
+    // Play actor voice at actor's position
+    playActorVoice(url, actorPosition, volume = 1.0) {
+        this.loadSound(url, 'voices', false).then(sound => {
+            if (sound) {
+                this.playSound(sound, actorPosition, volume);
+            }
+        });
+    }
+
+    // Set volume for a category
+    setVolume(category, value) {
+        this.volumes[category] = Math.max(0, Math.min(1, value));
+        
+        // Update all playing sounds in this category
+        this.sounds[category].forEach(sound => {
+            if (sound.isPlaying && sound.gainNode) {
+                const categoryVolume = this.volumes[sound.category] || 1.0;
+                sound.gainNode.gain.value = categoryVolume * this.volumes.master;
+            }
+        });
+    }
+
+    // Schedule an audio cue
+    scheduleAudioCue(time, callback) {
+        this.audioCues.push({
+            time: time,
+            callback: callback,
+            triggered: false
+        });
+    }
+
+    // Update audio cues (call in animation loop)
+    updateAudioCues(currentTime) {
+        this.audioCues.forEach(cue => {
+            if (!cue.triggered && currentTime >= cue.time) {
+                cue.callback();
+                cue.triggered = true;
+            }
+        });
+        
+        // Remove triggered cues
+        this.audioCues = this.audioCues.filter(cue => !cue.triggered);
+    }
+
+    // Update panner position for a sound (for moving sources)
+    updateSoundPosition(sound, position) {
+        if (sound && sound.pannerNode && sound.isPlaying) {
+            sound.pannerNode.positionX.value = position.x;
+            sound.pannerNode.positionY.value = position.y;
+            sound.pannerNode.positionZ.value = position.z;
+        }
+    }
+
+    // Stop all sounds in a category
+    stopCategory(category) {
+        this.sounds[category].forEach(sound => {
+            this.stopSound(sound);
+        });
+    }
+
+    // Stop all sounds
+    stopAll() {
+        Object.keys(this.sounds).forEach(category => {
+            this.stopCategory(category);
+        });
+    }
+
+    // Get all sounds in a category
+    getSounds(category) {
+        return this.sounds[category];
+    }
+
+    // Suspend audio context (for pausing)
+    suspend() {
+        if (this.audioContext && this.audioContext.state === 'running') {
+            this.audioContext.suspend();
+        }
+    }
+
+    // Resume audio context
+    resume() {
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
+    }
+}
+
 // Scene serializer for save/load functionality
 class SceneSerializer {
     constructor() {
@@ -408,10 +675,24 @@ function init() {
     addControls();
     setupUI();
 
+    // Initialize sound system
+    soundSystem = new SoundSystem();
+
     window.addEventListener('resize', onWindowResize, false);
     window.addEventListener('click', onStageClick, false);
     window.addEventListener('mousemove', onMouseMove, false);
     window.addEventListener('keydown', onKeyDown, false);
+    
+    // Initialize sound system on first user interaction
+    const initAudio = () => {
+        if (!soundSystem.initialized) {
+            soundSystem.initialize();
+            document.removeEventListener('click', initAudio);
+            document.removeEventListener('keydown', initAudio);
+        }
+    };
+    document.addEventListener('click', initAudio);
+    document.addEventListener('keydown', initAudio);
 }
 
 function createStage() {
@@ -1498,6 +1779,146 @@ function setupUI() {
     uiContainer.appendChild(undoButton);
     uiContainer.appendChild(document.createTextNode(' '));
     uiContainer.appendChild(redoButton);
+    
+    // Audio controls
+    const audioLabel = document.createElement('div');
+    audioLabel.innerHTML = '<strong>Audio System</strong>';
+    audioLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const audioStatusDiv = document.createElement('div');
+    audioStatusDiv.style.cssText = 'font-size: 11px; color: #aaa; margin-bottom: 5px;';
+    audioStatusDiv.textContent = 'Status: Not initialized';
+    
+    // Master volume
+    const masterVolumeLabel = document.createElement('div');
+    masterVolumeLabel.textContent = 'Master Volume:';
+    masterVolumeLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
+    
+    const masterVolumeSlider = document.createElement('input');
+    masterVolumeSlider.type = 'range';
+    masterVolumeSlider.min = '0';
+    masterVolumeSlider.max = '1';
+    masterVolumeSlider.step = '0.1';
+    masterVolumeSlider.value = '1';
+    masterVolumeSlider.style.cssText = 'margin: 5px 0; width: 150px;';
+    masterVolumeSlider.addEventListener('input', (e) => {
+        if (soundSystem && soundSystem.initialized) {
+            soundSystem.setVolume('master', parseFloat(e.target.value));
+        }
+    });
+    
+    // Background volume
+    const bgVolumeLabel = document.createElement('div');
+    bgVolumeLabel.textContent = 'Background:';
+    bgVolumeLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
+    
+    const bgVolumeSlider = document.createElement('input');
+    bgVolumeSlider.type = 'range';
+    bgVolumeSlider.min = '0';
+    bgVolumeSlider.max = '1';
+    bgVolumeSlider.step = '0.1';
+    bgVolumeSlider.value = '0.5';
+    bgVolumeSlider.style.cssText = 'margin: 5px 0; width: 150px;';
+    bgVolumeSlider.addEventListener('input', (e) => {
+        if (soundSystem && soundSystem.initialized) {
+            soundSystem.setVolume('background', parseFloat(e.target.value));
+        }
+    });
+    
+    // Effects volume
+    const effectsVolumeLabel = document.createElement('div');
+    effectsVolumeLabel.textContent = 'Effects:';
+    effectsVolumeLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
+    
+    const effectsVolumeSlider = document.createElement('input');
+    effectsVolumeSlider.type = 'range';
+    effectsVolumeSlider.min = '0';
+    effectsVolumeSlider.max = '1';
+    effectsVolumeSlider.step = '0.1';
+    effectsVolumeSlider.value = '0.7';
+    effectsVolumeSlider.style.cssText = 'margin: 5px 0; width: 150px;';
+    effectsVolumeSlider.addEventListener('input', (e) => {
+        if (soundSystem && soundSystem.initialized) {
+            soundSystem.setVolume('effects', parseFloat(e.target.value));
+        }
+    });
+    
+    // Voices volume
+    const voicesVolumeLabel = document.createElement('div');
+    voicesVolumeLabel.textContent = 'Voices:';
+    voicesVolumeLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
+    
+    const voicesVolumeSlider = document.createElement('input');
+    voicesVolumeSlider.type = 'range';
+    voicesVolumeSlider.min = '0';
+    voicesVolumeSlider.max = '1';
+    voicesVolumeSlider.step = '0.1';
+    voicesVolumeSlider.value = '0.8';
+    voicesVolumeSlider.style.cssText = 'margin: 5px 0; width: 150px;';
+    voicesVolumeSlider.addEventListener('input', (e) => {
+        if (soundSystem && soundSystem.initialized) {
+            soundSystem.setVolume('voices', parseFloat(e.target.value));
+        }
+    });
+    
+    // Pause/Resume button
+    const pauseResumeButton = document.createElement('button');
+    pauseResumeButton.textContent = 'Pause Audio';
+    pauseResumeButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    let audioPaused = false;
+    pauseResumeButton.addEventListener('click', () => {
+        if (soundSystem && soundSystem.initialized) {
+            if (audioPaused) {
+                soundSystem.resume();
+                pauseResumeButton.textContent = 'Pause Audio';
+                audioPaused = false;
+            } else {
+                soundSystem.suspend();
+                pauseResumeButton.textContent = 'Resume Audio';
+                audioPaused = true;
+            }
+        }
+    });
+    
+    // Stop all button
+    const stopAllButton = document.createElement('button');
+    stopAllButton.textContent = 'Stop All';
+    stopAllButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    stopAllButton.addEventListener('click', () => {
+        if (soundSystem && soundSystem.initialized) {
+            soundSystem.stopAll();
+        }
+    });
+    
+    // Update audio status when initialized
+    const updateAudioStatus = () => {
+        if (soundSystem && soundSystem.initialized) {
+            audioStatusDiv.textContent = 'Status: Active';
+            audioStatusDiv.style.color = '#0f0';
+        }
+    };
+    
+    // Check for initialization periodically
+    const statusInterval = setInterval(() => {
+        if (soundSystem && soundSystem.initialized) {
+            updateAudioStatus();
+            clearInterval(statusInterval);
+        }
+    }, 500);
+    
+    uiContainer.appendChild(audioLabel);
+    uiContainer.appendChild(audioStatusDiv);
+    uiContainer.appendChild(masterVolumeLabel);
+    uiContainer.appendChild(masterVolumeSlider);
+    uiContainer.appendChild(bgVolumeLabel);
+    uiContainer.appendChild(bgVolumeSlider);
+    uiContainer.appendChild(effectsVolumeLabel);
+    uiContainer.appendChild(effectsVolumeSlider);
+    uiContainer.appendChild(voicesVolumeLabel);
+    uiContainer.appendChild(voicesVolumeSlider);
+    uiContainer.appendChild(pauseResumeButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(stopAllButton);
 
     document.body.appendChild(toggleButton);
     document.body.appendChild(uiContainer);
@@ -3290,6 +3711,15 @@ function animate() {
     
     if (controls) {
         controls.update();
+    }
+    
+    // Update sound system listener position with camera
+    if (soundSystem && soundSystem.initialized) {
+        soundSystem.updateListenerPosition(camera.position);
+        
+        // Update audio cues based on current time
+        const currentTime = Date.now() / 1000; // Convert to seconds
+        soundSystem.updateAudioCues(currentTime);
     }
     
     renderer.render(scene, camera);
