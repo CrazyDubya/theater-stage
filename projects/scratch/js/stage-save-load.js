@@ -176,3 +176,50 @@ function loadScene() {
         );
     }
 }
+
+/**
+ * Load a preset template from the presets directory
+ * @param {string} presetName - The preset filename (without .json extension)
+ */
+async function loadPreset(presetName) {
+    try {
+        console.log('Loading preset:', presetName);
+        
+        // Fetch the preset JSON file from the presets directory
+        const response = await fetch(`presets/${presetName}.json`);
+        
+        if (!response.ok) {
+            throw new Error(`Failed to load preset: ${response.statusText}`);
+        }
+        
+        const jsonData = await response.text();
+        
+        // Validate JSON
+        try {
+            JSON.parse(jsonData);
+        } catch (parseError) {
+            throw new Error('Invalid preset file format');
+        }
+        
+        // Import the scene using the SceneSerializer
+        const result = sceneSerializer.importScene(jsonData);
+        
+        if (result.success) {
+            console.log('Preset loaded successfully:', result.name);
+            alert(
+                `Preset loaded successfully!\n\n` +
+                `Template: ${result.name}\n` +
+                `Description: ${result.description || 'No description'}`
+            );
+        } else {
+            throw new Error(result.error || 'Unknown error during preset import');
+        }
+        
+    } catch (error) {
+        console.error('Failed to load preset:', error);
+        alert(
+            `Failed to load preset: ${error.message}\n\n` +
+            `Please check the console for more details.`
+        );
+    }
+}
