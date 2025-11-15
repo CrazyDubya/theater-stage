@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Undo/Redo Test</title>
+    <style>
+        body { margin: 0; font-family: Arial; }
+        #test-container {
+            padding: 20px;
+            background: #f0f0f0;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        .test-result { 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-left: 4px solid #4CAF50;
+            background: white;
+        }
+        .test-result.fail { border-color: #f44336; }
+        button { margin: 5px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <div id="test-container">
+        <h1>Undo/Redo System Tests</h1>
+        <div id="results"></div>
+        <button onclick="runTests()">Run Tests</button>
+    </div>
+
+    <script>
+        // Mock the required global objects for testing
+        let scene = { add: () => {}, remove: () => {}, background: {}, fog: {} };
+        let lights = [{}, {}, {}];
+        let props = [];
+        let actors = [];
+        let moveablePlatforms = [];
+        let rotatingStage = { visible: true, userData: { rotating: false } };
+        let trapDoors = [];
+        let curtainState = 'closed';
+        let curtainLeft = { position: { x: -2 } };
+        let curtainRight = { position: { x: 2 } };
+        let sceneryPanels = [];
+        let currentLightingPreset = 'default';
+
+        class THREE {
+            static Color = function() { return {}; };
+            static Fog = function() { return {}; };
+        }
+
+        function addPropAt(x, z) {
+            const prop = { position: { x, y: 0, z }, userData: { id: 'prop_' + props.length } };
+            props.push(prop);
+        }
+
+        function addActorAt(x, z) {
+            const actor = { position: { x, y: 0, z }, userData: { id: 'actor_' + actors.length } };
+            actors.push(actor);
+        }
+
+        function moveSceneryPanelDirect(index, position) {}
+        function applyLightingPresetDirect(preset) { currentLightingPreset = preset; }
+
+        // Copy the Command classes from stage.js
+        class Command {
+            execute() { throw new Error('Execute method must be implemented'); }
+            undo() { throw new Error('Undo method must be implemented'); }
+            canMerge(otherCommand) { return false; }
+        }
+
+        class PlaceObjectCommand extends Command {
+            constructor(objectType, objectData, position) {
+                super();
+                this.objectType = objectType;
+                this.objectData = objectData;
+                this.position = position;
+                this.objectRef = null;
+            }
+            
+            execute() {
+                if (this.objectType === 'prop') {
+                    addPropAt(this.position.x, this.position.z);
+                    this.objectRef = props[props.length - 1];
+                } else if (this.objectType === 'actor') {
+                    addActorAt(this.position.x, this.position.z);
+                    this.objectRef = actors[actors.length - 1];
+                }
+            }
+            
+            undo() {
+                if (!this.objectRef) return;
+                
+                if (this.objectType === 'prop') {
+                    const index = props.indexOf(this.objectRef);
+                    if (index > -1) props.splice(index, 1);
+                } else if (this.objectType === 'actor') {
+                    const index = actors.indexOf(this.objectRef);
+                    if (index > -1) actors.splice(index, 1);
+                }
+            }
+        }
+
+        class DeleteObjectCommand extends Command {
+            constructor(objectType, object) {
+                super();
+                this.objectType = objectType;
+                this.object = object;
+            }
+            
+            execute() {
+                if (this.objectType === 'prop') {
+                    const index = props.indexOf(this.object);
+                    if (index > -1) props.splice(index, 1);
+                } else if (this.objectType === 'actor') {
+                    const index = actors.indexOf(this.object);
+                    if (index > -1) actors.splice(index, 1);
+                }
+            }
+            
+            undo() {
+                if (this.objectType === 'prop') {
+                    props.push(this.object);
+                } else if (this.objectType === 'actor') {
+                    actors.push(this.object);
+                }
+            }
+        }
+
+        class LightingCommand extends Command {
+            constructor(newPreset, oldPreset) {
+                super();
+                this.newPreset = newPreset;
+                this.oldPreset = oldPreset;
+            }
+            
+            execute() {
+                applyLightingPresetDirect(this.newPreset);
+            }
+            
+            undo() {
+                applyLightingPresetDirect(this.oldPreset);
+            }
+        }
+
+        class CommandManager {
+            constructor() {
+                this.history = [];
+                this.currentIndex = -1;
+                this.maxHistorySize = 50;
+            }
+            
+            executeCommand(command) {
+                command.execute();
+                this.history = this.history.slice(0, this.currentIndex + 1);
+                this.history.push(command);
+                this.currentIndex = this.history.length - 1;
+                
+                if (this.history.length > this.maxHistorySize) {
+                    this.history.shift();
+                    this.currentIndex--;
+                }
+            }
+            
+            undo() {
+                if (this.currentIndex >= 0) {
+                    const command = this.history[this.currentIndex];
+                    command.undo();
+                    this.currentIndex--;
+                    return true;
+                }
+                return false;
+            }
+            
+            redo() {
+                if (this.currentIndex < this.history.length - 1) {
+                    this.currentIndex++;
+                    const command = this.history[this.currentIndex];
+                    command.execute();
+                    return true;
+                }
+                return false;
+            }
+            
+            canUndo() {
+                return this.currentIndex >= 0;
+            }
+            
+            canRedo() {
+                return this.currentIndex < this.history.length - 1;
+            }
+
+            getHistory() {
+                return this.history.map((command, index) => ({
+                    description: this.getCommandDescription(command),
+                    isCurrent: index === this.currentIndex,
+                    index: index
+                }));
+            }
+
+            getCommandDescription(command) {
+                if (command instanceof PlaceObjectCommand) {
+                    return `Place ${command.objectType}`;
+                } else if (command instanceof DeleteObjectCommand) {
+                    return `Delete ${command.objectType}`;
+                } else if (command instanceof LightingCommand) {
+                    return `Change lighting to ${command.newPreset}`;
+                }
+                return 'Unknown command';
+            }
+        }
+
+        function runTests() {
+            const results = document.getElementById('results');
+            results.innerHTML = '';
+            
+            function addResult(name, passed, details) {
+                const div = document.createElement('div');
+                div.className = 'test-result' + (passed ? '' : ' fail');
+                div.innerHTML = `<strong>${passed ? '✓' : '✗'} ${name}</strong><br>${details}`;
+                results.appendChild(div);
+            }
+
+            // Test 1: Place and undo prop
+            const cm1 = new CommandManager();
+            const cmd1 = new PlaceObjectCommand('prop', {}, { x: 0, y: 0, z: 0 });
+            cm1.executeCommand(cmd1);
+            const propsAfterPlace = props.length;
+            cm1.undo();
+            const propsAfterUndo = props.length;
+            addResult('Place and Undo Prop', 
+                propsAfterPlace === 1 && propsAfterUndo === 0,
+                `Props after place: ${propsAfterPlace}, after undo: ${propsAfterUndo}`);
+
+            // Test 2: Place, undo, redo
+            props = [];
+            const cm2 = new CommandManager();
+            const cmd2 = new PlaceObjectCommand('actor', {}, { x: 1, y: 0, z: 1 });
+            cm2.executeCommand(cmd2);
+            cm2.undo();
+            cm2.redo();
+            addResult('Place, Undo, Redo Actor',
+                actors.length === 1,
+                `Actors after redo: ${actors.length}`);
+
+            // Test 3: Delete and undo
+            actors = [];
+            addActorAt(0, 0);
+            const actor = actors[0];
+            const cm3 = new CommandManager();
+            const cmd3 = new DeleteObjectCommand('actor', actor);
+            cm3.executeCommand(cmd3);
+            const actorsAfterDelete = actors.length;
+            cm3.undo();
+            const actorsAfterUndo = actors.length;
+            addResult('Delete and Undo Actor',
+                actorsAfterDelete === 0 && actorsAfterUndo === 1,
+                `Actors after delete: ${actorsAfterDelete}, after undo: ${actorsAfterUndo}`);
+
+            // Test 4: Lighting command
+            const cm4 = new CommandManager();
+            const cmd4 = new LightingCommand('night', 'default');
+            cm4.executeCommand(cmd4);
+            const lightingAfter = currentLightingPreset;
+            cm4.undo();
+            const lightingUndo = currentLightingPreset;
+            addResult('Lighting Change and Undo',
+                lightingAfter === 'night' && lightingUndo === 'default',
+                `Lighting after: ${lightingAfter}, after undo: ${lightingUndo}`);
+
+            // Test 5: History tracking
+            const cm5 = new CommandManager();
+            cm5.executeCommand(new PlaceObjectCommand('prop', {}, { x: 0, y: 0, z: 0 }));
+            cm5.executeCommand(new PlaceObjectCommand('actor', {}, { x: 0, y: 0, z: 0 }));
+            const history = cm5.getHistory();
+            addResult('History Tracking',
+                history.length === 2 && history[1].isCurrent,
+                `History length: ${history.length}, Current index correct: ${history[1].isCurrent}`);
+
+            // Test 6: Can undo/redo state
+            const cm6 = new CommandManager();
+            const canUndoBefore = cm6.canUndo();
+            cm6.executeCommand(new PlaceObjectCommand('prop', {}, { x: 0, y: 0, z: 0 }));
+            const canUndoAfter = cm6.canUndo();
+            const canRedoBefore = cm6.canRedo();
+            cm6.undo();
+            const canRedoAfter = cm6.canRedo();
+            addResult('Can Undo/Redo States',
+                !canUndoBefore && canUndoAfter && !canRedoBefore && canRedoAfter,
+                `States correct: ${!canUndoBefore && canUndoAfter && !canRedoBefore && canRedoAfter}`);
+        }
+
+        // Auto-run tests
+        window.onload = () => runTests();
+    </script>
+</body>
+</html>

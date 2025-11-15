@@ -19,15 +19,305 @@
             padding: 10px;
             border-radius: 5px;
         }
+        
+        /* Collaboration UI */
+        #collaboration-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 300px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border-radius: 5px;
+            overflow: hidden;
+            display: none;
+        }
+        
+        #collaboration-panel.active {
+            display: block;
+        }
+        
+        .panel-header {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            font-weight: bold;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .panel-content {
+            padding: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        /* User list */
+        .user-item {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            margin: 5px 0;
+            background: rgba(255,255,255,0.05);
+            border-radius: 3px;
+        }
+        
+        .user-item.me {
+            background: rgba(100,200,255,0.2);
+        }
+        
+        .user-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .user-name {
+            flex: 1;
+        }
+        
+        .user-permission {
+            font-size: 0.8em;
+            color: #aaa;
+            text-transform: capitalize;
+        }
+        
+        /* Chat */
+        #chat-messages {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            padding: 5px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 3px;
+        }
+        
+        .chat-message {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        
+        .chat-time {
+            color: #888;
+            font-size: 0.8em;
+            margin-right: 5px;
+        }
+        
+        .chat-username {
+            color: #4af;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        
+        .chat-text {
+            color: #fff;
+        }
+        
+        #chat-input-container {
+            display: flex;
+            gap: 5px;
+        }
+        
+        #chat-input {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 3px;
+        }
+        
+        #chat-send {
+            padding: 5px 10px;
+            background: rgba(100,200,255,0.5);
+            border: none;
+            color: white;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        
+        #chat-send:hover {
+            background: rgba(100,200,255,0.7);
+        }
+        
+        /* Connection panel */
+        #connection-panel {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 30px;
+            border-radius: 10px;
+            color: white;
+            min-width: 400px;
+            display: none;
+        }
+        
+        #connection-panel.active {
+            display: block;
+        }
+        
+        #connection-panel h2 {
+            margin-top: 0;
+        }
+        
+        .form-group {
+            margin: 15px 0;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 3px;
+            box-sizing: border-box;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        .btn-primary {
+            background: rgba(100,200,255,0.8);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: rgba(100,200,255,1);
+        }
+        
+        .btn-secondary {
+            background: rgba(128,128,128,0.5);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(128,128,128,0.7);
+        }
+        
+        /* Notification */
+        #collaboration-notification {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        #collaboration-notification.error {
+            background: rgba(255,0,0,0.8);
+        }
+        
+        #collaboration-notification.success {
+            background: rgba(0,255,0,0.8);
+        }
+        
+        /* Toggle button */
+        #collaboration-toggle {
+            position: absolute;
+            top: 50px;
+            right: 10px;
+            padding: 10px 15px;
+            background: rgba(100,200,255,0.5);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        #collaboration-toggle:hover {
+            background: rgba(100,200,255,0.7);
+        }
+        
+        #collaboration-toggle.connected {
+            background: rgba(0,255,0,0.5);
+        }
+        
+        #collaboration-toggle.connected:hover {
+            background: rgba(0,255,0,0.7);
+        }
     </style>
 </head>
 <body>
     <div id="info">
         3D Stage • Mouse: Rotate • Scroll: Zoom • Right-click: Pan
     </div>
+    
+    <!-- Collaboration Toggle Button -->
+    <button id="collaboration-toggle">Join Collaboration</button>
+    
+    <!-- Connection Panel -->
+    <div id="connection-panel">
+        <h2>Join Collaboration Session</h2>
+        <div class="form-group">
+            <label for="username-input">Your Name:</label>
+            <input type="text" id="username-input" placeholder="Enter your name" value="User">
+        </div>
+        <div class="form-group">
+            <label for="room-input">Room ID:</label>
+            <input type="text" id="room-input" placeholder="Enter room ID" value="default-room">
+        </div>
+        <div class="form-group">
+            <label for="permission-select">Role:</label>
+            <select id="permission-select">
+                <option value="director">Director (Full Control)</option>
+                <option value="actor">Actor (Can Edit)</option>
+                <option value="viewer" selected>Viewer (Read Only)</option>
+            </select>
+        </div>
+        <div class="button-group">
+            <button class="btn btn-secondary" id="cancel-connection">Cancel</button>
+            <button class="btn btn-primary" id="connect-btn">Connect</button>
+        </div>
+    </div>
+    
+    <!-- Collaboration Panel -->
+    <div id="collaboration-panel">
+        <div class="panel-header">Collaboration</div>
+        <div class="panel-content">
+            <h4 style="margin-top: 0;">Active Users</h4>
+            <div id="collaboration-user-list"></div>
+            
+            <h4>Chat</h4>
+            <div id="chat-messages"></div>
+            <div id="chat-input-container">
+                <input type="text" id="chat-input" placeholder="Type a message...">
+                <button id="chat-send">Send</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification -->
+    <div id="collaboration-notification"></div>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="js/collaboration.js"></script>
     <script src="js/stage.js"></script>
     <script src="js/stage-save-load.js"></script>
+    <script src="js/collaboration-integration.js"></script>
 </body>
 </html>
