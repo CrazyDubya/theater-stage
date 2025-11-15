@@ -3252,63 +3252,8 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-// Save/Load functions
-function saveScene() {
-    const sceneName = prompt('Enter a name for this scene:', 'My Scene');
-    if (!sceneName) return;
-    
-    const sceneDescription = prompt('Enter a description (optional):', '');
-    
-    // Export the scene
-    const sceneJson = sceneSerializer.exportScene(sceneName, sceneDescription);
-    
-    // Create a download link
-    const blob = new Blob([sceneJson], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${sceneName.replace(/\s+/g, '_')}_scene.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    console.log('Scene saved successfully!');
-}
-
-function loadScene() {
-    // Create file input
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            try {
-                const result = sceneSerializer.importScene(e.target.result);
-                if (result.success) {
-                    console.log(`Scene loaded: ${result.name}`);
-                    if (result.description) {
-                        console.log(`Description: ${result.description}`);
-                    }
-                    alert(`Scene "${result.name}" loaded successfully!`);
-                } else {
-                    alert(`Failed to load scene: ${result.error}`);
-                }
-            } catch (error) {
-                alert(`Error loading scene: ${error.message}`);
-                console.error('Load error:', error);
-            }
-        };
-        reader.readAsText(file);
-    };
-    
-    input.click();
-}
+// Note: saveScene() and loadScene() functions are defined in stage-save-load.js
+// which provides enhanced error handling and user feedback
 
 init();
 animate();
