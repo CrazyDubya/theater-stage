@@ -67,6 +67,9 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Toggle Trap Doors**: Open/close trap doors
 - **Show/Hide Elements**: Toggle optional stage elements
 - **Scenery Panels**: Slide panels to various positions (Off, 1/4, 1/2, 3/4, Full)
+- **Toggle Benchmark**: Show/hide performance statistics overlay
+- **Toggle LOD**: Enable/disable level-of-detail optimizations
+- **Create Test Scene**: Generate 60+ objects for performance testing
 
 ## Architecture
 
@@ -89,6 +92,47 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Actors**: Unique IDs like `actor_1`, `actor_2`
 - **Props**: Unique IDs like `prop_1`, `prop_2`
 - Persistent throughout session for tracking and scripting
+
+## Performance Features
+
+The stage includes several performance optimizations for handling large scenes with many objects:
+
+### Level of Detail (LOD)
+- Automatically adjusts object detail based on camera distance
+- Far objects (>50 units): Hidden
+- Medium distance (30-50 units): Visible, no shadows
+- Close distance (15-30 units): Visible with cast shadows only
+- Very close (<15 units): Full detail with all shadows
+- Toggle LOD on/off with the "Toggle LOD" button
+
+### Object Pooling
+- Reuses prop objects instead of creating new ones
+- Reduces garbage collection overhead
+- Pool size limited to 50 objects per type
+
+### Physics Sleep States
+- Static objects enter "sleep" mode after 1 second of no movement
+- Sleeping objects skip physics calculations
+- Objects automatically wake when moved or affected by stage elements
+
+### Shared Materials
+- Common colors and materials are shared between objects
+- Reduces draw calls and memory usage
+- Automatically applied to new props
+
+### Benchmark Mode
+- Toggle benchmark display with "Toggle Benchmark" button
+- Shows real-time performance statistics:
+  - FPS (Frames Per Second)
+  - Frame time in milliseconds
+  - Visible vs total object counts
+  - Number of sleeping objects
+  - Approximate draw calls
+
+### Test Scene Creation
+- "Create Test Scene" button adds 60+ objects for performance testing
+- Mix of actors and various prop types
+- Useful for demonstrating performance optimizations
 
 ## Known Issues
 - Props/actors may hover slightly when on elevated platforms

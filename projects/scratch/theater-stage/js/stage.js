@@ -828,6 +828,13 @@ function setupUI() {
     lodButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
     lodButton.addEventListener('click', toggleLOD);
     uiContainer.appendChild(lodButton);
+    uiContainer.appendChild(document.createElement('br'));
+    
+    const testSceneButton = document.createElement('button');
+    testSceneButton.textContent = 'Create Test Scene (60 objects)';
+    testSceneButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer; background: #228B22; color: white;';
+    testSceneButton.addEventListener('click', createLargeTestScene);
+    uiContainer.appendChild(testSceneButton);
 
     document.body.appendChild(uiContainer);
 }
@@ -1829,6 +1836,37 @@ function animate() {
     
     renderer.render(scene, camera);
 }
+
+// Test function to create a large scene with many objects
+function createLargeTestScene() {
+    console.log('Creating large test scene with 50+ objects...');
+    
+    const propTypes = Object.keys(PROP_CATALOG);
+    let objectCount = 0;
+    
+    // Create objects in a grid pattern on the stage
+    for (let x = -8; x <= 8; x += 2) {
+        for (let z = -5; z <= 5; z += 2) {
+            if (objectCount >= 60) break;
+            
+            // Alternate between props and actors
+            if (objectCount % 3 === 0) {
+                addActorAt(x, z);
+            } else {
+                selectedPropType = propTypes[objectCount % propTypes.length];
+                addPropAt(x, z);
+            }
+            objectCount++;
+        }
+        if (objectCount >= 60) break;
+    }
+    
+    console.log(`Created ${objectCount} objects for performance testing`);
+    console.log('Press "Toggle Benchmark" button to see performance stats');
+}
+
+// Expose test function to window for manual testing
+window.createLargeTestScene = createLargeTestScene;
 
 init();
 animate();
