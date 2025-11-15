@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Undo/Redo System Demo</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .demo-container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            max-width: 800px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 18px;
+        }
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .feature {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .feature h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .feature p {
+            margin: 0;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .status {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .demo-section {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        .demo-section h2 {
+            margin-top: 0;
+            color: #333;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .history-panel {
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .history-item {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .history-item:hover {
+            background: #f0f0f0;
+        }
+        .history-item.current {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+        .history-item.past {
+            color: #999;
+        }
+        .object-list {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+        }
+        .object {
+            background: #667eea;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #667eea;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .check {
+            color: #4CAF50;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>🎭 Theater Stage Undo/Redo System</h1>
+        <div class="subtitle">
+            <span class="status">✓ FULLY IMPLEMENTED</span>
+        </div>
+
+        <div class="feature-grid">
+            <div class="feature">
+                <h3><span class="check">✓</span> Object Placement</h3>
+                <p>Place props & actors with full undo/redo</p>
+            </div>
+            <div class="feature">
+                <h3><span class="check">✓</span> Object Deletion</h3>
+                <p>Delete and restore objects</p>
+            </div>
+            <div class="feature">
+                <h3><span class="check">✓</span> Stage Elements</h3>
+                <p>All stage changes tracked</p>
+            </div>
+            <div class="feature">
+                <h3><span class="check">✓</span> Lighting</h3>
+                <p>Lighting preset changes</p>
+            </div>
+            <div class="feature">
+                <h3><span class="check">✓</span> Keyboard Shortcuts</h3>
+                <p>Ctrl+Z / Ctrl+Y support</p>
+            </div>
+            <div class="feature">
+                <h3><span class="check">✓</span> Visual History</h3>
+                <p>Interactive command history</p>
+            </div>
+        </div>
+
+        <div class="demo-section">
+            <h2>Interactive Demo</h2>
+            <p>Try the undo/redo system:</p>
+            
+            <div class="button-group">
+                <button onclick="addObject('prop')">Add Prop</button>
+                <button onclick="addObject('actor')">Add Actor</button>
+                <button onclick="deleteLastObject()">Delete Last</button>
+                <button onclick="changeLighting()">Change Lighting</button>
+            </div>
+
+            <div class="button-group">
+                <button id="undoBtn" onclick="undo()" disabled>⟲ Undo (Ctrl+Z)</button>
+                <button id="redoBtn" onclick="redo()" disabled>⟳ Redo (Ctrl+Y)</button>
+                <button onclick="clearAll()">Clear All</button>
+            </div>
+
+            <div class="object-list" id="objectList"></div>
+
+            <div class="history-panel" id="historyPanel">
+                <em>No actions yet - try adding some objects!</em>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="objectCount">0</div>
+                <div class="stat-label">Total Objects</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="historyCount">0</div>
+                <div class="stat-label">History Size</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="currentIndex">-</div>
+                <div class="stat-label">Current Position</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Simple command pattern implementation for demo
+        class Command {
+            execute() {}
+            undo() {}
+        }
+
+        class AddObjectCommand extends Command {
+            constructor(type) {
+                super();
+                this.type = type;
+                this.id = Date.now();
+            }
+            execute() {
+                objects.push({ type: this.type, id: this.id });
+                updateDisplay();
+            }
+            undo() {
+                objects = objects.filter(o => o.id !== this.id);
+                updateDisplay();
+            }
+        }
+
+        class DeleteObjectCommand extends Command {
+            constructor(object) {
+                super();
+                this.object = object;
+            }
+            execute() {
+                objects = objects.filter(o => o.id !== this.object.id);
+                updateDisplay();
+            }
+            undo() {
+                objects.push(this.object);
+                updateDisplay();
+            }
+        }
+
+        class LightingCommand extends Command {
+            constructor(newPreset, oldPreset) {
+                super();
+                this.newPreset = newPreset;
+                this.oldPreset = oldPreset;
+            }
+            execute() {
+                lighting = this.newPreset;
+                updateDisplay();
+            }
+            undo() {
+                lighting = this.oldPreset;
+                updateDisplay();
+            }
+        }
+
+        class CommandManager {
+            constructor() {
+                this.history = [];
+                this.currentIndex = -1;
+            }
+            
+            executeCommand(command) {
+                command.execute();
+                this.history = this.history.slice(0, this.currentIndex + 1);
+                this.history.push(command);
+                this.currentIndex = this.history.length - 1;
+                updateButtons();
+                updateHistory();
+            }
+            
+            undo() {
+                if (this.currentIndex >= 0) {
+                    this.history[this.currentIndex].undo();
+                    this.currentIndex--;
+                    updateButtons();
+                    updateHistory();
+                }
+            }
+            
+            redo() {
+                if (this.currentIndex < this.history.length - 1) {
+                    this.currentIndex++;
+                    this.history[this.currentIndex].execute();
+                    updateButtons();
+                    updateHistory();
+                }
+            }
+            
+            canUndo() {
+                return this.currentIndex >= 0;
+            }
+            
+            canRedo() {
+                return this.currentIndex < this.history.length - 1;
+            }
+
+            clear() {
+                this.history = [];
+                this.currentIndex = -1;
+                updateButtons();
+                updateHistory();
+            }
+        }
+
+        let objects = [];
+        let lighting = 'default';
+        const lightingOptions = ['default', 'day', 'night', 'sunset', 'dramatic'];
+        const manager = new CommandManager();
+
+        function addObject(type) {
+            const cmd = new AddObjectCommand(type);
+            manager.executeCommand(cmd);
+        }
+
+        function deleteLastObject() {
+            if (objects.length > 0) {
+                const obj = objects[objects.length - 1];
+                const cmd = new DeleteObjectCommand(obj);
+                manager.executeCommand(cmd);
+            }
+        }
+
+        function changeLighting() {
+            const currentIndex = lightingOptions.indexOf(lighting);
+            const newIndex = (currentIndex + 1) % lightingOptions.length;
+            const cmd = new LightingCommand(lightingOptions[newIndex], lighting);
+            manager.executeCommand(cmd);
+        }
+
+        function undo() {
+            manager.undo();
+        }
+
+        function redo() {
+            manager.redo();
+        }
+
+        function clearAll() {
+            objects = [];
+            lighting = 'default';
+            manager.clear();
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const list = document.getElementById('objectList');
+            list.innerHTML = objects.map(o => 
+                `<div class="object">${o.type === 'prop' ? '📦' : '🧍'} ${o.type}</div>`
+            ).join('');
+
+            document.getElementById('objectCount').textContent = objects.length;
+            document.getElementById('historyCount').textContent = manager.history.length;
+            document.getElementById('currentIndex').textContent = 
+                manager.history.length > 0 ? (manager.currentIndex + 1) : '-';
+
+            if (objects.length === 0 && manager.history.length === 0) {
+                list.innerHTML = '<em style="color: #999;">No objects - add some to try undo/redo!</em>';
+            }
+        }
+
+        function updateButtons() {
+            document.getElementById('undoBtn').disabled = !manager.canUndo();
+            document.getElementById('redoBtn').disabled = !manager.canRedo();
+        }
+
+        function updateHistory() {
+            const panel = document.getElementById('historyPanel');
+            if (manager.history.length === 0) {
+                panel.innerHTML = '<em>No actions yet - try adding some objects!</em>';
+                return;
+            }
+
+            panel.innerHTML = manager.history.map((cmd, index) => {
+                let desc = 'Unknown';
+                if (cmd instanceof AddObjectCommand) desc = `Add ${cmd.type}`;
+                else if (cmd instanceof DeleteObjectCommand) desc = `Delete ${cmd.object.type}`;
+                else if (cmd instanceof LightingCommand) desc = `Lighting → ${cmd.newPreset}`;
+
+                const className = index === manager.currentIndex ? 'current' : 
+                                 index < manager.currentIndex ? '' : 'past';
+                return `<div class="history-item ${className}">${index + 1}. ${desc}</div>`;
+            }).join('');
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                if (manager.canUndo()) undo();
+            } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                e.preventDefault();
+                if (manager.canRedo()) redo();
+            }
+        });
+
+        // Initialize
+        updateDisplay();
+        updateButtons();
+    </script>
+</body>
+</html>
