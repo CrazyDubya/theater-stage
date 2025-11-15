@@ -1373,7 +1373,7 @@ function setupUI() {
     
     // Physics test button
     const physicsLabel = document.createElement('div');
-    physicsLabel.innerHTML = '<strong>Physics Test</strong>';
+    physicsLabel.innerHTML = '<strong>Physics & Debug</strong>';
     physicsLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
     
     const pushButton = document.createElement('button');
@@ -1383,6 +1383,14 @@ function setupUI() {
         placementMode = 'push';
         placementMarker.visible = true;
         alert('Click on an object to push it! Lighter objects move more.');
+    });
+    
+    const debugButton = document.createElement('button');
+    debugButton.textContent = 'Debug Collisions: OFF';
+    debugButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    debugButton.addEventListener('click', () => {
+        toggleDebugVisualization();
+        debugButton.textContent = `Debug Collisions: ${debugVisualizationEnabled ? 'ON' : 'OFF'}`;
     });
     
     // Undo/Redo controls
@@ -1485,6 +1493,7 @@ function setupUI() {
     uiContainer.appendChild(loadButton);
     uiContainer.appendChild(physicsLabel);
     uiContainer.appendChild(pushButton);
+    uiContainer.appendChild(debugButton);
     uiContainer.appendChild(undoRedoLabel);
     uiContainer.appendChild(undoButton);
     uiContainer.appendChild(document.createTextNode(' '));
@@ -2128,6 +2137,102 @@ const OBJECT_PHYSICS = {
 // Velocity tracking for momentum
 let objectVelocities = new Map();
 
+// Collision Detection Enhancements
+
+// Collision layers for filtering
+const COLLISION_LAYERS = {
+    NONE: 0,
+    ACTORS: 1 << 0,      // 1
+    PROPS: 1 << 1,       // 2
+    SCENERY: 1 << 2,     // 4
+    STAGE: 1 << 3,       // 8
+    ALL: 0xFF            // All layers
+};
+
+// Collision shape types
+const COLLISION_SHAPES = {
+    BOX: 'box',
+    SPHERE: 'sphere',
+    CAPSULE: 'capsule'
+};
+
+// Spatial hash grid for performance optimization
+class SpatialHashGrid {
+    constructor(cellSize = 5) {
+        this.cellSize = cellSize;
+        this.grid = new Map();
+    }
+    
+    _hash(x, z) {
+        const cellX = Math.floor(x / this.cellSize);
+        const cellZ = Math.floor(z / this.cellSize);
+        return `${cellX},${cellZ}`;
+    }
+    
+    clear() {
+        this.grid.clear();
+    }
+    
+    insert(obj) {
+        const pos = obj.position;
+        const bounds = getObjectBounds(obj);
+        const radius = Math.max(bounds.width, bounds.depth) / 2;
+        
+        // Insert into all cells the object overlaps
+        const minX = pos.x - radius;
+        const maxX = pos.x + radius;
+        const minZ = pos.z - radius;
+        const maxZ = pos.z + radius;
+        
+        const minCellX = Math.floor(minX / this.cellSize);
+        const maxCellX = Math.floor(maxX / this.cellSize);
+        const minCellZ = Math.floor(minZ / this.cellSize);
+        const maxCellZ = Math.floor(maxZ / this.cellSize);
+        
+        for (let cx = minCellX; cx <= maxCellX; cx++) {
+            for (let cz = minCellZ; cz <= maxCellZ; cz++) {
+                const key = `${cx},${cz}`;
+                if (!this.grid.has(key)) {
+                    this.grid.set(key, []);
+                }
+                this.grid.get(key).push(obj);
+            }
+        }
+    }
+    
+    query(x, z, radius) {
+        const minX = x - radius;
+        const maxX = x + radius;
+        const minZ = z - radius;
+        const maxZ = z + radius;
+        
+        const minCellX = Math.floor(minX / this.cellSize);
+        const maxCellX = Math.floor(maxX / this.cellSize);
+        const minCellZ = Math.floor(minZ / this.cellSize);
+        const maxCellZ = Math.floor(maxZ / this.cellSize);
+        
+        const objects = new Set();
+        for (let cx = minCellX; cx <= maxCellX; cx++) {
+            for (let cz = minCellZ; cz <= maxCellZ; cz++) {
+                const key = `${cx},${cz}`;
+                const cell = this.grid.get(key);
+                if (cell) {
+                    cell.forEach(obj => objects.add(obj));
+                }
+            }
+        }
+        
+        return Array.from(objects);
+    }
+}
+
+// Create spatial hash grid instance
+let spatialGrid = new SpatialHashGrid(5);
+
+// Debug visualization state
+let debugVisualizationEnabled = false;
+let debugVisualizationHelpers = [];
+
 // Texture management system
 class TextureManager {
     constructor() {
@@ -2515,33 +2620,39 @@ const commandManager = new CommandManager();
 // Get bounding box for an object (prop or actor)
 function getObjectBounds(obj) {
     // Default bounds based on object type
-    let bounds = { width: 1, depth: 1, height: 1 };
+    let bounds = { width: 1, depth: 1, height: 1, shape: COLLISION_SHAPES.BOX };
     
     if (obj.userData.type === 'actor') {
-        bounds = { width: 1, depth: 1, height: 2.5 };
+        bounds = { width: 1, depth: 1, height: 2.5, shape: COLLISION_SHAPES.CAPSULE };
     } else if (obj.userData.propType) {
         // Specific bounds for different prop types
         switch (obj.userData.propType) {
             case 'table':
-                bounds = { width: 2, depth: 1.5, height: 1 };
+                bounds = { width: 2, depth: 1.5, height: 1, shape: COLLISION_SHAPES.BOX };
                 break;
             case 'chair':
-                bounds = { width: 1, depth: 1, height: 1.5 };
+                bounds = { width: 1, depth: 1, height: 1.5, shape: COLLISION_SHAPES.BOX };
                 break;
             case 'barrel':
-                bounds = { width: 1, depth: 1, height: 1.2 };
+                bounds = { width: 1, depth: 1, height: 1.2, shape: COLLISION_SHAPES.SPHERE };
                 break;
             case 'box':
-                bounds = { width: 1.2, depth: 1.2, height: 1.2 };
+                bounds = { width: 1.2, depth: 1.2, height: 1.2, shape: COLLISION_SHAPES.BOX };
                 break;
             case 'plant':
-                bounds = { width: 0.8, depth: 0.8, height: 1.2 };
+                bounds = { width: 0.8, depth: 0.8, height: 1.2, shape: COLLISION_SHAPES.SPHERE };
                 break;
             case 'lamp':
-                bounds = { width: 0.8, depth: 0.8, height: 1.5 };
+                bounds = { width: 0.8, depth: 0.8, height: 1.5, shape: COLLISION_SHAPES.CAPSULE };
+                break;
+            case 'sphere':
+                bounds = { width: 1, depth: 1, height: 1, shape: COLLISION_SHAPES.SPHERE };
+                break;
+            case 'cylinder':
+                bounds = { width: 1, depth: 1, height: 1.5, shape: COLLISION_SHAPES.CAPSULE };
                 break;
             default:
-                bounds = { width: 1, depth: 1, height: 1 };
+                bounds = { width: 1, depth: 1, height: 1, shape: COLLISION_SHAPES.BOX };
         }
     }
     
@@ -2568,22 +2679,133 @@ function getObjectFriction(obj) {
     return 0.7; // Default friction
 }
 
+// Get collision layer for an object
+function getObjectCollisionLayer(obj) {
+    if (obj.userData.type === 'actor') {
+        return COLLISION_LAYERS.ACTORS;
+    } else if (obj.userData.propType) {
+        return COLLISION_LAYERS.PROPS;
+    } else if (obj.userData.sceneryType) {
+        return COLLISION_LAYERS.SCENERY;
+    }
+    return COLLISION_LAYERS.ALL;
+}
+
+// Check if two layers can collide
+function canLayersCollide(layer1, layer2) {
+    return (layer1 & layer2) !== 0;
+}
+
+// Improved collision detection with shape support
+function checkShapeCollision(bounds1, pos1, bounds2, pos2) {
+    const shape1 = bounds1.shape || COLLISION_SHAPES.BOX;
+    const shape2 = bounds2.shape || COLLISION_SHAPES.BOX;
+    
+    // Sphere-Sphere collision
+    if (shape1 === COLLISION_SHAPES.SPHERE && shape2 === COLLISION_SHAPES.SPHERE) {
+        const radius1 = Math.max(bounds1.width, bounds1.depth) / 2;
+        const radius2 = Math.max(bounds2.width, bounds2.depth) / 2;
+        const dx = pos1.x - pos2.x;
+        const dz = pos1.z - pos2.z;
+        const dy = pos1.y - pos2.y;
+        const distSq = dx * dx + dz * dz + dy * dy;
+        const radiusSum = radius1 + radius2;
+        return distSq < radiusSum * radiusSum;
+    }
+    
+    // Capsule-Capsule (simplified to cylinder check on XZ plane)
+    if (shape1 === COLLISION_SHAPES.CAPSULE && shape2 === COLLISION_SHAPES.CAPSULE) {
+        const radius1 = Math.max(bounds1.width, bounds1.depth) / 2;
+        const radius2 = Math.max(bounds2.width, bounds2.depth) / 2;
+        const dx = pos1.x - pos2.x;
+        const dz = pos1.z - pos2.z;
+        const distSq = dx * dx + dz * dz;
+        const radiusSum = radius1 + radius2;
+        
+        // Check Y overlap
+        const yOverlap = Math.abs(pos1.y - pos2.y) < (bounds1.height + bounds2.height) / 2;
+        return distSq < radiusSum * radiusSum && yOverlap;
+    }
+    
+    // Sphere-Box collision (treat sphere as if testing against expanded box)
+    if ((shape1 === COLLISION_SHAPES.SPHERE && shape2 === COLLISION_SHAPES.BOX) ||
+        (shape1 === COLLISION_SHAPES.BOX && shape2 === COLLISION_SHAPES.SPHERE)) {
+        const spherePos = shape1 === COLLISION_SHAPES.SPHERE ? pos1 : pos2;
+        const boxPos = shape1 === COLLISION_SHAPES.BOX ? pos1 : pos2;
+        const sphereBounds = shape1 === COLLISION_SHAPES.SPHERE ? bounds1 : bounds2;
+        const boxBounds = shape1 === COLLISION_SHAPES.BOX ? bounds1 : bounds2;
+        
+        const radius = Math.max(sphereBounds.width, sphereBounds.depth) / 2;
+        
+        // Closest point on box to sphere center
+        const closestX = Math.max(boxPos.x - boxBounds.width/2, 
+                                   Math.min(spherePos.x, boxPos.x + boxBounds.width/2));
+        const closestZ = Math.max(boxPos.z - boxBounds.depth/2,
+                                   Math.min(spherePos.z, boxPos.z + boxBounds.depth/2));
+        const closestY = Math.max(boxPos.y - boxBounds.height/2,
+                                   Math.min(spherePos.y, boxPos.y + boxBounds.height/2));
+        
+        const dx = spherePos.x - closestX;
+        const dz = spherePos.z - closestZ;
+        const dy = spherePos.y - closestY;
+        const distSq = dx * dx + dz * dz + dy * dy;
+        
+        return distSq < radius * radius;
+    }
+    
+    // Box-Box collision (AABB)
+    const xOverlap = Math.abs(pos1.x - pos2.x) < (bounds1.width + bounds2.width) / 2;
+    const zOverlap = Math.abs(pos1.z - pos2.z) < (bounds1.depth + bounds2.depth) / 2;
+    const yOverlap = Math.abs(pos1.y - pos2.y) < (bounds1.height + bounds2.height) / 2;
+    
+    return xOverlap && zOverlap && yOverlap;
+}
+
 // Check collision between two objects
 function checkObjectCollision(obj1, pos1, obj2) {
     if (obj1 === obj2 || obj2.userData.hidden) return false;
+    
+    // Check collision layers
+    const layer1 = getObjectCollisionLayer(obj1);
+    const layer2 = getObjectCollisionLayer(obj2);
+    if (!canLayersCollide(layer1, layer2)) {
+        return false;
+    }
     
     const bounds1 = getObjectBounds(obj1);
     const bounds2 = getObjectBounds(obj2);
     const pos2 = obj2.position;
     
-    // Check X-Z plane collision (horizontal)
-    const xOverlap = Math.abs(pos1.x - pos2.x) < (bounds1.width + bounds2.width) / 2;
-    const zOverlap = Math.abs(pos1.z - pos2.z) < (bounds1.depth + bounds2.depth) / 2;
+    // Use improved shape-based collision detection
+    return checkShapeCollision(bounds1, pos1, bounds2, pos2);
+}
+
+// Calculate sliding vector along collision surface
+function calculateSlidingVector(velocity, collisionNormal) {
+    // Project velocity onto collision normal
+    const dot = velocity.x * collisionNormal.x + velocity.z * collisionNormal.z;
     
-    // Check Y collision (vertical) - objects at different heights don't collide
-    const yOverlap = Math.abs(pos1.y - pos2.y) < (bounds1.height + bounds2.height) / 2;
+    // Subtract normal component to get sliding vector
+    return {
+        x: velocity.x - dot * collisionNormal.x,
+        z: velocity.z - dot * collisionNormal.z
+    };
+}
+
+// Get collision normal between two objects
+function getCollisionNormal(obj1Pos, obj2Pos) {
+    const dx = obj1Pos.x - obj2Pos.x;
+    const dz = obj1Pos.z - obj2Pos.z;
+    const dist = Math.sqrt(dx * dx + dz * dz);
     
-    return xOverlap && zOverlap && yOverlap;
+    if (dist < 0.001) {
+        return { x: 1, z: 0 }; // Default normal if objects are at same position
+    }
+    
+    return {
+        x: dx / dist,
+        z: dz / dist
+    };
 }
 
 // Handle collision response with momentum transfer
@@ -2613,14 +2835,19 @@ function handleCollisionResponse(obj1, obj2, velocity1) {
     };
 }
 
-// Check if object can move to new position
-function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
+// Check if object can move to new position with sliding support
+function checkAllCollisions(movingObj, newX, newZ, velocity = 0, velocityVector = null) {
     const testPos = { x: newX, y: movingObj.position.y, z: newZ };
     let collisionHandled = false;
     
-    // Check collision with all props
-    for (let prop of props) {
-        if (checkObjectCollision(movingObj, testPos, prop)) {
+    // Use spatial grid for better performance with many objects
+    const bounds = getObjectBounds(movingObj);
+    const queryRadius = Math.max(bounds.width, bounds.depth) + 3; // Extra margin for nearby objects
+    const nearbyObjects = spatialGrid.query(newX, newZ, queryRadius);
+    
+    // Check collision with nearby props
+    for (let prop of nearbyObjects) {
+        if (props.includes(prop) && checkObjectCollision(movingObj, testPos, prop)) {
             if (velocity > 0) {
                 // Calculate collision response
                 const response = handleCollisionResponse(movingObj, prop, velocity);
@@ -2649,9 +2876,9 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
         }
     }
     
-    // Check collision with all actors
-    for (let actor of actors) {
-        if (checkObjectCollision(movingObj, testPos, actor)) {
+    // Check collision with nearby actors
+    for (let actor of nearbyObjects) {
+        if (actors.includes(actor) && checkObjectCollision(movingObj, testPos, actor)) {
             if (velocity > 0) {
                 const response = handleCollisionResponse(movingObj, actor, velocity);
                 
@@ -2683,6 +2910,30 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
     }
     
     return false; // No collision
+}
+
+// Attempt to move with sliding along obstacles
+function tryMoveWithSliding(obj, targetX, targetZ, velocity = 0) {
+    const currentX = obj.position.x;
+    const currentZ = obj.position.z;
+    
+    // Try direct movement first
+    if (!checkAllCollisions(obj, targetX, targetZ, velocity)) {
+        return { x: targetX, z: targetZ, moved: true };
+    }
+    
+    // If direct movement blocked, try sliding along X axis
+    if (!checkAllCollisions(obj, targetX, currentZ, velocity)) {
+        return { x: targetX, z: currentZ, moved: true };
+    }
+    
+    // Try sliding along Z axis
+    if (!checkAllCollisions(obj, currentX, targetZ, velocity)) {
+        return { x: currentX, z: targetZ, moved: true };
+    }
+    
+    // No movement possible
+    return { x: currentX, z: currentZ, moved: false };
 }
 
 function checkPropSceneryCollision(prop, newX, newZ) {
@@ -2723,8 +2974,114 @@ function checkPropSceneryCollision(prop, newX, newZ) {
     return false;
 }
 
+// Debug visualization functions
+function updateDebugVisualization() {
+    // Clear existing debug helpers
+    clearDebugVisualization();
+    
+    if (!debugVisualizationEnabled) {
+        return;
+    }
+    
+    // Create debug helpers for all props
+    props.forEach(prop => {
+        if (!prop.userData.hidden) {
+            const helper = createCollisionDebugHelper(prop);
+            if (helper) {
+                scene.add(helper);
+                debugVisualizationHelpers.push(helper);
+            }
+        }
+    });
+    
+    // Create debug helpers for all actors
+    actors.forEach(actor => {
+        if (!actor.userData.hidden) {
+            const helper = createCollisionDebugHelper(actor);
+            if (helper) {
+                scene.add(helper);
+                debugVisualizationHelpers.push(helper);
+            }
+        }
+    });
+}
+
+function createCollisionDebugHelper(obj) {
+    const bounds = getObjectBounds(obj);
+    const pos = obj.position;
+    let geometry;
+    
+    const material = new THREE.MeshBasicMaterial({
+        color: 0x00ff00,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.5
+    });
+    
+    switch (bounds.shape) {
+        case COLLISION_SHAPES.BOX:
+            geometry = new THREE.BoxGeometry(bounds.width, bounds.height, bounds.depth);
+            break;
+        case COLLISION_SHAPES.SPHERE:
+            const radius = Math.max(bounds.width, bounds.depth, bounds.height) / 2;
+            geometry = new THREE.SphereGeometry(radius, 16, 16);
+            break;
+        case COLLISION_SHAPES.CAPSULE:
+            // Approximate capsule with cylinder
+            const capRadius = Math.max(bounds.width, bounds.depth) / 2;
+            geometry = new THREE.CylinderGeometry(capRadius, capRadius, bounds.height, 16);
+            break;
+        default:
+            geometry = new THREE.BoxGeometry(bounds.width, bounds.height, bounds.depth);
+    }
+    
+    const helper = new THREE.Mesh(geometry, material);
+    helper.position.copy(pos);
+    helper.rotation.copy(obj.rotation);
+    
+    // Store reference to original object for updating
+    helper.userData.trackedObject = obj;
+    
+    return helper;
+}
+
+function clearDebugVisualization() {
+    debugVisualizationHelpers.forEach(helper => {
+        scene.remove(helper);
+        if (helper.geometry) helper.geometry.dispose();
+        if (helper.material) helper.material.dispose();
+    });
+    debugVisualizationHelpers = [];
+}
+
+function toggleDebugVisualization() {
+    debugVisualizationEnabled = !debugVisualizationEnabled;
+    updateDebugVisualization();
+    console.log('Debug visualization:', debugVisualizationEnabled ? 'ON' : 'OFF');
+}
+
+// Update spatial grid with all objects
+function updateSpatialGrid() {
+    spatialGrid.clear();
+    
+    props.forEach(prop => {
+        if (!prop.userData.hidden) {
+            spatialGrid.insert(prop);
+        }
+    });
+    
+    actors.forEach(actor => {
+        if (!actor.userData.hidden) {
+            spatialGrid.insert(actor);
+        }
+    });
+}
+
 function animate() {
     requestAnimationFrame(animate);
+    
+    // Update spatial grid for efficient collision detection
+    updateSpatialGrid();
     
     if (currentLightingPreset === 'default' || currentLightingPreset === 'dramatic') {
         lights.forEach((light, index) => {
@@ -2919,6 +3276,17 @@ function animate() {
             }
         }
     });
+    
+    // Update debug visualization helpers to follow objects
+    if (debugVisualizationEnabled) {
+        debugVisualizationHelpers.forEach(helper => {
+            const trackedObj = helper.userData.trackedObject;
+            if (trackedObj) {
+                helper.position.copy(trackedObj.position);
+                helper.rotation.copy(trackedObj.rotation);
+            }
+        });
+    }
     
     if (controls) {
         controls.update();
