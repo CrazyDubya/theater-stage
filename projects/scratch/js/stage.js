@@ -21,6 +21,12 @@ let propPlatformRelations = new Map(); // prop -> platform
 let propRotatingStageRelations = new Set(); // props on rotating stage
 let propTrapDoorRelations = new Map(); // prop -> trapdoor
 
+// Prop interaction tracking
+let actorHeldProps = new Map(); // actor -> prop being held
+let actorSittingOn = new Map(); // actor -> furniture prop being sat on
+let propStates = new Map(); // prop -> state object (e.g., lamp: {on: false}, door: {open: false})
+let throwingProps = new Map(); // prop -> {velocity, thrownBy}
+
 // Scene serializer for save/load functionality
 class SceneSerializer {
     constructor() {
@@ -887,6 +893,48 @@ function onStageClick(event) {
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, camera);
     
+    if (placementMode === 'select-actor') {
+        // Check intersection with actors
+        const intersects = raycaster.intersectObjects(actors, true);
+        
+        if (intersects.length > 0) {
+            // Find the root actor object
+            let targetActor = intersects[0].object;
+            while (targetActor.parent && targetActor.parent !== scene) {
+                targetActor = targetActor.parent;
+            }
+            
+            if (targetActor.userData.type === 'actor') {
+                window.setSelectedActor(targetActor);
+                alert(`Selected: ${targetActor.userData.name}`);
+            }
+        }
+        
+        placementMode = null;
+        return;
+    }
+    
+    if (placementMode === 'select-prop') {
+        // Check intersection with props
+        const intersects = raycaster.intersectObjects(props, true);
+        
+        if (intersects.length > 0) {
+            // Find the root prop object
+            let targetProp = intersects[0].object;
+            while (targetProp.parent && targetProp.parent !== scene) {
+                targetProp = targetProp.parent;
+            }
+            
+            if (targetProp.userData.type === 'prop') {
+                window.setSelectedProp(targetProp);
+                alert(`Selected: ${targetProp.userData.name}`);
+            }
+        }
+        
+        placementMode = null;
+        return;
+    }
+    
     if (placementMode === 'push') {
         // Check intersection with all objects
         const allObjects = [...props, ...actors];
@@ -1274,6 +1322,121 @@ function setupUI() {
         alert('Click on an object to push it! Lighter objects move more.');
     });
     
+    // Prop Interaction controls
+    const interactionLabel = document.createElement('div');
+    interactionLabel.innerHTML = '<strong>Prop Interactions</strong>';
+    interactionLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const interactionInfo = document.createElement('div');
+    interactionInfo.style.cssText = 'font-size: 11px; margin: 5px 0; color: #aaa;';
+    interactionInfo.innerHTML = 'Click actor, then prop to interact';
+    
+    let selectedActor = null;
+    let selectedProp = null;
+    
+    const selectActorButton = document.createElement('button');
+    selectActorButton.textContent = 'Select Actor';
+    selectActorButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    selectActorButton.addEventListener('click', () => {
+        placementMode = 'select-actor';
+        placementMarker.visible = false;
+        alert('Click on an actor to select it');
+    });
+    
+    const selectPropButton = document.createElement('button');
+    selectPropButton.textContent = 'Select Prop';
+    selectPropButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    selectPropButton.addEventListener('click', () => {
+        placementMode = 'select-prop';
+        placementMarker.visible = false;
+        alert('Click on a prop to select it');
+    });
+    
+    const pickUpButton = document.createElement('button');
+    pickUpButton.textContent = 'Pick Up';
+    pickUpButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    pickUpButton.addEventListener('click', () => {
+        if (selectedActor && selectedProp) {
+            pickUpProp(selectedActor, selectedProp);
+        } else {
+            alert('Select an actor and a prop first');
+        }
+    });
+    
+    const putDownButton = document.createElement('button');
+    putDownButton.textContent = 'Put Down';
+    putDownButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    putDownButton.addEventListener('click', () => {
+        if (selectedActor) {
+            putDownProp(selectedActor);
+        } else {
+            alert('Select an actor first');
+        }
+    });
+    
+    const throwButton = document.createElement('button');
+    throwButton.textContent = 'Throw';
+    throwButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    throwButton.addEventListener('click', () => {
+        if (selectedActor) {
+            // Get actor facing direction (or default forward)
+            const direction = new THREE.Vector3(0, 0, -1);
+            throwProp(selectedActor, direction, 5);
+        } else {
+            alert('Select an actor first');
+        }
+    });
+    
+    const sitButton = document.createElement('button');
+    sitButton.textContent = 'Sit';
+    sitButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    sitButton.addEventListener('click', () => {
+        if (selectedActor && selectedProp) {
+            sitOnProp(selectedActor, selectedProp);
+        } else {
+            alert('Select an actor and a sittable prop first');
+        }
+    });
+    
+    const standButton = document.createElement('button');
+    standButton.textContent = 'Stand Up';
+    standButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    standButton.addEventListener('click', () => {
+        if (selectedActor) {
+            standUpFromProp(selectedActor);
+        } else {
+            alert('Select an actor first');
+        }
+    });
+    
+    const toggleStateButton = document.createElement('button');
+    toggleStateButton.textContent = 'Toggle Prop State';
+    toggleStateButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    toggleStateButton.addEventListener('click', () => {
+        if (selectedProp) {
+            const result = togglePropState(selectedProp) || toggleDoorState(selectedProp);
+            if (!result) {
+                alert('Prop does not have toggleable state');
+            }
+        } else {
+            alert('Select a prop first');
+        }
+    });
+    
+    // Store references for selection
+    window.selectedActor = null;
+    window.selectedProp = null;
+    window.setSelectedActor = (actor) => {
+        window.selectedActor = actor;
+        selectedActor = actor;
+        console.log('Selected actor:', actor.userData.name);
+    };
+    window.setSelectedProp = (prop) => {
+        window.selectedProp = prop;
+        selectedProp = prop;
+        console.log('Selected prop:', prop.userData.name);
+    };
+    
     // Undo/Redo controls
     const undoRedoLabel = document.createElement('div');
     undoRedoLabel.innerHTML = '<strong>Undo/Redo</strong>';
@@ -1366,6 +1529,23 @@ function setupUI() {
     uiContainer.appendChild(loadButton);
     uiContainer.appendChild(physicsLabel);
     uiContainer.appendChild(pushButton);
+    uiContainer.appendChild(interactionLabel);
+    uiContainer.appendChild(interactionInfo);
+    uiContainer.appendChild(selectActorButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(selectPropButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(pickUpButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(putDownButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(throwButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(sitButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(standButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(toggleStateButton);
     uiContainer.appendChild(undoRedoLabel);
     uiContainer.appendChild(undoButton);
     uiContainer.appendChild(document.createTextNode(' '));
@@ -1420,21 +1600,33 @@ const PROP_CATALOG = {
         category: 'basic',
         create: () => new THREE.BoxGeometry(1, 1, 1),
         color: 0x808080,
-        y: 0.5
+        y: 0.5,
+        interactions: {
+            grabbable: true,
+            throwable: true
+        }
     },
     sphere: {
         name: 'Sphere',
         category: 'basic',
         create: () => new THREE.SphereGeometry(0.5, 16, 16),
         color: 0x808080,
-        y: 0.5
+        y: 0.5,
+        interactions: {
+            grabbable: true,
+            throwable: true
+        }
     },
     cylinder: {
         name: 'Cylinder',
         category: 'basic',
         create: () => new THREE.CylinderGeometry(0.5, 0.5, 1, 16),
         color: 0x808080,
-        y: 0.5
+        y: 0.5,
+        interactions: {
+            grabbable: true,
+            throwable: true
+        }
     },
     // Furniture
     chair: {
@@ -1468,7 +1660,11 @@ const PROP_CATALOG = {
             }
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {
+            sittable: true,
+            seatHeight: 0.5
+        }
     },
     table: {
         name: 'Table',
@@ -1494,7 +1690,8 @@ const PROP_CATALOG = {
             }
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {}
     },
     // Stage props
     box: {
@@ -1520,7 +1717,11 @@ const PROP_CATALOG = {
             }
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {
+            grabbable: true,
+            throwable: false
+        }
     },
     barrel: {
         name: 'Barrel',
@@ -1545,7 +1746,11 @@ const PROP_CATALOG = {
             }
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {
+            grabbable: true,
+            throwable: false
+        }
     },
     // Decorative
     plant: {
@@ -1568,7 +1773,11 @@ const PROP_CATALOG = {
             group.add(plant);
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {
+            grabbable: true,
+            throwable: false
+        }
     },
     lamp: {
         name: 'Stage Lamp',
@@ -1598,7 +1807,59 @@ const PROP_CATALOG = {
             group.add(shade);
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {
+            toggleable: true,
+            states: ['off', 'on']
+        }
+    },
+    door: {
+        name: 'Door',
+        category: 'furniture',
+        create: () => {
+            const group = new THREE.Group();
+            // Door frame
+            const frameMaterial = new THREE.MeshPhongMaterial({ color: 0x654321 });
+            const leftPost = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, 2.5, 0.1),
+                frameMaterial
+            );
+            leftPost.position.set(-1, 1.25, 0);
+            group.add(leftPost);
+            const rightPost = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, 2.5, 0.1),
+                frameMaterial
+            );
+            rightPost.position.set(1, 1.25, 0);
+            group.add(rightPost);
+            const topPost = new THREE.Mesh(
+                new THREE.BoxGeometry(2.2, 0.1, 0.1),
+                frameMaterial
+            );
+            topPost.position.set(0, 2.5, 0);
+            group.add(topPost);
+            // Door panel (will rotate)
+            const door = new THREE.Mesh(
+                new THREE.BoxGeometry(1.8, 2.3, 0.1),
+                new THREE.MeshPhongMaterial({ color: 0x8B4513 })
+            );
+            door.position.set(0, 1.15, 0);
+            door.userData.isDoorPanel = true;
+            group.add(door);
+            // Door knob
+            const knob = new THREE.Mesh(
+                new THREE.SphereGeometry(0.08, 8, 8),
+                new THREE.MeshPhongMaterial({ color: 0xFFD700 })
+            );
+            knob.position.set(0.7, 1.15, 0.1);
+            group.add(knob);
+            return group;
+        },
+        y: 0,
+        interactions: {
+            openable: true,
+            states: ['closed', 'open']
+        }
     }
 };
 
@@ -1631,8 +1892,18 @@ function addPropAt(x, z) {
         name: `${propDef.name} (${propId})`,
         draggable: true,
         originalY: propDef.y,
-        hidden: false
+        hidden: false,
+        interactions: propDef.interactions || {}
     };
+    
+    // Initialize prop state if it has stateful interactions
+    if (propDef.interactions) {
+        if (propDef.interactions.toggleable || propDef.interactions.openable) {
+            propStates.set(propObject, {
+                currentState: propDef.interactions.states ? propDef.interactions.states[0] : 'closed'
+            });
+        }
+    }
     
     // Check if position is occupied before placing
     const tempProps = [...props];
@@ -1770,6 +2041,235 @@ function addActorAt(x, z) {
     
     // Actors use same physics as props
     updatePropRelationships(actorGroup);
+}
+
+// ===== PROP INTERACTION FUNCTIONS =====
+
+// Pick up prop - actor grabs a prop
+function pickUpProp(actor, prop) {
+    if (!actor || !prop) return false;
+    
+    // Check if prop is grabbable
+    if (!prop.userData.interactions || !prop.userData.interactions.grabbable) {
+        console.log('Prop is not grabbable');
+        return false;
+    }
+    
+    // Check if actor already holding something
+    if (actorHeldProps.has(actor)) {
+        console.log('Actor already holding a prop');
+        return false;
+    }
+    
+    // Check distance
+    const distance = actor.position.distanceTo(prop.position);
+    if (distance > 2) {
+        console.log('Prop too far away');
+        return false;
+    }
+    
+    // Pick up the prop
+    actorHeldProps.set(actor, prop);
+    prop.userData.heldBy = actor;
+    console.log(`${actor.userData.name} picked up ${prop.userData.name}`);
+    return true;
+}
+
+// Put down prop - actor releases held prop
+function putDownProp(actor) {
+    if (!actor) return false;
+    
+    const prop = actorHeldProps.get(actor);
+    if (!prop) {
+        console.log('Actor not holding anything');
+        return false;
+    }
+    
+    // Place prop near actor
+    prop.position.x = actor.position.x;
+    prop.position.z = actor.position.z + 1; // Slightly in front
+    prop.position.y = prop.userData.originalY;
+    delete prop.userData.heldBy;
+    
+    actorHeldProps.delete(actor);
+    updatePropRelationships(prop);
+    console.log(`${actor.userData.name} put down ${prop.userData.name}`);
+    return true;
+}
+
+// Throw prop - actor throws held prop
+function throwProp(actor, direction, force = 5) {
+    if (!actor) return false;
+    
+    const prop = actorHeldProps.get(actor);
+    if (!prop) {
+        console.log('Actor not holding anything to throw');
+        return false;
+    }
+    
+    // Check if prop is throwable
+    if (!prop.userData.interactions || !prop.userData.interactions.throwable) {
+        console.log('Prop cannot be thrown');
+        return false;
+    }
+    
+    // Release from actor
+    actorHeldProps.delete(actor);
+    delete prop.userData.heldBy;
+    
+    // Calculate throw velocity
+    const throwDir = direction || new THREE.Vector3(0, 0, -1);
+    throwDir.normalize();
+    
+    const velocity = {
+        x: throwDir.x * force,
+        y: 2, // upward component
+        z: throwDir.z * force
+    };
+    
+    throwingProps.set(prop, {
+        velocity: velocity,
+        thrownBy: actor,
+        gravity: -9.8
+    });
+    
+    console.log(`${actor.userData.name} threw ${prop.userData.name}`);
+    return true;
+}
+
+// Sit on furniture - actor sits on a sittable prop
+function sitOnProp(actor, prop) {
+    if (!actor || !prop) return false;
+    
+    // Check if prop is sittable
+    if (!prop.userData.interactions || !prop.userData.interactions.sittable) {
+        console.log('Cannot sit on this prop');
+        return false;
+    }
+    
+    // Check if someone already sitting
+    for (let [otherActor, sittingProp] of actorSittingOn) {
+        if (sittingProp === prop) {
+            console.log('Someone already sitting here');
+            return false;
+        }
+    }
+    
+    // Check distance
+    const distance = actor.position.distanceTo(prop.position);
+    if (distance > 2) {
+        console.log('Prop too far away');
+        return false;
+    }
+    
+    // Sit down
+    actorSittingOn.set(actor, prop);
+    actor.position.x = prop.position.x;
+    actor.position.z = prop.position.z;
+    actor.position.y = prop.userData.interactions.seatHeight || 0.5;
+    
+    console.log(`${actor.userData.name} sat on ${prop.userData.name}`);
+    return true;
+}
+
+// Stand up from furniture
+function standUpFromProp(actor) {
+    if (!actor) return false;
+    
+    const prop = actorSittingOn.get(actor);
+    if (!prop) {
+        console.log('Actor not sitting');
+        return false;
+    }
+    
+    // Stand up - move slightly forward
+    actor.position.z += 1;
+    actor.position.y = 0; // Reset to ground level
+    
+    actorSittingOn.delete(actor);
+    console.log(`${actor.userData.name} stood up`);
+    return true;
+}
+
+// Toggle prop state (lamp on/off, etc)
+function togglePropState(prop) {
+    if (!prop) return false;
+    
+    const propDef = PROP_CATALOG[prop.userData.propType];
+    if (!propDef || !propDef.interactions || !propDef.interactions.toggleable) {
+        console.log('Prop cannot be toggled');
+        return false;
+    }
+    
+    const state = propStates.get(prop);
+    if (!state) return false;
+    
+    // Toggle between states
+    const states = propDef.interactions.states;
+    const currentIndex = states.indexOf(state.currentState);
+    const nextIndex = (currentIndex + 1) % states.length;
+    state.currentState = states[nextIndex];
+    
+    // Apply visual changes based on prop type
+    if (prop.userData.propType === 'lamp') {
+        // Find shade and update color
+        prop.traverse(child => {
+            if (child instanceof THREE.Mesh && child.position.y > 1) {
+                if (state.currentState === 'on') {
+                    child.material.color.setHex(0xFFFF99);
+                    child.material.emissive = new THREE.Color(0xFFFF66);
+                    child.material.emissiveIntensity = 0.5;
+                } else {
+                    child.material.color.setHex(0xFFFFE0);
+                    child.material.emissive = new THREE.Color(0x000000);
+                    child.material.emissiveIntensity = 0;
+                }
+            }
+        });
+    }
+    
+    console.log(`${prop.userData.name} toggled to ${state.currentState}`);
+    return true;
+}
+
+// Open/close door
+function toggleDoorState(prop) {
+    if (!prop) return false;
+    
+    const propDef = PROP_CATALOG[prop.userData.propType];
+    if (!propDef || !propDef.interactions || !propDef.interactions.openable) {
+        console.log('Prop cannot be opened/closed');
+        return false;
+    }
+    
+    const state = propStates.get(prop);
+    if (!state) return false;
+    
+    // Toggle between states
+    const states = propDef.interactions.states;
+    const currentIndex = states.indexOf(state.currentState);
+    const nextIndex = (currentIndex + 1) % states.length;
+    state.currentState = states[nextIndex];
+    
+    // Apply visual changes - rotate door panel
+    if (prop.userData.propType === 'door') {
+        prop.traverse(child => {
+            if (child.userData.isDoorPanel) {
+                if (state.currentState === 'open') {
+                    // Rotate door 90 degrees
+                    child.rotation.y = Math.PI / 2;
+                    child.position.x = 0.9; // Pivot adjustment
+                } else {
+                    // Close door
+                    child.rotation.y = 0;
+                    child.position.x = 0;
+                }
+            }
+        });
+    }
+    
+    console.log(`${prop.userData.name} ${state.currentState}`);
+    return true;
 }
 
 function toggleMarkers() {
@@ -2616,6 +3116,56 @@ function animate() {
             } else {
                 return; // Still hidden, skip other physics
             }
+        }
+        
+        // Handle props being held by actors
+        if (prop.userData.type === 'prop' && prop.userData.heldBy) {
+            const actor = prop.userData.heldBy;
+            // Position prop relative to actor (in front and slightly up)
+            prop.position.x = actor.position.x;
+            prop.position.z = actor.position.z - 0.8; // In front of actor
+            prop.position.y = actor.position.y + 1.5; // At chest height
+            return; // Skip other physics when held
+        }
+        
+        // Handle thrown props with physics
+        if (throwingProps.has(prop)) {
+            const throwData = throwingProps.get(prop);
+            const vel = throwData.velocity;
+            
+            // Apply gravity
+            vel.y += throwData.gravity * 0.016; // Assuming 60fps
+            
+            // Update position
+            const newX = prop.position.x + vel.x * 0.016;
+            const newZ = prop.position.z + vel.z * 0.016;
+            const newY = prop.position.y + vel.y * 0.016;
+            
+            // Check for collision or ground
+            if (newY <= prop.userData.originalY) {
+                // Hit ground
+                prop.position.y = prop.userData.originalY;
+                vel.x *= 0.3; // Bounce friction
+                vel.z *= 0.3;
+                vel.y *= -0.3; // Bounce up
+                
+                // Stop if velocity too low
+                if (Math.abs(vel.x) < 0.1 && Math.abs(vel.z) < 0.1 && Math.abs(vel.y) < 0.1) {
+                    throwingProps.delete(prop);
+                    updatePropRelationships(prop);
+                }
+            } else if (!checkAllCollisions(prop, newX, newZ, Math.sqrt(vel.x*vel.x + vel.z*vel.z))) {
+                prop.position.x = newX;
+                prop.position.z = newZ;
+                prop.position.y = newY;
+            } else {
+                // Hit obstacle - stop throwing
+                vel.x *= -0.3;
+                vel.z *= -0.3;
+                vel.y *= 0.5;
+            }
+            
+            return; // Skip other physics when being thrown
         }
         
         // Platform physics - elevation
