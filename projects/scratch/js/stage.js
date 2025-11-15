@@ -1260,6 +1260,40 @@ function setupUI() {
     loadButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
     loadButton.addEventListener('click', loadScene);
     
+    // Preset templates
+    const presetLabel = document.createElement('div');
+    presetLabel.innerHTML = '<strong>Preset Templates</strong>';
+    presetLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const presetSelect = document.createElement('select');
+    presetSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
+    presetSelect.innerHTML = `
+        <option value="">Select a preset...</option>
+        <option value="empty-stage">Empty Stage</option>
+        <option value="living-room">Living Room Scene</option>
+        <option value="outdoor-park">Outdoor Park</option>
+        <option value="office-setting">Office Setting</option>
+        <option value="restaurant-cafe">Restaurant/Cafe</option>
+        <option value="classical-theater">Classical Theater</option>
+    `;
+    
+    const loadPresetButton = document.createElement('button');
+    loadPresetButton.textContent = 'Load Preset';
+    loadPresetButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    loadPresetButton.addEventListener('click', () => {
+        const selectedPreset = presetSelect.value;
+        if (selectedPreset) {
+            const confirmLoad = confirm(
+                `This will clear the current scene and load the preset template.\n\nDo you want to continue?`
+            );
+            if (confirmLoad) {
+                loadPreset(selectedPreset);
+            }
+        } else {
+            alert('Please select a preset template from the dropdown.');
+        }
+    });
+    
     // Physics test button
     const physicsLabel = document.createElement('div');
     physicsLabel.innerHTML = '<strong>Physics Test</strong>';
@@ -1364,6 +1398,10 @@ function setupUI() {
     uiContainer.appendChild(saveButton);
     uiContainer.appendChild(document.createTextNode(' '));
     uiContainer.appendChild(loadButton);
+    uiContainer.appendChild(presetLabel);
+    uiContainer.appendChild(presetSelect);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(loadPresetButton);
     uiContainer.appendChild(physicsLabel);
     uiContainer.appendChild(pushButton);
     uiContainer.appendChild(undoRedoLabel);

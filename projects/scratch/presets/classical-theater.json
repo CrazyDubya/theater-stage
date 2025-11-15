@@ -1,0 +1,107 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-01-15T00:00:00.000Z",
+  "name": "Classical Theater",
+  "description": "A traditional theater setup with dramatic lighting and center stage focus",
+  "stage": {
+    "actors": [
+      {
+        "id": "actor_1",
+        "name": "Actor actor_1",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_2",
+        "name": "Actor actor_2",
+        "position": { "x": -3, "y": 0, "z": -2 },
+        "rotation": { "x": 0, "y": 0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_3",
+        "name": "Actor actor_3",
+        "position": { "x": 3, "y": 0, "z": -2 },
+        "rotation": { "x": 0, "y": -0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "props": [
+      {
+        "id": "prop_1",
+        "name": "Chair (prop_1)",
+        "type": "chair",
+        "position": { "x": -4, "y": 0, "z": 3 },
+        "rotation": { "x": 0, "y": 0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_2",
+        "name": "Chair (prop_2)",
+        "type": "chair",
+        "position": { "x": 4, "y": 0, "z": 3 },
+        "rotation": { "x": 0, "y": -0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_3",
+        "name": "Stage Lamp (prop_3)",
+        "type": "lamp",
+        "position": { "x": -6, "y": 0, "z": -4 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_4",
+        "name": "Stage Lamp (prop_4)",
+        "type": "lamp",
+        "position": { "x": 6, "y": 0, "z": -4 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "lighting": {
+      "preset": "dramatic",
+      "customSettings": {}
+    },
+    "camera": {
+      "position": { "x": 0, "y": 8, "z": 15 },
+      "target": { "x": 0, "y": 0, "z": 0 }
+    },
+    "stageElements": {
+      "platforms": [
+        { "index": 0, "height": 0.25, "visible": true },
+        { "index": 1, "height": 0.25, "visible": true },
+        { "index": 2, "height": 0.25, "visible": true },
+        { "index": 3, "height": 0.25, "visible": true }
+      ],
+      "curtains": "open",
+      "rotatingStage": {
+        "visible": true,
+        "rotating": false,
+        "rotation": 0
+      },
+      "trapDoors": [
+        { "index": 0, "visible": true, "open": false },
+        { "index": 1, "visible": true, "open": false },
+        { "index": 2, "visible": true, "open": false },
+        { "index": 3, "visible": true, "open": false }
+      ],
+      "scenery": [
+        { "index": 0, "position": 1 },
+        { "index": 1, "position": 0.5 }
+      ],
+      "markers": {
+        "visible": true
+      }
+    }
+  }
+}
