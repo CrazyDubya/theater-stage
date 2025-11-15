@@ -90,13 +90,30 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Props**: Unique IDs like `prop_1`, `prop_2`
 - Persistent throughout session for tracking and scripting
 
+## Multi-User Collaboration
+
+The application now supports real-time multi-user collaboration! Multiple users can work on the same stage simultaneously.
+
+### Features
+- **Real-time synchronization** - All changes are instantly visible to all users
+- **User presence** - See cursors and names of other collaborators
+- **Permission levels** - Director (full control), Actor (editing), Viewer (read-only)
+- **Chat system** - Communicate with other users
+- **Conflict resolution** - Object locking prevents simultaneous edits
+
+### Usage
+1. Start the collaboration server: `npm run server`
+2. Start the web server: `python3 -m http.server 8000`
+3. Click "Join Collaboration" and enter room details
+4. Multiple users can join the same room ID
+
+See [COLLABORATION.md](COLLABORATION.md) for detailed documentation.
+
 ## Known Issues
 - Props/actors may hover slightly when on elevated platforms
 - Collision detection is simplified (bounding box based)
-- No save/load functionality yet
 
 ## Future Enhancements
-- Save/load scenes
 - AI actor movement scripting
 - Advanced prop interactions
 - Sound system integration
