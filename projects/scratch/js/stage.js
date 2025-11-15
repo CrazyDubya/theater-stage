@@ -1260,6 +1260,31 @@ function setupUI() {
     loadButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
     loadButton.addEventListener('click', loadScene);
     
+    // 3D Export controls
+    const exportLabel = document.createElement('div');
+    exportLabel.innerHTML = '<strong>Export to 3D Formats</strong>';
+    exportLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const exportGLBButton = document.createElement('button');
+    exportGLBButton.textContent = 'Export GLB';
+    exportGLBButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    exportGLBButton.addEventListener('click', exportSceneGLB);
+    
+    const exportGLTFButton = document.createElement('button');
+    exportGLTFButton.textContent = 'Export GLTF';
+    exportGLTFButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    exportGLTFButton.addEventListener('click', exportSceneGLTF);
+    
+    const exportOBJButton = document.createElement('button');
+    exportOBJButton.textContent = 'Export OBJ';
+    exportOBJButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    exportOBJButton.addEventListener('click', exportSceneOBJ);
+    
+    const exportAnimButton = document.createElement('button');
+    exportAnimButton.textContent = 'Export Animation';
+    exportAnimButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    exportAnimButton.addEventListener('click', exportAnimationFrames);
+    
     // Physics test button
     const physicsLabel = document.createElement('div');
     physicsLabel.innerHTML = '<strong>Physics Test</strong>';
@@ -1364,6 +1389,14 @@ function setupUI() {
     uiContainer.appendChild(saveButton);
     uiContainer.appendChild(document.createTextNode(' '));
     uiContainer.appendChild(loadButton);
+    uiContainer.appendChild(exportLabel);
+    uiContainer.appendChild(exportGLBButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(exportGLTFButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(exportOBJButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(exportAnimButton);
     uiContainer.appendChild(physicsLabel);
     uiContainer.appendChild(pushButton);
     uiContainer.appendChild(undoRedoLabel);
