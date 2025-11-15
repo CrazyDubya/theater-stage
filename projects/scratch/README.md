@@ -38,6 +38,15 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - Collision detection with scenery panels
 - Passthrough detection for midstage cutout
 
+### 📐 Measurement and Grid Tools
+- **Grid Overlay**: Toggle grid helper for reference (25x25 units)
+- **Snap to Grid**: Enable snap-to-grid for precise object placement
+- **Grid Size**: Adjustable grid size from 0.5 to 5 units
+- **Distance Measurement**: Click two objects to measure distance between them
+- **Coordinate Display**: Real-time cursor position display (shown when grid is visible)
+- **Visual Feedback**: Measurement lines and distance labels
+- **Angle Calculation**: Helper function for angle measurements between objects
+
 ## Getting Started
 
 1. Open `index.html` in a modern web browser
@@ -67,6 +76,24 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Toggle Trap Doors**: Open/close trap doors
 - **Show/Hide Elements**: Toggle optional stage elements
 - **Scenery Panels**: Slide panels to various positions (Off, 1/4, 1/2, 3/4, Full)
+- **Save/Load Scene**: Export/import complete stage configurations
+- **Undo/Redo**: Full undo/redo support (Ctrl+Z / Ctrl+Y)
+- **Toggle Grid**: Show/hide grid overlay for reference
+- **Snap to Grid**: Enable precise object placement aligned to grid
+- **Measure Distance**: Measure distance between any two objects
+- **Grid Size**: Adjust grid cell size (0.5 to 5 units)
+
+### Using Measurement Tools
+1. **Grid Overlay**: Click "Toggle Grid" to show/hide the grid on the stage
+2. **Snap to Grid**: Click "Snap to Grid" to enable/disable snapping (button turns green when active)
+3. **Measuring Distance**:
+   - Click "Measure Distance" button (button turns purple when active)
+   - Click on the first object (prop or actor)
+   - Click on the second object
+   - A purple line will appear with a distance label
+   - Click "Measure Distance" again to exit measurement mode
+4. **Coordinate Display**: Enable the grid to see real-time cursor coordinates in the bottom-right corner
+5. **Grid Size**: Use the slider to adjust grid spacing for different precision levels
 
 ## Architecture
 
