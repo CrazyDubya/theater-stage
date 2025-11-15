@@ -142,18 +142,22 @@ class SceneSerializer {
                     textureScale: mesh.material.map ? {
                         x: mesh.material.map.repeat.x,
                         y: mesh.material.map.repeat.y
+                    } : null,
+                    textureOffset: mesh.material.map ? {
+                        x: mesh.material.map.offset.x,
+                        y: mesh.material.map.offset.y
                     } : null
                 };
                 
                 // If using a default texture, save its type
                 if (mesh.material.map) {
                     const texture = mesh.material.map;
-                    if (texture === textureManager.getDefaultTexture('brick')) {
-                        textureInfo.defaultTexture = 'brick';
-                    } else if (texture === textureManager.getDefaultTexture('wood')) {
-                        textureInfo.defaultTexture = 'wood';
-                    } else if (texture === textureManager.getDefaultTexture('sky')) {
-                        textureInfo.defaultTexture = 'sky';
+                    const defaultTypes = ['brick', 'wood', 'sky', 'stone', 'metal', 'curtain', 'grass'];
+                    for (const type of defaultTypes) {
+                        if (texture === textureManager.getDefaultTexture(type)) {
+                            textureInfo.defaultTexture = type;
+                            break;
+                        }
                     }
                 }
                 
@@ -333,6 +337,18 @@ class SceneSerializer {
                                     mesh.material.map.repeat.set(
                                         sceneryData.textureScale.x,
                                         sceneryData.textureScale.y
+                                    );
+                                }
+                            }
+                            
+                            // Restore texture offset
+                            if (sceneryData.textureOffset) {
+                                const panel = sceneryPanels[sceneryData.index];
+                                const mesh = panel.children[0];
+                                if (mesh.material.map) {
+                                    mesh.material.map.offset.set(
+                                        sceneryData.textureOffset.x,
+                                        sceneryData.textureOffset.y
                                     );
                                 }
                             }
@@ -1188,6 +1204,10 @@ function setupUI() {
         <option value="brick">Brick Wall</option>
         <option value="wood">Wood Planks</option>
         <option value="sky">Sky Gradient</option>
+        <option value="stone">Stone Wall</option>
+        <option value="metal">Metal</option>
+        <option value="curtain">Red Curtain</option>
+        <option value="grass">Grass</option>
     `;
     defaultTextureSelect.addEventListener('change', (e) => {
         if (e.target.value) {
@@ -1225,6 +1245,57 @@ function setupUI() {
         input.click();
     });
     
+    const uploadVideoButton = document.createElement('button');
+    uploadVideoButton.textContent = 'Upload Video';
+    uploadVideoButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    uploadVideoButton.addEventListener('click', () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'video/*';
+        
+        input.onchange = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            try {
+                const video = document.createElement('video');
+                video.src = URL.createObjectURL(file);
+                video.crossOrigin = 'anonymous';
+                video.loop = true;
+                video.muted = true;
+                video.playsInline = true;
+                
+                video.addEventListener('loadeddata', () => {
+                    video.play();
+                    const texture = textureManager.loadVideoTexture(video);
+                    const panelIndex = parseInt(panelSelect.value);
+                    textureManager.applyTextureToPanel(panelIndex, texture);
+                    console.log(`Applied video texture to panel ${panelIndex}`);
+                    alert('Video texture applied successfully!');
+                });
+                
+                video.addEventListener('error', (e) => {
+                    console.error('Video loading failed:', e);
+                    alert('Failed to load video: ' + (e.message || 'Unknown error'));
+                });
+            } catch (error) {
+                console.error('Video texture failed:', error);
+                alert('Failed to load video texture: ' + error.message);
+            }
+        };
+        
+        input.click();
+    });
+    
+    const clearTextureButton = document.createElement('button');
+    clearTextureButton.textContent = 'Clear Texture';
+    clearTextureButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    clearTextureButton.addEventListener('click', () => {
+        const panelIndex = parseInt(panelSelect.value);
+        textureManager.removeTextureFromPanel(panelIndex);
+        console.log(`Cleared texture from panel ${panelIndex}`);
+    });
+    
     const textureScaleLabel = document.createElement('div');
     textureScaleLabel.textContent = 'Texture Scale:';
     textureScaleLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
@@ -1242,6 +1313,46 @@ function setupUI() {
         const panel = sceneryPanels[panelIndex];
         if (panel && panel.children[0].material.map) {
             panel.children[0].material.map.repeat.set(scale, scale);
+        }
+    });
+    
+    const textureOffsetLabel = document.createElement('div');
+    textureOffsetLabel.textContent = 'Texture Offset X:';
+    textureOffsetLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
+    
+    const offsetXSlider = document.createElement('input');
+    offsetXSlider.type = 'range';
+    offsetXSlider.min = '0';
+    offsetXSlider.max = '1';
+    offsetXSlider.step = '0.01';
+    offsetXSlider.value = '0';
+    offsetXSlider.style.cssText = 'margin: 5px 0; width: 150px;';
+    offsetXSlider.addEventListener('input', (e) => {
+        const offset = parseFloat(e.target.value);
+        const panelIndex = parseInt(panelSelect.value);
+        const panel = sceneryPanels[panelIndex];
+        if (panel && panel.children[0].material.map) {
+            panel.children[0].material.map.offset.x = offset;
+        }
+    });
+    
+    const textureOffsetYLabel = document.createElement('div');
+    textureOffsetYLabel.textContent = 'Texture Offset Y:';
+    textureOffsetYLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
+    
+    const offsetYSlider = document.createElement('input');
+    offsetYSlider.type = 'range';
+    offsetYSlider.min = '0';
+    offsetYSlider.max = '1';
+    offsetYSlider.step = '0.01';
+    offsetYSlider.value = '0';
+    offsetYSlider.style.cssText = 'margin: 5px 0; width: 150px;';
+    offsetYSlider.addEventListener('input', (e) => {
+        const offset = parseFloat(e.target.value);
+        const panelIndex = parseInt(panelSelect.value);
+        const panel = sceneryPanels[panelIndex];
+        if (panel && panel.children[0].material.map) {
+            panel.children[0].material.map.offset.y = offset;
         }
     });
 
@@ -1358,8 +1469,16 @@ function setupUI() {
     uiContainer.appendChild(defaultTextureSelect);
     uiContainer.appendChild(document.createElement('br'));
     uiContainer.appendChild(uploadButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(uploadVideoButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(clearTextureButton);
     uiContainer.appendChild(textureScaleLabel);
     uiContainer.appendChild(scaleSlider);
+    uiContainer.appendChild(textureOffsetLabel);
+    uiContainer.appendChild(offsetXSlider);
+    uiContainer.appendChild(textureOffsetYLabel);
+    uiContainer.appendChild(offsetYSlider);
     uiContainer.appendChild(saveLoadLabel);
     uiContainer.appendChild(saveButton);
     uiContainer.appendChild(document.createTextNode(' '));
@@ -2019,20 +2138,23 @@ class TextureManager {
     
     createDefaultTextures() {
         const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
+        canvas.width = 512;
+        canvas.height = 512;
         const ctx = canvas.getContext('2d');
         
         const textures = {};
         
         // Create brick texture
         ctx.fillStyle = '#8B4513';
-        ctx.fillRect(0, 0, 256, 256);
+        ctx.fillRect(0, 0, 512, 512);
         ctx.fillStyle = '#654321';
-        for (let y = 0; y < 256; y += 32) {
-            for (let x = 0; x < 256; x += 64) {
-                const offset = (y / 32) % 2 * 32;
-                ctx.fillRect(x + offset, y, 60, 30);
+        ctx.strokeStyle = '#5A3A1A';
+        ctx.lineWidth = 2;
+        for (let y = 0; y < 512; y += 64) {
+            for (let x = 0; x < 512; x += 128) {
+                const offset = (y / 64) % 2 * 64;
+                ctx.fillRect(x + offset, y, 120, 60);
+                ctx.strokeRect(x + offset, y, 120, 60);
             }
         }
         textures.brick = new THREE.CanvasTexture(canvas);
@@ -2040,21 +2162,99 @@ class TextureManager {
         
         // Create wood texture
         ctx.fillStyle = '#DEB887';
-        ctx.fillRect(0, 0, 256, 256);
+        ctx.fillRect(0, 0, 512, 512);
         ctx.fillStyle = '#CD853F';
-        for (let y = 0; y < 256; y += 16) {
-            ctx.fillRect(0, y, 256, 8);
+        for (let y = 0; y < 512; y += 32) {
+            ctx.fillRect(0, y, 512, 16);
+            // Add wood grain detail
+            ctx.strokeStyle = '#8B6914';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < 512; x += 20) {
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + 10, y + 16);
+                ctx.stroke();
+            }
         }
         textures.wood = new THREE.CanvasTexture(canvas);
         textures.wood.wrapS = textures.wood.wrapT = THREE.RepeatWrapping;
         
         // Create sky texture
-        const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+        const gradient = ctx.createLinearGradient(0, 0, 0, 512);
         gradient.addColorStop(0, '#87CEEB');
+        gradient.addColorStop(0.5, '#B0E0E6');
         gradient.addColorStop(1, '#98FB98');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 256, 256);
+        ctx.fillRect(0, 0, 512, 512);
+        // Add clouds
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        for (let i = 0; i < 10; i++) {
+            const x = Math.random() * 512;
+            const y = Math.random() * 256;
+            ctx.beginPath();
+            ctx.arc(x, y, 30, 0, Math.PI * 2);
+            ctx.arc(x + 25, y, 35, 0, Math.PI * 2);
+            ctx.arc(x + 50, y, 30, 0, Math.PI * 2);
+            ctx.fill();
+        }
         textures.sky = new THREE.CanvasTexture(canvas);
+        
+        // Create stone texture
+        ctx.fillStyle = '#808080';
+        ctx.fillRect(0, 0, 512, 512);
+        for (let i = 0; i < 100; i++) {
+            ctx.fillStyle = `rgba(${100 + Math.random() * 100}, ${100 + Math.random() * 100}, ${100 + Math.random() * 100}, 0.8)`;
+            const size = 20 + Math.random() * 80;
+            ctx.fillRect(Math.random() * 512, Math.random() * 512, size, size);
+        }
+        textures.stone = new THREE.CanvasTexture(canvas);
+        textures.stone.wrapS = textures.stone.wrapT = THREE.RepeatWrapping;
+        
+        // Create metal texture
+        ctx.fillStyle = '#C0C0C0';
+        ctx.fillRect(0, 0, 512, 512);
+        for (let y = 0; y < 512; y += 2) {
+            const brightness = 180 + Math.sin(y * 0.1) * 40;
+            ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
+            ctx.fillRect(0, y, 512, 1);
+        }
+        textures.metal = new THREE.CanvasTexture(canvas);
+        textures.metal.wrapS = textures.metal.wrapT = THREE.RepeatWrapping;
+        
+        // Create curtain texture
+        const curtainGradient = ctx.createLinearGradient(0, 0, 512, 0);
+        curtainGradient.addColorStop(0, '#660000');
+        curtainGradient.addColorStop(0.1, '#8B0000');
+        curtainGradient.addColorStop(0.2, '#660000');
+        curtainGradient.addColorStop(0.3, '#8B0000');
+        curtainGradient.addColorStop(0.4, '#660000');
+        curtainGradient.addColorStop(0.5, '#8B0000');
+        curtainGradient.addColorStop(0.6, '#660000');
+        curtainGradient.addColorStop(0.7, '#8B0000');
+        curtainGradient.addColorStop(0.8, '#660000');
+        curtainGradient.addColorStop(0.9, '#8B0000');
+        curtainGradient.addColorStop(1, '#660000');
+        ctx.fillStyle = curtainGradient;
+        ctx.fillRect(0, 0, 512, 512);
+        textures.curtain = new THREE.CanvasTexture(canvas);
+        textures.curtain.wrapS = textures.curtain.wrapT = THREE.RepeatWrapping;
+        
+        // Create grass texture
+        ctx.fillStyle = '#228B22';
+        ctx.fillRect(0, 0, 512, 512);
+        for (let i = 0; i < 5000; i++) {
+            const x = Math.random() * 512;
+            const y = Math.random() * 512;
+            const greenShade = 100 + Math.random() * 100;
+            ctx.strokeStyle = `rgb(${Math.random() * 50}, ${greenShade}, ${Math.random() * 50})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + Math.random() * 4 - 2, y - Math.random() * 8);
+            ctx.stroke();
+        }
+        textures.grass = new THREE.CanvasTexture(canvas);
+        textures.grass.wrapS = textures.grass.wrapT = THREE.RepeatWrapping;
         
         return textures;
     }
@@ -2075,7 +2275,7 @@ class TextureManager {
         });
     }
     
-    applyTextureToPanel(panelIndex, texture, scale = { x: 1, y: 1 }) {
+    applyTextureToPanel(panelIndex, texture, scale = { x: 1, y: 1 }, offset = { x: 0, y: 0 }) {
         if (panelIndex >= sceneryPanels.length) return false;
         
         const panel = sceneryPanels[panelIndex];
@@ -2084,12 +2284,37 @@ class TextureManager {
         // Clone texture to avoid sharing references
         const clonedTexture = texture.clone();
         clonedTexture.repeat.set(scale.x, scale.y);
+        clonedTexture.offset.set(offset.x, offset.y);
         
         // Apply to material
         mesh.material.map = clonedTexture;
         mesh.material.needsUpdate = true;
         
         return true;
+    }
+    
+    removeTextureFromPanel(panelIndex) {
+        if (panelIndex >= sceneryPanels.length) return false;
+        
+        const panel = sceneryPanels[panelIndex];
+        const mesh = panel.children[0];
+        
+        // Remove texture and revert to solid color
+        if (mesh.material.map) {
+            mesh.material.map.dispose();
+            mesh.material.map = null;
+            mesh.material.needsUpdate = true;
+        }
+        
+        return true;
+    }
+    
+    loadVideoTexture(videoElement) {
+        const texture = new THREE.VideoTexture(videoElement);
+        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        return texture;
     }
     
     getDefaultTexture(name) {
