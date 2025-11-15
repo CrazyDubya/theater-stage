@@ -27,9 +27,17 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 
 ### 🎯 Prop Catalog
 - **Basic**: Cube, Sphere, Cylinder
-- **Furniture**: Chair, Table
+- **Furniture**: Chair, Table, Door
 - **Stage Props**: Crate, Barrel
 - **Decorative**: Potted Plant, Stage Lamp
+
+### 🤝 Prop Interaction System
+- **Pick Up/Put Down**: Actors can grab and carry props
+- **Throw Mechanics**: Physics-based throwing with gravity and collision
+- **Sit on Furniture**: Actors can sit on chairs and other furniture
+- **State Changes**: Toggle lamps on/off, open/close doors
+- **Smart Positioning**: Held props follow actor movements
+- See [PROP_INTERACTIONS.md](PROP_INTERACTIONS.md) for detailed usage
 
 ### ⚙️ Physics System
 - Props and actors elevate with platforms
@@ -37,15 +45,7 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - Trap doors make objects disappear
 - Collision detection with scenery panels
 - Passthrough detection for midstage cutout
-
-### 📐 Measurement and Grid Tools
-- **Grid Overlay**: Toggle grid helper for reference (25x25 units)
-- **Snap to Grid**: Enable snap-to-grid for precise object placement
-- **Grid Size**: Adjustable grid size from 0.5 to 5 units
-- **Distance Measurement**: Click two objects to measure distance between them
-- **Coordinate Display**: Real-time cursor position display (shown when grid is visible)
-- **Visual Feedback**: Measurement lines and distance labels
-- **Angle Calculation**: Helper function for angle measurements between objects
+- Thrown prop physics with gravity and bounce
 
 ## Getting Started
 
@@ -76,24 +76,6 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Toggle Trap Doors**: Open/close trap doors
 - **Show/Hide Elements**: Toggle optional stage elements
 - **Scenery Panels**: Slide panels to various positions (Off, 1/4, 1/2, 3/4, Full)
-- **Save/Load Scene**: Export/import complete stage configurations
-- **Undo/Redo**: Full undo/redo support (Ctrl+Z / Ctrl+Y)
-- **Toggle Grid**: Show/hide grid overlay for reference
-- **Snap to Grid**: Enable precise object placement aligned to grid
-- **Measure Distance**: Measure distance between any two objects
-- **Grid Size**: Adjust grid cell size (0.5 to 5 units)
-
-### Using Measurement Tools
-1. **Grid Overlay**: Click "Toggle Grid" to show/hide the grid on the stage
-2. **Snap to Grid**: Click "Snap to Grid" to enable/disable snapping (button turns green when active)
-3. **Measuring Distance**:
-   - Click "Measure Distance" button (button turns purple when active)
-   - Click on the first object (prop or actor)
-   - Click on the second object
-   - A purple line will appear with a distance label
-   - Click "Measure Distance" again to exit measurement mode
-4. **Coordinate Display**: Enable the grid to see real-time cursor coordinates in the bottom-right corner
-5. **Grid Size**: Use the slider to adjust grid spacing for different precision levels
 
 ## Architecture
 
@@ -117,35 +99,22 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Props**: Unique IDs like `prop_1`, `prop_2`
 - Persistent throughout session for tracking and scripting
 
-## Multi-User Collaboration
-
-The application now supports real-time multi-user collaboration! Multiple users can work on the same stage simultaneously.
-
-### Features
-- **Real-time synchronization** - All changes are instantly visible to all users
-- **User presence** - See cursors and names of other collaborators
-- **Permission levels** - Director (full control), Actor (editing), Viewer (read-only)
-- **Chat system** - Communicate with other users
-- **Conflict resolution** - Object locking prevents simultaneous edits
-
-### Usage
-1. Start the collaboration server: `npm run server`
-2. Start the web server: `python3 -m http.server 8000`
-3. Click "Join Collaboration" and enter room details
-4. Multiple users can join the same room ID
-
-See [COLLABORATION.md](COLLABORATION.md) for detailed documentation.
-
 ## Known Issues
 - Props/actors may hover slightly when on elevated platforms
 - Collision detection is simplified (bounding box based)
 
+## Recent Enhancements
+- ✓ Save/load scene functionality
+- ✓ Advanced prop interaction system
+- ✓ Undo/Redo support
+- ✓ Physics-based push system
+
 ## Future Enhancements
 - AI actor movement scripting
-- Advanced prop interactions
 - Sound system integration
 - Multi-user collaboration
 - Export to standard 3D formats
+- Advanced catching mechanics
 
 ## Dependencies
 - Three.js r128

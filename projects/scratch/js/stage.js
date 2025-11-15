@@ -21,17 +21,11 @@ let propPlatformRelations = new Map(); // prop -> platform
 let propRotatingStageRelations = new Set(); // props on rotating stage
 let propTrapDoorRelations = new Map(); // prop -> trapdoor
 
-// Measurement and grid tools
-let gridHelper = null;
-let gridVisible = false;
-let snapToGrid = false;
-let gridSize = 1; // Grid cell size in units
-let measurementMode = false;
-let measurementStart = null;
-let measurementLine = null;
-let measurementLabel = null;
-let coordinateDisplay = null;
-let selectedObjectForMeasurement = null;
+// Prop interaction tracking
+let actorHeldProps = new Map(); // actor -> prop being held
+let actorSittingOn = new Map(); // actor -> furniture prop being sat on
+let propStates = new Map(); // prop -> state object (e.g., lamp: {on: false}, door: {open: false})
+let throwingProps = new Map(); // prop -> {velocity, thrownBy}
 
 // Scene serializer for save/load functionality
 class SceneSerializer {
@@ -154,22 +148,18 @@ class SceneSerializer {
                     textureScale: mesh.material.map ? {
                         x: mesh.material.map.repeat.x,
                         y: mesh.material.map.repeat.y
-                    } : null,
-                    textureOffset: mesh.material.map ? {
-                        x: mesh.material.map.offset.x,
-                        y: mesh.material.map.offset.y
                     } : null
                 };
                 
                 // If using a default texture, save its type
                 if (mesh.material.map) {
                     const texture = mesh.material.map;
-                    const defaultTypes = ['brick', 'wood', 'sky', 'stone', 'metal', 'curtain', 'grass'];
-                    for (const type of defaultTypes) {
-                        if (texture === textureManager.getDefaultTexture(type)) {
-                            textureInfo.defaultTexture = type;
-                            break;
-                        }
+                    if (texture === textureManager.getDefaultTexture('brick')) {
+                        textureInfo.defaultTexture = 'brick';
+                    } else if (texture === textureManager.getDefaultTexture('wood')) {
+                        textureInfo.defaultTexture = 'wood';
+                    } else if (texture === textureManager.getDefaultTexture('sky')) {
+                        textureInfo.defaultTexture = 'sky';
                     }
                 }
                 
@@ -352,18 +342,6 @@ class SceneSerializer {
                                     );
                                 }
                             }
-                            
-                            // Restore texture offset
-                            if (sceneryData.textureOffset) {
-                                const panel = sceneryPanels[sceneryData.index];
-                                const mesh = panel.children[0];
-                                if (mesh.material.map) {
-                                    mesh.material.map.offset.set(
-                                        sceneryData.textureOffset.x,
-                                        sceneryData.textureOffset.y
-                                    );
-                                }
-                            }
                         }
                     }
                 }
@@ -417,8 +395,6 @@ function init() {
     createSceneryPanels();
     updateCurtains();
     createPlacementMarker();
-    createGridHelper();
-    createCoordinateDisplay();
     addControls();
     setupUI();
 
@@ -905,230 +881,7 @@ function createPlacementMarker() {
     placementMarker = markerGroup;
 }
 
-function createGridHelper() {
-    // Create a grid helper overlaying the stage
-    const stageWidth = 20;
-    const stageDepth = 15;
-    const divisions = Math.max(stageWidth, stageDepth);
-    
-    gridHelper = new THREE.GridHelper(25, 25, 0x00ff00, 0x404040);
-    gridHelper.position.y = 0.05; // Slightly above stage to be visible
-    gridHelper.visible = gridVisible;
-    scene.add(gridHelper);
-}
-
-function toggleGrid() {
-    gridVisible = !gridVisible;
-    if (gridHelper) {
-        gridHelper.visible = gridVisible;
-    }
-    console.log(`Grid ${gridVisible ? 'enabled' : 'disabled'}`);
-}
-
-function toggleSnapToGrid() {
-    snapToGrid = !snapToGrid;
-    console.log(`Snap-to-grid ${snapToGrid ? 'enabled' : 'disabled'}`);
-}
-
-function snapPositionToGrid(position) {
-    if (!snapToGrid) return position;
-    
-    return {
-        x: Math.round(position.x / gridSize) * gridSize,
-        y: position.y,
-        z: Math.round(position.z / gridSize) * gridSize
-    };
-}
-
-function createCoordinateDisplay() {
-    // Create HTML overlay for coordinate display
-    const coordDiv = document.createElement('div');
-    coordDiv.id = 'coordinate-display';
-    coordDiv.style.cssText = `
-        position: absolute;
-        bottom: 10px;
-        right: 10px;
-        background: rgba(0,0,0,0.7);
-        color: white;
-        padding: 10px;
-        border-radius: 5px;
-        font-family: monospace;
-        font-size: 12px;
-        display: none;
-    `;
-    document.body.appendChild(coordDiv);
-    coordinateDisplay = coordDiv;
-}
-
-function updateCoordinateDisplay(x, y, z) {
-    if (coordinateDisplay) {
-        coordinateDisplay.style.display = 'block';
-        coordinateDisplay.innerHTML = `
-            <strong>Cursor Position:</strong><br>
-            X: ${x.toFixed(2)}<br>
-            Y: ${y.toFixed(2)}<br>
-            Z: ${z.toFixed(2)}
-        `;
-    }
-}
-
-function hideCoordinateDisplay() {
-    if (coordinateDisplay) {
-        coordinateDisplay.style.display = 'none';
-    }
-}
-
-function toggleMeasurementMode() {
-    measurementMode = !measurementMode;
-    
-    if (measurementMode) {
-        console.log('Measurement mode enabled. Click on two objects to measure distance.');
-        placementMode = null;
-        placementMarker.visible = false;
-        selectedObjectForMeasurement = null;
-        
-        // Clear previous measurement
-        if (measurementLine) {
-            scene.remove(measurementLine);
-            measurementLine = null;
-        }
-        if (measurementLabel) {
-            document.body.removeChild(measurementLabel);
-            measurementLabel = null;
-        }
-    } else {
-        console.log('Measurement mode disabled.');
-        selectedObjectForMeasurement = null;
-        
-        // Clear measurement visuals
-        if (measurementLine) {
-            scene.remove(measurementLine);
-            measurementLine = null;
-        }
-        if (measurementLabel) {
-            document.body.removeChild(measurementLabel);
-            measurementLabel = null;
-        }
-    }
-}
-
-function measureDistance(obj1, obj2) {
-    const pos1 = obj1.position;
-    const pos2 = obj2.position;
-    
-    const distance = pos1.distanceTo(pos2);
-    
-    // Create line between objects
-    const lineGeometry = new THREE.BufferGeometry();
-    const vertices = new Float32Array([
-        pos1.x, pos1.y, pos1.z,
-        pos2.x, pos2.y, pos2.z
-    ]);
-    lineGeometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
-    const lineMaterial = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 2 });
-    
-    if (measurementLine) {
-        scene.remove(measurementLine);
-    }
-    measurementLine = new THREE.Line(lineGeometry, lineMaterial);
-    scene.add(measurementLine);
-    
-    // Create label for distance
-    if (measurementLabel) {
-        document.body.removeChild(measurementLabel);
-    }
-    
-    measurementLabel = document.createElement('div');
-    measurementLabel.style.cssText = `
-        position: absolute;
-        background: rgba(255,0,255,0.8);
-        color: white;
-        padding: 5px 10px;
-        border-radius: 3px;
-        font-family: Arial, sans-serif;
-        font-size: 14px;
-        pointer-events: none;
-        z-index: 1000;
-    `;
-    measurementLabel.textContent = `Distance: ${distance.toFixed(2)} units`;
-    document.body.appendChild(measurementLabel);
-    
-    // Position label in the middle of the line
-    const midPoint = new THREE.Vector3(
-        (pos1.x + pos2.x) / 2,
-        (pos1.y + pos2.y) / 2,
-        (pos1.z + pos2.z) / 2
-    );
-    
-    // Update label position every frame
-    updateMeasurementLabelPosition(midPoint);
-    
-    console.log(`Distance between ${obj1.userData.id || obj1.userData.name} and ${obj2.userData.id || obj2.userData.name}: ${distance.toFixed(2)} units`);
-    
-    return distance;
-}
-
-function updateMeasurementLabelPosition(worldPosition) {
-    if (!measurementLabel) return;
-    
-    const vector = worldPosition.clone();
-    vector.project(camera);
-    
-    const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-    const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
-    
-    measurementLabel.style.left = x + 'px';
-    measurementLabel.style.top = y + 'px';
-}
-
-function calculateAngleBetweenObjects(obj1, obj2, referencePoint) {
-    // Calculate angle between two objects relative to a reference point (usually camera or origin)
-    const vec1 = new THREE.Vector3().subVectors(obj1.position, referencePoint);
-    const vec2 = new THREE.Vector3().subVectors(obj2.position, referencePoint);
-    
-    vec1.y = 0; // Project to horizontal plane
-    vec2.y = 0;
-    
-    const angle = vec1.angleTo(vec2) * (180 / Math.PI);
-    
-    console.log(`Angle between objects: ${angle.toFixed(2)}°`);
-    return angle;
-}
-
 function onStageClick(event) {
-    // Handle measurement mode
-    if (measurementMode) {
-        const mouse = new THREE.Vector2();
-        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(mouse, camera);
-        
-        // Check intersection with all objects
-        const allObjects = [...props, ...actors];
-        const intersects = raycaster.intersectObjects(allObjects, true);
-        
-        if (intersects.length > 0) {
-            // Find the root object (not child meshes)
-            let targetObj = intersects[0].object;
-            while (targetObj.parent && targetObj.parent !== scene) {
-                targetObj = targetObj.parent;
-            }
-            
-            if (!selectedObjectForMeasurement) {
-                // First object selected
-                selectedObjectForMeasurement = targetObj;
-                console.log(`First object selected: ${targetObj.userData.id || targetObj.userData.name}`);
-            } else {
-                // Second object selected - measure distance
-                measureDistance(selectedObjectForMeasurement, targetObj);
-                selectedObjectForMeasurement = null;
-            }
-        }
-        return;
-    }
-    
     if (!placementMode) return;
     
     // Calculate mouse position in normalized device coordinates
@@ -1140,30 +893,45 @@ function onStageClick(event) {
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(mouse, camera);
     
-    if (placementMode === 'delete') {
-        // Check intersection with all objects
-        const allObjects = [...props, ...actors];
-        const intersects = raycaster.intersectObjects(allObjects, true);
+    if (placementMode === 'select-actor') {
+        // Check intersection with actors
+        const intersects = raycaster.intersectObjects(actors, true);
         
         if (intersects.length > 0) {
-            // Find the root object (not child meshes)
-            let targetObj = intersects[0].object;
-            while (targetObj.parent && targetObj.parent !== scene) {
-                targetObj = targetObj.parent;
+            // Find the root actor object
+            let targetActor = intersects[0].object;
+            while (targetActor.parent && targetActor.parent !== scene) {
+                targetActor = targetActor.parent;
             }
             
-            // Determine object type
-            const objectType = props.includes(targetObj) ? 'prop' : 'actor';
-            
-            // Create delete command
-            const command = new DeleteObjectCommand(objectType, targetObj);
-            commandManager.executeCommand(command);
-            window.updateUndoRedoButtons();
-            
-            console.log(`Deleted ${objectType}: ${targetObj.userData.name || targetObj.userData.id}`);
+            if (targetActor.userData.type === 'actor') {
+                window.setSelectedActor(targetActor);
+                alert(`Selected: ${targetActor.userData.name}`);
+            }
         }
         
-        // Stay in delete mode for multiple deletions
+        placementMode = null;
+        return;
+    }
+    
+    if (placementMode === 'select-prop') {
+        // Check intersection with props
+        const intersects = raycaster.intersectObjects(props, true);
+        
+        if (intersects.length > 0) {
+            // Find the root prop object
+            let targetProp = intersects[0].object;
+            while (targetProp.parent && targetProp.parent !== scene) {
+                targetProp = targetProp.parent;
+            }
+            
+            if (targetProp.userData.type === 'prop') {
+                window.setSelectedProp(targetProp);
+                alert(`Selected: ${targetProp.userData.name}`);
+            }
+        }
+        
+        placementMode = null;
         return;
     }
     
@@ -1210,20 +978,17 @@ function onStageClick(event) {
     if (intersects.length > 0) {
         const point = intersects[0].point;
         
-        // Apply snap-to-grid if enabled
-        const snappedPoint = snapPositionToGrid({ x: point.x, y: 0, z: point.z });
-        
         if (placementMode === 'prop') {
             const command = new PlaceObjectCommand('prop', 
                 { propType: selectedPropType }, 
-                snappedPoint
+                { x: point.x, y: 0, z: point.z }
             );
             commandManager.executeCommand(command);
             window.updateUndoRedoButtons();
         } else if (placementMode === 'actor') {
             const command = new PlaceObjectCommand('actor', 
                 {}, 
-                snappedPoint
+                { x: point.x, y: 0, z: point.z }
             );
             commandManager.executeCommand(command);
             window.updateUndoRedoButtons();
@@ -1236,6 +1001,8 @@ function onStageClick(event) {
 }
 
 function onMouseMove(event) {
+    if (!placementMode || !placementMarker.visible) return;
+    
     // Calculate mouse position in normalized device coordinates
     const mouse = new THREE.Vector2();
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -1249,22 +1016,7 @@ function onMouseMove(event) {
     const intersects = raycaster.intersectObject(stage);
     if (intersects.length > 0) {
         const point = intersects[0].point;
-        
-        // Update coordinate display if grid is visible
-        if (gridVisible) {
-            updateCoordinateDisplay(point.x, point.y, point.z);
-        } else {
-            hideCoordinateDisplay();
-        }
-        
-        // Update placement marker if in placement mode
-        if (placementMode && placementMarker.visible) {
-            // Apply snap-to-grid if enabled
-            const snappedPoint = snapPositionToGrid({ x: point.x, y: point.y, z: point.z });
-            placementMarker.position.set(snappedPoint.x, 0.1, snappedPoint.z);
-        }
-    } else {
-        hideCoordinateDisplay();
+        placementMarker.position.set(point.x, 0.1, point.z);
     }
 }
 
@@ -1402,15 +1154,6 @@ function setupUI() {
         placementMode = 'actor';
         placementMarker.visible = true;
     });
-    
-    const deleteButton = document.createElement('button');
-    deleteButton.textContent = 'Delete Object';
-    deleteButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    deleteButton.addEventListener('click', () => {
-        placementMode = 'delete';
-        placementMarker.visible = true;
-        alert('Click on an object to delete it!');
-    });
 
     const markerToggle = document.createElement('button');
     markerToggle.textContent = 'Toggle Markers';
@@ -1493,10 +1236,6 @@ function setupUI() {
         <option value="brick">Brick Wall</option>
         <option value="wood">Wood Planks</option>
         <option value="sky">Sky Gradient</option>
-        <option value="stone">Stone Wall</option>
-        <option value="metal">Metal</option>
-        <option value="curtain">Red Curtain</option>
-        <option value="grass">Grass</option>
     `;
     defaultTextureSelect.addEventListener('change', (e) => {
         if (e.target.value) {
@@ -1534,57 +1273,6 @@ function setupUI() {
         input.click();
     });
     
-    const uploadVideoButton = document.createElement('button');
-    uploadVideoButton.textContent = 'Upload Video';
-    uploadVideoButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    uploadVideoButton.addEventListener('click', () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = 'video/*';
-        
-        input.onchange = (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            try {
-                const video = document.createElement('video');
-                video.src = URL.createObjectURL(file);
-                video.crossOrigin = 'anonymous';
-                video.loop = true;
-                video.muted = true;
-                video.playsInline = true;
-                
-                video.addEventListener('loadeddata', () => {
-                    video.play();
-                    const texture = textureManager.loadVideoTexture(video);
-                    const panelIndex = parseInt(panelSelect.value);
-                    textureManager.applyTextureToPanel(panelIndex, texture);
-                    console.log(`Applied video texture to panel ${panelIndex}`);
-                    alert('Video texture applied successfully!');
-                });
-                
-                video.addEventListener('error', (e) => {
-                    console.error('Video loading failed:', e);
-                    alert('Failed to load video: ' + (e.message || 'Unknown error'));
-                });
-            } catch (error) {
-                console.error('Video texture failed:', error);
-                alert('Failed to load video texture: ' + error.message);
-            }
-        };
-        
-        input.click();
-    });
-    
-    const clearTextureButton = document.createElement('button');
-    clearTextureButton.textContent = 'Clear Texture';
-    clearTextureButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    clearTextureButton.addEventListener('click', () => {
-        const panelIndex = parseInt(panelSelect.value);
-        textureManager.removeTextureFromPanel(panelIndex);
-        console.log(`Cleared texture from panel ${panelIndex}`);
-    });
-    
     const textureScaleLabel = document.createElement('div');
     textureScaleLabel.textContent = 'Texture Scale:';
     textureScaleLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
@@ -1604,46 +1292,6 @@ function setupUI() {
             panel.children[0].material.map.repeat.set(scale, scale);
         }
     });
-    
-    const textureOffsetLabel = document.createElement('div');
-    textureOffsetLabel.textContent = 'Texture Offset X:';
-    textureOffsetLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
-    
-    const offsetXSlider = document.createElement('input');
-    offsetXSlider.type = 'range';
-    offsetXSlider.min = '0';
-    offsetXSlider.max = '1';
-    offsetXSlider.step = '0.01';
-    offsetXSlider.value = '0';
-    offsetXSlider.style.cssText = 'margin: 5px 0; width: 150px;';
-    offsetXSlider.addEventListener('input', (e) => {
-        const offset = parseFloat(e.target.value);
-        const panelIndex = parseInt(panelSelect.value);
-        const panel = sceneryPanels[panelIndex];
-        if (panel && panel.children[0].material.map) {
-            panel.children[0].material.map.offset.x = offset;
-        }
-    });
-    
-    const textureOffsetYLabel = document.createElement('div');
-    textureOffsetYLabel.textContent = 'Texture Offset Y:';
-    textureOffsetYLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
-    
-    const offsetYSlider = document.createElement('input');
-    offsetYSlider.type = 'range';
-    offsetYSlider.min = '0';
-    offsetYSlider.max = '1';
-    offsetYSlider.step = '0.01';
-    offsetYSlider.value = '0';
-    offsetYSlider.style.cssText = 'margin: 5px 0; width: 150px;';
-    offsetYSlider.addEventListener('input', (e) => {
-        const offset = parseFloat(e.target.value);
-        const panelIndex = parseInt(panelSelect.value);
-        const panel = sceneryPanels[panelIndex];
-        if (panel && panel.children[0].material.map) {
-            panel.children[0].material.map.offset.y = offset;
-        }
-    });
 
     // Save/Load controls
     const saveLoadLabel = document.createElement('div');
@@ -1660,43 +1308,9 @@ function setupUI() {
     loadButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
     loadButton.addEventListener('click', loadScene);
     
-    // Preset templates
-    const presetLabel = document.createElement('div');
-    presetLabel.innerHTML = '<strong>Preset Templates</strong>';
-    presetLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
-    
-    const presetSelect = document.createElement('select');
-    presetSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
-    presetSelect.innerHTML = `
-        <option value="">Select a preset...</option>
-        <option value="empty-stage">Empty Stage</option>
-        <option value="living-room">Living Room Scene</option>
-        <option value="outdoor-park">Outdoor Park</option>
-        <option value="office-setting">Office Setting</option>
-        <option value="restaurant-cafe">Restaurant/Cafe</option>
-        <option value="classical-theater">Classical Theater</option>
-    `;
-    
-    const loadPresetButton = document.createElement('button');
-    loadPresetButton.textContent = 'Load Preset';
-    loadPresetButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    loadPresetButton.addEventListener('click', () => {
-        const selectedPreset = presetSelect.value;
-        if (selectedPreset) {
-            const confirmLoad = confirm(
-                `This will clear the current scene and load the preset template.\n\nDo you want to continue?`
-            );
-            if (confirmLoad) {
-                loadPreset(selectedPreset);
-            }
-        } else {
-            alert('Please select a preset template from the dropdown.');
-        }
-    });
-    
     // Physics test button
     const physicsLabel = document.createElement('div');
-    physicsLabel.innerHTML = '<strong>Physics & Debug</strong>';
+    physicsLabel.innerHTML = '<strong>Physics Test</strong>';
     physicsLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
     
     const pushButton = document.createElement('button');
@@ -1708,13 +1322,120 @@ function setupUI() {
         alert('Click on an object to push it! Lighter objects move more.');
     });
     
-    const debugButton = document.createElement('button');
-    debugButton.textContent = 'Debug Collisions: OFF';
-    debugButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    debugButton.addEventListener('click', () => {
-        toggleDebugVisualization();
-        debugButton.textContent = `Debug Collisions: ${debugVisualizationEnabled ? 'ON' : 'OFF'}`;
+    // Prop Interaction controls
+    const interactionLabel = document.createElement('div');
+    interactionLabel.innerHTML = '<strong>Prop Interactions</strong>';
+    interactionLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    
+    const interactionInfo = document.createElement('div');
+    interactionInfo.style.cssText = 'font-size: 11px; margin: 5px 0; color: #aaa;';
+    interactionInfo.innerHTML = 'Click actor, then prop to interact';
+    
+    let selectedActor = null;
+    let selectedProp = null;
+    
+    const selectActorButton = document.createElement('button');
+    selectActorButton.textContent = 'Select Actor';
+    selectActorButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    selectActorButton.addEventListener('click', () => {
+        placementMode = 'select-actor';
+        placementMarker.visible = false;
+        alert('Click on an actor to select it');
     });
+    
+    const selectPropButton = document.createElement('button');
+    selectPropButton.textContent = 'Select Prop';
+    selectPropButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    selectPropButton.addEventListener('click', () => {
+        placementMode = 'select-prop';
+        placementMarker.visible = false;
+        alert('Click on a prop to select it');
+    });
+    
+    const pickUpButton = document.createElement('button');
+    pickUpButton.textContent = 'Pick Up';
+    pickUpButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    pickUpButton.addEventListener('click', () => {
+        if (selectedActor && selectedProp) {
+            pickUpProp(selectedActor, selectedProp);
+        } else {
+            alert('Select an actor and a prop first');
+        }
+    });
+    
+    const putDownButton = document.createElement('button');
+    putDownButton.textContent = 'Put Down';
+    putDownButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    putDownButton.addEventListener('click', () => {
+        if (selectedActor) {
+            putDownProp(selectedActor);
+        } else {
+            alert('Select an actor first');
+        }
+    });
+    
+    const throwButton = document.createElement('button');
+    throwButton.textContent = 'Throw';
+    throwButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    throwButton.addEventListener('click', () => {
+        if (selectedActor) {
+            // Get actor facing direction (or default forward)
+            const direction = new THREE.Vector3(0, 0, -1);
+            throwProp(selectedActor, direction, 5);
+        } else {
+            alert('Select an actor first');
+        }
+    });
+    
+    const sitButton = document.createElement('button');
+    sitButton.textContent = 'Sit';
+    sitButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    sitButton.addEventListener('click', () => {
+        if (selectedActor && selectedProp) {
+            sitOnProp(selectedActor, selectedProp);
+        } else {
+            alert('Select an actor and a sittable prop first');
+        }
+    });
+    
+    const standButton = document.createElement('button');
+    standButton.textContent = 'Stand Up';
+    standButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    standButton.addEventListener('click', () => {
+        if (selectedActor) {
+            standUpFromProp(selectedActor);
+        } else {
+            alert('Select an actor first');
+        }
+    });
+    
+    const toggleStateButton = document.createElement('button');
+    toggleStateButton.textContent = 'Toggle Prop State';
+    toggleStateButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    toggleStateButton.addEventListener('click', () => {
+        if (selectedProp) {
+            const result = togglePropState(selectedProp) || toggleDoorState(selectedProp);
+            if (!result) {
+                alert('Prop does not have toggleable state');
+            }
+        } else {
+            alert('Select a prop first');
+        }
+    });
+    
+    // Store references for selection
+    window.selectedActor = null;
+    window.selectedProp = null;
+    window.setSelectedActor = (actor) => {
+        window.selectedActor = actor;
+        selectedActor = actor;
+        console.log('Selected actor:', actor.userData.name);
+    };
+    window.setSelectedProp = (prop) => {
+        window.selectedProp = prop;
+        selectedProp = prop;
+        console.log('Selected prop:', prop.userData.name);
+    };
     
     // Undo/Redo controls
     const undoRedoLabel = document.createElement('div');
@@ -1744,51 +1465,6 @@ function setupUI() {
         redoButton.disabled = !commandManager.canRedo();
         undoButton.style.opacity = commandManager.canUndo() ? '1' : '0.5';
         redoButton.style.opacity = commandManager.canRedo() ? '1' : '0.5';
-        updateHistoryPanel();
-    }
-    
-    // Create history panel
-    const historyPanel = document.createElement('div');
-    historyPanel.style.cssText = `
-        max-height: 150px;
-        overflow-y: auto;
-        border: 1px solid rgba(255,255,255,0.3);
-        border-radius: 3px;
-        margin-top: 5px;
-        padding: 5px;
-        font-size: 11px;
-        background: rgba(0,0,0,0.3);
-    `;
-    
-    function updateHistoryPanel() {
-        const history = commandManager.getHistory();
-        if (history.length === 0) {
-            historyPanel.innerHTML = '<div style="color: #888;">No actions yet</div>';
-            return;
-        }
-        
-        historyPanel.innerHTML = '';
-        history.forEach((item, index) => {
-            const historyItem = document.createElement('div');
-            historyItem.style.cssText = `
-                padding: 2px 4px;
-                margin: 1px 0;
-                ${item.isCurrent ? 'background: rgba(100,150,255,0.3); font-weight: bold;' : 'color: #aaa;'}
-                cursor: pointer;
-            `;
-            historyItem.textContent = `${index + 1}. ${item.description}`;
-            historyItem.addEventListener('click', () => {
-                // Jump to this point in history
-                while (commandManager.currentIndex > index) {
-                    commandManager.undo();
-                }
-                while (commandManager.currentIndex < index) {
-                    commandManager.redo();
-                }
-                updateUndoRedoButtons();
-            });
-            historyPanel.appendChild(historyItem);
-        });
     }
     
     // Initialize button states
@@ -1796,50 +1472,6 @@ function setupUI() {
     
     // Store reference for global access
     window.updateUndoRedoButtons = updateUndoRedoButtons;
-    
-    // Grid and Measurement Tools
-    const gridToolsLabel = document.createElement('div');
-    gridToolsLabel.innerHTML = '<strong>Grid & Measurement</strong>';
-    gridToolsLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
-    
-    const gridToggleButton = document.createElement('button');
-    gridToggleButton.textContent = 'Toggle Grid';
-    gridToggleButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    gridToggleButton.addEventListener('click', toggleGrid);
-    
-    const snapToggleButton = document.createElement('button');
-    snapToggleButton.textContent = 'Snap to Grid';
-    snapToggleButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    snapToggleButton.addEventListener('click', () => {
-        toggleSnapToGrid();
-        snapToggleButton.style.background = snapToGrid ? '#4CAF50' : '';
-        snapToggleButton.style.color = snapToGrid ? 'white' : '';
-    });
-    
-    const measureButton = document.createElement('button');
-    measureButton.textContent = 'Measure Distance';
-    measureButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
-    measureButton.addEventListener('click', () => {
-        toggleMeasurementMode();
-        measureButton.style.background = measurementMode ? '#FF00FF' : '';
-        measureButton.style.color = measurementMode ? 'white' : '';
-    });
-    
-    const gridSizeLabel = document.createElement('div');
-    gridSizeLabel.textContent = 'Grid Size:';
-    gridSizeLabel.style.cssText = 'margin-top: 5px; font-size: 12px;';
-    
-    const gridSizeSlider = document.createElement('input');
-    gridSizeSlider.type = 'range';
-    gridSizeSlider.min = '0.5';
-    gridSizeSlider.max = '5';
-    gridSizeSlider.step = '0.5';
-    gridSizeSlider.value = '1';
-    gridSizeSlider.style.cssText = 'margin: 5px 0; width: 150px;';
-    gridSizeSlider.addEventListener('input', (e) => {
-        gridSize = parseFloat(e.target.value);
-        console.log(`Grid size set to ${gridSize} units`);
-    });
 
     const cameraSelect = document.createElement('select');
     cameraSelect.style.cssText = 'margin: 5px 0; padding: 5px; width: 150px;';
@@ -1866,8 +1498,6 @@ function setupUI() {
     uiContainer.appendChild(document.createTextNode(' '));
     uiContainer.appendChild(actorButton);
     uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(deleteButton);
-    uiContainer.appendChild(document.createElement('br'));
     uiContainer.appendChild(markerToggle);
     uiContainer.appendChild(document.createElement('br'));
     uiContainer.appendChild(curtainButton);
@@ -1891,46 +1521,41 @@ function setupUI() {
     uiContainer.appendChild(defaultTextureSelect);
     uiContainer.appendChild(document.createElement('br'));
     uiContainer.appendChild(uploadButton);
-    uiContainer.appendChild(document.createTextNode(' '));
-    uiContainer.appendChild(uploadVideoButton);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(clearTextureButton);
     uiContainer.appendChild(textureScaleLabel);
     uiContainer.appendChild(scaleSlider);
-    uiContainer.appendChild(textureOffsetLabel);
-    uiContainer.appendChild(offsetXSlider);
-    uiContainer.appendChild(textureOffsetYLabel);
-    uiContainer.appendChild(offsetYSlider);
     uiContainer.appendChild(saveLoadLabel);
     uiContainer.appendChild(saveButton);
     uiContainer.appendChild(document.createTextNode(' '));
     uiContainer.appendChild(loadButton);
-    uiContainer.appendChild(presetLabel);
-    uiContainer.appendChild(presetSelect);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(loadPresetButton);
     uiContainer.appendChild(physicsLabel);
     uiContainer.appendChild(pushButton);
-    uiContainer.appendChild(debugButton);
+    uiContainer.appendChild(interactionLabel);
+    uiContainer.appendChild(interactionInfo);
+    uiContainer.appendChild(selectActorButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(selectPropButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(pickUpButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(putDownButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(throwButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(sitButton);
+    uiContainer.appendChild(document.createTextNode(' '));
+    uiContainer.appendChild(standButton);
+    uiContainer.appendChild(document.createElement('br'));
+    uiContainer.appendChild(toggleStateButton);
     uiContainer.appendChild(undoRedoLabel);
     uiContainer.appendChild(undoButton);
     uiContainer.appendChild(document.createTextNode(' '));
     uiContainer.appendChild(redoButton);
-    uiContainer.appendChild(historyPanel);
-    uiContainer.appendChild(gridToolsLabel);
-    uiContainer.appendChild(gridToggleButton);
-    uiContainer.appendChild(document.createTextNode(' '));
-    uiContainer.appendChild(snapToggleButton);
-    uiContainer.appendChild(document.createElement('br'));
-    uiContainer.appendChild(measureButton);
-    uiContainer.appendChild(gridSizeLabel);
-    uiContainer.appendChild(gridSizeSlider);
 
     document.body.appendChild(toggleButton);
     document.body.appendChild(uiContainer);
 }
 
-function applyLightingPresetDirect(preset) {
+function applyLightingPreset(preset) {
     currentLightingPreset = preset;
     
     switch(preset) {
@@ -1967,13 +1592,6 @@ function applyLightingPresetDirect(preset) {
     }
 }
 
-function applyLightingPreset(preset) {
-    const oldPreset = currentLightingPreset;
-    const command = new LightingCommand(preset, oldPreset);
-    commandManager.executeCommand(command);
-    window.updateUndoRedoButtons();
-}
-
 // Prop catalog definitions
 const PROP_CATALOG = {
     // Basic shapes
@@ -1982,21 +1600,33 @@ const PROP_CATALOG = {
         category: 'basic',
         create: () => new THREE.BoxGeometry(1, 1, 1),
         color: 0x808080,
-        y: 0.5
+        y: 0.5,
+        interactions: {
+            grabbable: true,
+            throwable: true
+        }
     },
     sphere: {
         name: 'Sphere',
         category: 'basic',
         create: () => new THREE.SphereGeometry(0.5, 16, 16),
         color: 0x808080,
-        y: 0.5
+        y: 0.5,
+        interactions: {
+            grabbable: true,
+            throwable: true
+        }
     },
     cylinder: {
         name: 'Cylinder',
         category: 'basic',
         create: () => new THREE.CylinderGeometry(0.5, 0.5, 1, 16),
         color: 0x808080,
-        y: 0.5
+        y: 0.5,
+        interactions: {
+            grabbable: true,
+            throwable: true
+        }
     },
     // Furniture
     chair: {
@@ -2030,7 +1660,11 @@ const PROP_CATALOG = {
             }
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {
+            sittable: true,
+            seatHeight: 0.5
+        }
     },
     table: {
         name: 'Table',
@@ -2056,7 +1690,8 @@ const PROP_CATALOG = {
             }
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {}
     },
     // Stage props
     box: {
@@ -2082,7 +1717,11 @@ const PROP_CATALOG = {
             }
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {
+            grabbable: true,
+            throwable: false
+        }
     },
     barrel: {
         name: 'Barrel',
@@ -2107,7 +1746,11 @@ const PROP_CATALOG = {
             }
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {
+            grabbable: true,
+            throwable: false
+        }
     },
     // Decorative
     plant: {
@@ -2130,7 +1773,11 @@ const PROP_CATALOG = {
             group.add(plant);
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {
+            grabbable: true,
+            throwable: false
+        }
     },
     lamp: {
         name: 'Stage Lamp',
@@ -2160,7 +1807,59 @@ const PROP_CATALOG = {
             group.add(shade);
             return group;
         },
-        y: 0
+        y: 0,
+        interactions: {
+            toggleable: true,
+            states: ['off', 'on']
+        }
+    },
+    door: {
+        name: 'Door',
+        category: 'furniture',
+        create: () => {
+            const group = new THREE.Group();
+            // Door frame
+            const frameMaterial = new THREE.MeshPhongMaterial({ color: 0x654321 });
+            const leftPost = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, 2.5, 0.1),
+                frameMaterial
+            );
+            leftPost.position.set(-1, 1.25, 0);
+            group.add(leftPost);
+            const rightPost = new THREE.Mesh(
+                new THREE.BoxGeometry(0.1, 2.5, 0.1),
+                frameMaterial
+            );
+            rightPost.position.set(1, 1.25, 0);
+            group.add(rightPost);
+            const topPost = new THREE.Mesh(
+                new THREE.BoxGeometry(2.2, 0.1, 0.1),
+                frameMaterial
+            );
+            topPost.position.set(0, 2.5, 0);
+            group.add(topPost);
+            // Door panel (will rotate)
+            const door = new THREE.Mesh(
+                new THREE.BoxGeometry(1.8, 2.3, 0.1),
+                new THREE.MeshPhongMaterial({ color: 0x8B4513 })
+            );
+            door.position.set(0, 1.15, 0);
+            door.userData.isDoorPanel = true;
+            group.add(door);
+            // Door knob
+            const knob = new THREE.Mesh(
+                new THREE.SphereGeometry(0.08, 8, 8),
+                new THREE.MeshPhongMaterial({ color: 0xFFD700 })
+            );
+            knob.position.set(0.7, 1.15, 0.1);
+            group.add(knob);
+            return group;
+        },
+        y: 0,
+        interactions: {
+            openable: true,
+            states: ['closed', 'open']
+        }
     }
 };
 
@@ -2193,8 +1892,18 @@ function addPropAt(x, z) {
         name: `${propDef.name} (${propId})`,
         draggable: true,
         originalY: propDef.y,
-        hidden: false
+        hidden: false,
+        interactions: propDef.interactions || {}
     };
+    
+    // Initialize prop state if it has stateful interactions
+    if (propDef.interactions) {
+        if (propDef.interactions.toggleable || propDef.interactions.openable) {
+            propStates.set(propObject, {
+                currentState: propDef.interactions.states ? propDef.interactions.states[0] : 'closed'
+            });
+        }
+    }
     
     // Check if position is occupied before placing
     const tempProps = [...props];
@@ -2334,6 +2043,235 @@ function addActorAt(x, z) {
     updatePropRelationships(actorGroup);
 }
 
+// ===== PROP INTERACTION FUNCTIONS =====
+
+// Pick up prop - actor grabs a prop
+function pickUpProp(actor, prop) {
+    if (!actor || !prop) return false;
+    
+    // Check if prop is grabbable
+    if (!prop.userData.interactions || !prop.userData.interactions.grabbable) {
+        console.log('Prop is not grabbable');
+        return false;
+    }
+    
+    // Check if actor already holding something
+    if (actorHeldProps.has(actor)) {
+        console.log('Actor already holding a prop');
+        return false;
+    }
+    
+    // Check distance
+    const distance = actor.position.distanceTo(prop.position);
+    if (distance > 2) {
+        console.log('Prop too far away');
+        return false;
+    }
+    
+    // Pick up the prop
+    actorHeldProps.set(actor, prop);
+    prop.userData.heldBy = actor;
+    console.log(`${actor.userData.name} picked up ${prop.userData.name}`);
+    return true;
+}
+
+// Put down prop - actor releases held prop
+function putDownProp(actor) {
+    if (!actor) return false;
+    
+    const prop = actorHeldProps.get(actor);
+    if (!prop) {
+        console.log('Actor not holding anything');
+        return false;
+    }
+    
+    // Place prop near actor
+    prop.position.x = actor.position.x;
+    prop.position.z = actor.position.z + 1; // Slightly in front
+    prop.position.y = prop.userData.originalY;
+    delete prop.userData.heldBy;
+    
+    actorHeldProps.delete(actor);
+    updatePropRelationships(prop);
+    console.log(`${actor.userData.name} put down ${prop.userData.name}`);
+    return true;
+}
+
+// Throw prop - actor throws held prop
+function throwProp(actor, direction, force = 5) {
+    if (!actor) return false;
+    
+    const prop = actorHeldProps.get(actor);
+    if (!prop) {
+        console.log('Actor not holding anything to throw');
+        return false;
+    }
+    
+    // Check if prop is throwable
+    if (!prop.userData.interactions || !prop.userData.interactions.throwable) {
+        console.log('Prop cannot be thrown');
+        return false;
+    }
+    
+    // Release from actor
+    actorHeldProps.delete(actor);
+    delete prop.userData.heldBy;
+    
+    // Calculate throw velocity
+    const throwDir = direction || new THREE.Vector3(0, 0, -1);
+    throwDir.normalize();
+    
+    const velocity = {
+        x: throwDir.x * force,
+        y: 2, // upward component
+        z: throwDir.z * force
+    };
+    
+    throwingProps.set(prop, {
+        velocity: velocity,
+        thrownBy: actor,
+        gravity: -9.8
+    });
+    
+    console.log(`${actor.userData.name} threw ${prop.userData.name}`);
+    return true;
+}
+
+// Sit on furniture - actor sits on a sittable prop
+function sitOnProp(actor, prop) {
+    if (!actor || !prop) return false;
+    
+    // Check if prop is sittable
+    if (!prop.userData.interactions || !prop.userData.interactions.sittable) {
+        console.log('Cannot sit on this prop');
+        return false;
+    }
+    
+    // Check if someone already sitting
+    for (let [otherActor, sittingProp] of actorSittingOn) {
+        if (sittingProp === prop) {
+            console.log('Someone already sitting here');
+            return false;
+        }
+    }
+    
+    // Check distance
+    const distance = actor.position.distanceTo(prop.position);
+    if (distance > 2) {
+        console.log('Prop too far away');
+        return false;
+    }
+    
+    // Sit down
+    actorSittingOn.set(actor, prop);
+    actor.position.x = prop.position.x;
+    actor.position.z = prop.position.z;
+    actor.position.y = prop.userData.interactions.seatHeight || 0.5;
+    
+    console.log(`${actor.userData.name} sat on ${prop.userData.name}`);
+    return true;
+}
+
+// Stand up from furniture
+function standUpFromProp(actor) {
+    if (!actor) return false;
+    
+    const prop = actorSittingOn.get(actor);
+    if (!prop) {
+        console.log('Actor not sitting');
+        return false;
+    }
+    
+    // Stand up - move slightly forward
+    actor.position.z += 1;
+    actor.position.y = 0; // Reset to ground level
+    
+    actorSittingOn.delete(actor);
+    console.log(`${actor.userData.name} stood up`);
+    return true;
+}
+
+// Toggle prop state (lamp on/off, etc)
+function togglePropState(prop) {
+    if (!prop) return false;
+    
+    const propDef = PROP_CATALOG[prop.userData.propType];
+    if (!propDef || !propDef.interactions || !propDef.interactions.toggleable) {
+        console.log('Prop cannot be toggled');
+        return false;
+    }
+    
+    const state = propStates.get(prop);
+    if (!state) return false;
+    
+    // Toggle between states
+    const states = propDef.interactions.states;
+    const currentIndex = states.indexOf(state.currentState);
+    const nextIndex = (currentIndex + 1) % states.length;
+    state.currentState = states[nextIndex];
+    
+    // Apply visual changes based on prop type
+    if (prop.userData.propType === 'lamp') {
+        // Find shade and update color
+        prop.traverse(child => {
+            if (child instanceof THREE.Mesh && child.position.y > 1) {
+                if (state.currentState === 'on') {
+                    child.material.color.setHex(0xFFFF99);
+                    child.material.emissive = new THREE.Color(0xFFFF66);
+                    child.material.emissiveIntensity = 0.5;
+                } else {
+                    child.material.color.setHex(0xFFFFE0);
+                    child.material.emissive = new THREE.Color(0x000000);
+                    child.material.emissiveIntensity = 0;
+                }
+            }
+        });
+    }
+    
+    console.log(`${prop.userData.name} toggled to ${state.currentState}`);
+    return true;
+}
+
+// Open/close door
+function toggleDoorState(prop) {
+    if (!prop) return false;
+    
+    const propDef = PROP_CATALOG[prop.userData.propType];
+    if (!propDef || !propDef.interactions || !propDef.interactions.openable) {
+        console.log('Prop cannot be opened/closed');
+        return false;
+    }
+    
+    const state = propStates.get(prop);
+    if (!state) return false;
+    
+    // Toggle between states
+    const states = propDef.interactions.states;
+    const currentIndex = states.indexOf(state.currentState);
+    const nextIndex = (currentIndex + 1) % states.length;
+    state.currentState = states[nextIndex];
+    
+    // Apply visual changes - rotate door panel
+    if (prop.userData.propType === 'door') {
+        prop.traverse(child => {
+            if (child.userData.isDoorPanel) {
+                if (state.currentState === 'open') {
+                    // Rotate door 90 degrees
+                    child.rotation.y = Math.PI / 2;
+                    child.position.x = 0.9; // Pivot adjustment
+                } else {
+                    // Close door
+                    child.rotation.y = 0;
+                    child.position.x = 0;
+                }
+            }
+        });
+    }
+    
+    console.log(`${prop.userData.name} ${state.currentState}`);
+    return true;
+}
+
 function toggleMarkers() {
     stageMarkers.forEach(marker => {
         marker.visible = !marker.visible;
@@ -2389,18 +2327,10 @@ function setCameraPreset(preset) {
 }
 
 function toggleCurtains() {
-    const oldState = { curtainState: curtainState };
-    const newState = { curtainState: curtainState === 'closed' ? 'open' : 'closed' };
-    
-    const command = new StageElementCommand('curtains', {}, newState, oldState);
-    commandManager.executeCommand(command);
-    window.updateUndoRedoButtons();
-    
-    // Animate the curtains
     const duration = 2500;
     const startTime = Date.now();
     
-    if (curtainState === 'open') {
+    if (curtainState === 'closed') {
         curtainState = 'opening';
         
         function openCurtains() {
@@ -2442,89 +2372,53 @@ function toggleCurtains() {
 }
 
 function movePlatforms() {
-    const oldState = {
-        platforms: moveablePlatforms.map(p => ({ height: p.position.y }))
-    };
-    const newState = {
-        platforms: moveablePlatforms.map(p => ({ 
-            height: p.userData.targetY === p.userData.baseY ? p.userData.baseY + 3 : p.userData.baseY 
-        }))
-    };
-    
-    const command = new StageElementCommand('platforms', {}, newState, oldState);
-    commandManager.executeCommand(command);
-    window.updateUndoRedoButtons();
-    
-    // Trigger the animation
     moveablePlatforms.forEach((platform, index) => {
         const userData = platform.userData;
         userData.moving = true;
-        userData.targetY = newState.platforms[index].height;
+        userData.targetY = userData.targetY === userData.baseY ? userData.baseY + 3 : userData.baseY;
     });
 }
 
 function rotateCenter() {
     if (rotatingStage && rotatingStage.visible) {
-        const oldState = {
-            visible: rotatingStage.visible,
-            rotating: rotatingStage.userData.rotating
-        };
-        const newState = {
-            visible: rotatingStage.visible,
-            rotating: !rotatingStage.userData.rotating
-        };
-        
-        const command = new StageElementCommand('rotatingStage', {}, newState, oldState);
-        commandManager.executeCommand(command);
-        window.updateUndoRedoButtons();
-        
-        console.log(`Rotating stage is now ${rotatingStage.userData.rotating ? 'rotating' : 'stopped'}`);
+        const userData = rotatingStage.userData;
+        userData.rotating = !userData.rotating;
+        console.log(`Rotating stage is now ${userData.rotating ? 'rotating' : 'stopped'}`);
     } else {
         alert('Please show the rotating stage first using "Show/Hide Rotating Stage" button');
     }
 }
 
 function toggleTrapDoors() {
-    const oldState = {
-        trapDoors: trapDoors.map(td => ({ open: td.userData.open }))
-    };
-    const newState = {
-        trapDoors: trapDoors.map(td => ({ open: !td.userData.open }))
-    };
-    
-    const command = new StageElementCommand('trapDoors', {}, newState, oldState);
-    commandManager.executeCommand(command);
-    window.updateUndoRedoButtons();
+    trapDoors.forEach(trapDoor => {
+        if (trapDoor.visible) {
+            const userData = trapDoor.userData;
+            userData.open = !userData.open;
+            userData.targetRotation = userData.open ? Math.PI / 2 : 0;
+        }
+    });
 }
 
 function toggleRotatingStageVisibility() {
     if (rotatingStage) {
-        const oldState = {
-            visible: rotatingStage.visible,
-            rotating: rotatingStage.userData.rotating
-        };
-        const newState = {
-            visible: !rotatingStage.visible,
-            rotating: rotatingStage.visible ? false : rotatingStage.userData.rotating
-        };
-        
-        const command = new StageElementCommand('rotatingStage', {}, newState, oldState);
-        commandManager.executeCommand(command);
-        window.updateUndoRedoButtons();
+        rotatingStage.visible = !rotatingStage.visible;
+        if (!rotatingStage.visible) {
+            rotatingStage.userData.rotating = false;
+        }
     }
 }
 
 function toggleTrapDoorsVisibility() {
-    const oldState = {
-        visible: trapDoors.length > 0 ? trapDoors[0].visible : false
-    };
-    const newState = {
-        visible: !oldState.visible
-    };
-    
-    const command = new StageElementCommand('trapDoorsVisibility', {}, newState, oldState);
-    commandManager.executeCommand(command);
-    window.updateUndoRedoButtons();
+    trapDoors.forEach(trapDoor => {
+        trapDoor.visible = !trapDoor.visible;
+        if (!trapDoor.visible) {
+            trapDoor.userData.open = false;
+            trapDoor.userData.targetRotation = 0;
+            trapDoor.children[0].rotation.x = 0;
+            trapDoor.children[0].position.z = 0;
+            trapDoor.children[0].position.y = 0;
+        }
+    });
 }
 
 function updatePropRelationships(prop) {
@@ -2590,23 +2484,11 @@ function updateAllPropRelationships() {
     });
 }
 
-function moveSceneryPanelDirect(index, position) {
+function moveSceneryPanel(index, position) {
     if (index < sceneryPanels.length) {
         const panel = sceneryPanels[index];
         panel.userData.targetPosition = position;
         panel.userData.moving = true;
-    }
-}
-
-function moveSceneryPanel(index, position) {
-    if (index < sceneryPanels.length) {
-        const panel = sceneryPanels[index];
-        const oldState = { position: panel.userData.currentPosition || 0 };
-        const newState = { position: position };
-        
-        const command = new StageElementCommand('scenery', { index }, newState, oldState);
-        commandManager.executeCommand(command);
-        window.updateUndoRedoButtons();
     }
 }
 
@@ -2627,102 +2509,6 @@ const OBJECT_PHYSICS = {
 // Velocity tracking for momentum
 let objectVelocities = new Map();
 
-// Collision Detection Enhancements
-
-// Collision layers for filtering
-const COLLISION_LAYERS = {
-    NONE: 0,
-    ACTORS: 1 << 0,      // 1
-    PROPS: 1 << 1,       // 2
-    SCENERY: 1 << 2,     // 4
-    STAGE: 1 << 3,       // 8
-    ALL: 0xFF            // All layers
-};
-
-// Collision shape types
-const COLLISION_SHAPES = {
-    BOX: 'box',
-    SPHERE: 'sphere',
-    CAPSULE: 'capsule'
-};
-
-// Spatial hash grid for performance optimization
-class SpatialHashGrid {
-    constructor(cellSize = 5) {
-        this.cellSize = cellSize;
-        this.grid = new Map();
-    }
-    
-    _hash(x, z) {
-        const cellX = Math.floor(x / this.cellSize);
-        const cellZ = Math.floor(z / this.cellSize);
-        return `${cellX},${cellZ}`;
-    }
-    
-    clear() {
-        this.grid.clear();
-    }
-    
-    insert(obj) {
-        const pos = obj.position;
-        const bounds = getObjectBounds(obj);
-        const radius = Math.max(bounds.width, bounds.depth) / 2;
-        
-        // Insert into all cells the object overlaps
-        const minX = pos.x - radius;
-        const maxX = pos.x + radius;
-        const minZ = pos.z - radius;
-        const maxZ = pos.z + radius;
-        
-        const minCellX = Math.floor(minX / this.cellSize);
-        const maxCellX = Math.floor(maxX / this.cellSize);
-        const minCellZ = Math.floor(minZ / this.cellSize);
-        const maxCellZ = Math.floor(maxZ / this.cellSize);
-        
-        for (let cx = minCellX; cx <= maxCellX; cx++) {
-            for (let cz = minCellZ; cz <= maxCellZ; cz++) {
-                const key = `${cx},${cz}`;
-                if (!this.grid.has(key)) {
-                    this.grid.set(key, []);
-                }
-                this.grid.get(key).push(obj);
-            }
-        }
-    }
-    
-    query(x, z, radius) {
-        const minX = x - radius;
-        const maxX = x + radius;
-        const minZ = z - radius;
-        const maxZ = z + radius;
-        
-        const minCellX = Math.floor(minX / this.cellSize);
-        const maxCellX = Math.floor(maxX / this.cellSize);
-        const minCellZ = Math.floor(minZ / this.cellSize);
-        const maxCellZ = Math.floor(maxZ / this.cellSize);
-        
-        const objects = new Set();
-        for (let cx = minCellX; cx <= maxCellX; cx++) {
-            for (let cz = minCellZ; cz <= maxCellZ; cz++) {
-                const key = `${cx},${cz}`;
-                const cell = this.grid.get(key);
-                if (cell) {
-                    cell.forEach(obj => objects.add(obj));
-                }
-            }
-        }
-        
-        return Array.from(objects);
-    }
-}
-
-// Create spatial hash grid instance
-let spatialGrid = new SpatialHashGrid(5);
-
-// Debug visualization state
-let debugVisualizationEnabled = false;
-let debugVisualizationHelpers = [];
-
 // Texture management system
 class TextureManager {
     constructor() {
@@ -2733,23 +2519,20 @@ class TextureManager {
     
     createDefaultTextures() {
         const canvas = document.createElement('canvas');
-        canvas.width = 512;
-        canvas.height = 512;
+        canvas.width = 256;
+        canvas.height = 256;
         const ctx = canvas.getContext('2d');
         
         const textures = {};
         
         // Create brick texture
         ctx.fillStyle = '#8B4513';
-        ctx.fillRect(0, 0, 512, 512);
+        ctx.fillRect(0, 0, 256, 256);
         ctx.fillStyle = '#654321';
-        ctx.strokeStyle = '#5A3A1A';
-        ctx.lineWidth = 2;
-        for (let y = 0; y < 512; y += 64) {
-            for (let x = 0; x < 512; x += 128) {
-                const offset = (y / 64) % 2 * 64;
-                ctx.fillRect(x + offset, y, 120, 60);
-                ctx.strokeRect(x + offset, y, 120, 60);
+        for (let y = 0; y < 256; y += 32) {
+            for (let x = 0; x < 256; x += 64) {
+                const offset = (y / 32) % 2 * 32;
+                ctx.fillRect(x + offset, y, 60, 30);
             }
         }
         textures.brick = new THREE.CanvasTexture(canvas);
@@ -2757,99 +2540,21 @@ class TextureManager {
         
         // Create wood texture
         ctx.fillStyle = '#DEB887';
-        ctx.fillRect(0, 0, 512, 512);
+        ctx.fillRect(0, 0, 256, 256);
         ctx.fillStyle = '#CD853F';
-        for (let y = 0; y < 512; y += 32) {
-            ctx.fillRect(0, y, 512, 16);
-            // Add wood grain detail
-            ctx.strokeStyle = '#8B6914';
-            ctx.lineWidth = 1;
-            for (let x = 0; x < 512; x += 20) {
-                ctx.beginPath();
-                ctx.moveTo(x, y);
-                ctx.lineTo(x + 10, y + 16);
-                ctx.stroke();
-            }
+        for (let y = 0; y < 256; y += 16) {
+            ctx.fillRect(0, y, 256, 8);
         }
         textures.wood = new THREE.CanvasTexture(canvas);
         textures.wood.wrapS = textures.wood.wrapT = THREE.RepeatWrapping;
         
         // Create sky texture
-        const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+        const gradient = ctx.createLinearGradient(0, 0, 0, 256);
         gradient.addColorStop(0, '#87CEEB');
-        gradient.addColorStop(0.5, '#B0E0E6');
         gradient.addColorStop(1, '#98FB98');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 512, 512);
-        // Add clouds
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        for (let i = 0; i < 10; i++) {
-            const x = Math.random() * 512;
-            const y = Math.random() * 256;
-            ctx.beginPath();
-            ctx.arc(x, y, 30, 0, Math.PI * 2);
-            ctx.arc(x + 25, y, 35, 0, Math.PI * 2);
-            ctx.arc(x + 50, y, 30, 0, Math.PI * 2);
-            ctx.fill();
-        }
+        ctx.fillRect(0, 0, 256, 256);
         textures.sky = new THREE.CanvasTexture(canvas);
-        
-        // Create stone texture
-        ctx.fillStyle = '#808080';
-        ctx.fillRect(0, 0, 512, 512);
-        for (let i = 0; i < 100; i++) {
-            ctx.fillStyle = `rgba(${100 + Math.random() * 100}, ${100 + Math.random() * 100}, ${100 + Math.random() * 100}, 0.8)`;
-            const size = 20 + Math.random() * 80;
-            ctx.fillRect(Math.random() * 512, Math.random() * 512, size, size);
-        }
-        textures.stone = new THREE.CanvasTexture(canvas);
-        textures.stone.wrapS = textures.stone.wrapT = THREE.RepeatWrapping;
-        
-        // Create metal texture
-        ctx.fillStyle = '#C0C0C0';
-        ctx.fillRect(0, 0, 512, 512);
-        for (let y = 0; y < 512; y += 2) {
-            const brightness = 180 + Math.sin(y * 0.1) * 40;
-            ctx.fillStyle = `rgb(${brightness}, ${brightness}, ${brightness})`;
-            ctx.fillRect(0, y, 512, 1);
-        }
-        textures.metal = new THREE.CanvasTexture(canvas);
-        textures.metal.wrapS = textures.metal.wrapT = THREE.RepeatWrapping;
-        
-        // Create curtain texture
-        const curtainGradient = ctx.createLinearGradient(0, 0, 512, 0);
-        curtainGradient.addColorStop(0, '#660000');
-        curtainGradient.addColorStop(0.1, '#8B0000');
-        curtainGradient.addColorStop(0.2, '#660000');
-        curtainGradient.addColorStop(0.3, '#8B0000');
-        curtainGradient.addColorStop(0.4, '#660000');
-        curtainGradient.addColorStop(0.5, '#8B0000');
-        curtainGradient.addColorStop(0.6, '#660000');
-        curtainGradient.addColorStop(0.7, '#8B0000');
-        curtainGradient.addColorStop(0.8, '#660000');
-        curtainGradient.addColorStop(0.9, '#8B0000');
-        curtainGradient.addColorStop(1, '#660000');
-        ctx.fillStyle = curtainGradient;
-        ctx.fillRect(0, 0, 512, 512);
-        textures.curtain = new THREE.CanvasTexture(canvas);
-        textures.curtain.wrapS = textures.curtain.wrapT = THREE.RepeatWrapping;
-        
-        // Create grass texture
-        ctx.fillStyle = '#228B22';
-        ctx.fillRect(0, 0, 512, 512);
-        for (let i = 0; i < 5000; i++) {
-            const x = Math.random() * 512;
-            const y = Math.random() * 512;
-            const greenShade = 100 + Math.random() * 100;
-            ctx.strokeStyle = `rgb(${Math.random() * 50}, ${greenShade}, ${Math.random() * 50})`;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + Math.random() * 4 - 2, y - Math.random() * 8);
-            ctx.stroke();
-        }
-        textures.grass = new THREE.CanvasTexture(canvas);
-        textures.grass.wrapS = textures.grass.wrapT = THREE.RepeatWrapping;
         
         return textures;
     }
@@ -2870,7 +2575,7 @@ class TextureManager {
         });
     }
     
-    applyTextureToPanel(panelIndex, texture, scale = { x: 1, y: 1 }, offset = { x: 0, y: 0 }) {
+    applyTextureToPanel(panelIndex, texture, scale = { x: 1, y: 1 }) {
         if (panelIndex >= sceneryPanels.length) return false;
         
         const panel = sceneryPanels[panelIndex];
@@ -2879,37 +2584,12 @@ class TextureManager {
         // Clone texture to avoid sharing references
         const clonedTexture = texture.clone();
         clonedTexture.repeat.set(scale.x, scale.y);
-        clonedTexture.offset.set(offset.x, offset.y);
         
         // Apply to material
         mesh.material.map = clonedTexture;
         mesh.material.needsUpdate = true;
         
         return true;
-    }
-    
-    removeTextureFromPanel(panelIndex) {
-        if (panelIndex >= sceneryPanels.length) return false;
-        
-        const panel = sceneryPanels[panelIndex];
-        const mesh = panel.children[0];
-        
-        // Remove texture and revert to solid color
-        if (mesh.material.map) {
-            mesh.material.map.dispose();
-            mesh.material.map = null;
-            mesh.material.needsUpdate = true;
-        }
-        
-        return true;
-    }
-    
-    loadVideoTexture(videoElement) {
-        const texture = new THREE.VideoTexture(videoElement);
-        texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        return texture;
     }
     
     getDefaultTexture(name) {
@@ -2992,57 +2672,6 @@ class MoveObjectCommand extends Command {
     }
 }
 
-class DeleteObjectCommand extends Command {
-    constructor(objectType, object) {
-        super();
-        this.objectType = objectType; // 'prop' or 'actor'
-        this.object = object;
-        this.position = { x: object.position.x, y: object.position.y, z: object.position.z };
-        this.rotation = { x: object.rotation.x, y: object.rotation.y, z: object.rotation.z };
-        this.userData = JSON.parse(JSON.stringify(object.userData)); // Deep copy
-    }
-    
-    execute() {
-        scene.remove(this.object);
-        if (this.objectType === 'prop') {
-            const index = props.indexOf(this.object);
-            if (index > -1) props.splice(index, 1);
-        } else if (this.objectType === 'actor') {
-            const index = actors.indexOf(this.object);
-            if (index > -1) actors.splice(index, 1);
-        }
-    }
-    
-    undo() {
-        // Restore the object to the scene
-        this.object.position.set(this.position.x, this.position.y, this.position.z);
-        this.object.rotation.set(this.rotation.x, this.rotation.y, this.rotation.z);
-        scene.add(this.object);
-        
-        if (this.objectType === 'prop') {
-            props.push(this.object);
-        } else if (this.objectType === 'actor') {
-            actors.push(this.object);
-        }
-    }
-}
-
-class LightingCommand extends Command {
-    constructor(newPreset, oldPreset) {
-        super();
-        this.newPreset = newPreset;
-        this.oldPreset = oldPreset;
-    }
-    
-    execute() {
-        applyLightingPresetDirect(this.newPreset);
-    }
-    
-    undo() {
-        applyLightingPresetDirect(this.oldPreset);
-    }
-}
-
 class StageElementCommand extends Command {
     constructor(elementType, elementData, newState, oldState) {
         super();
@@ -3063,58 +2692,22 @@ class StageElementCommand extends Command {
     applyState(state) {
         switch(this.elementType) {
             case 'curtains':
-                // Apply curtain state immediately
-                const oldState = curtainState;
-                curtainState = state.curtainState;
-                if (state.curtainState === 'open') {
-                    curtainLeft.position.x = -20;
-                    curtainRight.position.x = 20;
-                } else if (state.curtainState === 'closed') {
-                    curtainLeft.position.x = -2;
-                    curtainRight.position.x = 2;
-                }
+                curtainState = state;
+                // Don't call updateCurtainPositions here - let the animation handle it
                 break;
-            case 'platforms':
-                // Apply to all platforms
-                moveablePlatforms.forEach((platform, index) => {
-                    const platformState = state.platforms[index];
-                    if (platformState) {
-                        platform.position.y = platformState.height;
-                        platform.userData.targetY = platformState.height;
-                        platform.userData.moving = false;
-                    }
-                });
+            case 'platform':
+                const platform = moveablePlatforms[this.elementData.index];
+                if (platform) {
+                    platform.position.y = state.height;
+                    platform.userData.targetY = state.height;
+                }
                 break;
             case 'rotatingStage':
-                if (rotatingStage) {
-                    rotatingStage.visible = state.visible;
-                    rotatingStage.userData.rotating = state.rotating;
-                }
-                break;
-            case 'trapDoors':
-                trapDoors.forEach((trapDoor, index) => {
-                    const doorState = state.trapDoors[index];
-                    if (doorState) {
-                        trapDoor.userData.open = doorState.open;
-                        trapDoor.userData.targetRotation = doorState.open ? Math.PI / 2 : 0;
-                        trapDoor.children[0].rotation.x = doorState.open ? Math.PI / 2 : 0;
-                    }
-                });
-                break;
-            case 'trapDoorsVisibility':
-                trapDoors.forEach(trapDoor => {
-                    trapDoor.visible = state.visible;
-                    if (!state.visible) {
-                        trapDoor.userData.open = false;
-                        trapDoor.userData.targetRotation = 0;
-                        trapDoor.children[0].rotation.x = 0;
-                        trapDoor.children[0].position.z = 0;
-                        trapDoor.children[0].position.y = 0;
-                    }
-                });
+                rotatingStage.visible = state.visible;
+                rotatingStage.userData.rotating = state.rotating;
                 break;
             case 'scenery':
-                moveSceneryPanelDirect(this.elementData.index, state.position);
+                moveSceneryPanel(this.elementData.index, state.position);
                 break;
         }
     }
@@ -3190,37 +2783,6 @@ class CommandManager {
     canRedo() {
         return this.currentIndex < this.history.length - 1;
     }
-    
-    getHistory() {
-        return this.history.map((command, index) => ({
-            description: this.getCommandDescription(command),
-            isCurrent: index === this.currentIndex,
-            index: index
-        }));
-    }
-    
-    getCommandDescription(command) {
-        if (command instanceof PlaceObjectCommand) {
-            return `Place ${command.objectType}`;
-        } else if (command instanceof DeleteObjectCommand) {
-            return `Delete ${command.objectType}`;
-        } else if (command instanceof MoveObjectCommand) {
-            return `Move object`;
-        } else if (command instanceof LightingCommand) {
-            return `Change lighting to ${command.newPreset}`;
-        } else if (command instanceof StageElementCommand) {
-            switch(command.elementType) {
-                case 'curtains': return 'Toggle curtains';
-                case 'platforms': return 'Move platforms';
-                case 'rotatingStage': return 'Toggle rotating stage';
-                case 'trapDoors': return 'Toggle trap doors';
-                case 'trapDoorsVisibility': return 'Toggle trap doors visibility';
-                case 'scenery': return `Move scenery panel ${command.elementData.index}`;
-                default: return 'Stage element change';
-            }
-        }
-        return 'Unknown command';
-    }
 }
 
 const commandManager = new CommandManager();
@@ -3228,39 +2790,33 @@ const commandManager = new CommandManager();
 // Get bounding box for an object (prop or actor)
 function getObjectBounds(obj) {
     // Default bounds based on object type
-    let bounds = { width: 1, depth: 1, height: 1, shape: COLLISION_SHAPES.BOX };
+    let bounds = { width: 1, depth: 1, height: 1 };
     
     if (obj.userData.type === 'actor') {
-        bounds = { width: 1, depth: 1, height: 2.5, shape: COLLISION_SHAPES.CAPSULE };
+        bounds = { width: 1, depth: 1, height: 2.5 };
     } else if (obj.userData.propType) {
         // Specific bounds for different prop types
         switch (obj.userData.propType) {
             case 'table':
-                bounds = { width: 2, depth: 1.5, height: 1, shape: COLLISION_SHAPES.BOX };
+                bounds = { width: 2, depth: 1.5, height: 1 };
                 break;
             case 'chair':
-                bounds = { width: 1, depth: 1, height: 1.5, shape: COLLISION_SHAPES.BOX };
+                bounds = { width: 1, depth: 1, height: 1.5 };
                 break;
             case 'barrel':
-                bounds = { width: 1, depth: 1, height: 1.2, shape: COLLISION_SHAPES.SPHERE };
+                bounds = { width: 1, depth: 1, height: 1.2 };
                 break;
             case 'box':
-                bounds = { width: 1.2, depth: 1.2, height: 1.2, shape: COLLISION_SHAPES.BOX };
+                bounds = { width: 1.2, depth: 1.2, height: 1.2 };
                 break;
             case 'plant':
-                bounds = { width: 0.8, depth: 0.8, height: 1.2, shape: COLLISION_SHAPES.SPHERE };
+                bounds = { width: 0.8, depth: 0.8, height: 1.2 };
                 break;
             case 'lamp':
-                bounds = { width: 0.8, depth: 0.8, height: 1.5, shape: COLLISION_SHAPES.CAPSULE };
-                break;
-            case 'sphere':
-                bounds = { width: 1, depth: 1, height: 1, shape: COLLISION_SHAPES.SPHERE };
-                break;
-            case 'cylinder':
-                bounds = { width: 1, depth: 1, height: 1.5, shape: COLLISION_SHAPES.CAPSULE };
+                bounds = { width: 0.8, depth: 0.8, height: 1.5 };
                 break;
             default:
-                bounds = { width: 1, depth: 1, height: 1, shape: COLLISION_SHAPES.BOX };
+                bounds = { width: 1, depth: 1, height: 1 };
         }
     }
     
@@ -3287,133 +2843,22 @@ function getObjectFriction(obj) {
     return 0.7; // Default friction
 }
 
-// Get collision layer for an object
-function getObjectCollisionLayer(obj) {
-    if (obj.userData.type === 'actor') {
-        return COLLISION_LAYERS.ACTORS;
-    } else if (obj.userData.propType) {
-        return COLLISION_LAYERS.PROPS;
-    } else if (obj.userData.sceneryType) {
-        return COLLISION_LAYERS.SCENERY;
-    }
-    return COLLISION_LAYERS.ALL;
-}
-
-// Check if two layers can collide
-function canLayersCollide(layer1, layer2) {
-    return (layer1 & layer2) !== 0;
-}
-
-// Improved collision detection with shape support
-function checkShapeCollision(bounds1, pos1, bounds2, pos2) {
-    const shape1 = bounds1.shape || COLLISION_SHAPES.BOX;
-    const shape2 = bounds2.shape || COLLISION_SHAPES.BOX;
-    
-    // Sphere-Sphere collision
-    if (shape1 === COLLISION_SHAPES.SPHERE && shape2 === COLLISION_SHAPES.SPHERE) {
-        const radius1 = Math.max(bounds1.width, bounds1.depth) / 2;
-        const radius2 = Math.max(bounds2.width, bounds2.depth) / 2;
-        const dx = pos1.x - pos2.x;
-        const dz = pos1.z - pos2.z;
-        const dy = pos1.y - pos2.y;
-        const distSq = dx * dx + dz * dz + dy * dy;
-        const radiusSum = radius1 + radius2;
-        return distSq < radiusSum * radiusSum;
-    }
-    
-    // Capsule-Capsule (simplified to cylinder check on XZ plane)
-    if (shape1 === COLLISION_SHAPES.CAPSULE && shape2 === COLLISION_SHAPES.CAPSULE) {
-        const radius1 = Math.max(bounds1.width, bounds1.depth) / 2;
-        const radius2 = Math.max(bounds2.width, bounds2.depth) / 2;
-        const dx = pos1.x - pos2.x;
-        const dz = pos1.z - pos2.z;
-        const distSq = dx * dx + dz * dz;
-        const radiusSum = radius1 + radius2;
-        
-        // Check Y overlap
-        const yOverlap = Math.abs(pos1.y - pos2.y) < (bounds1.height + bounds2.height) / 2;
-        return distSq < radiusSum * radiusSum && yOverlap;
-    }
-    
-    // Sphere-Box collision (treat sphere as if testing against expanded box)
-    if ((shape1 === COLLISION_SHAPES.SPHERE && shape2 === COLLISION_SHAPES.BOX) ||
-        (shape1 === COLLISION_SHAPES.BOX && shape2 === COLLISION_SHAPES.SPHERE)) {
-        const spherePos = shape1 === COLLISION_SHAPES.SPHERE ? pos1 : pos2;
-        const boxPos = shape1 === COLLISION_SHAPES.BOX ? pos1 : pos2;
-        const sphereBounds = shape1 === COLLISION_SHAPES.SPHERE ? bounds1 : bounds2;
-        const boxBounds = shape1 === COLLISION_SHAPES.BOX ? bounds1 : bounds2;
-        
-        const radius = Math.max(sphereBounds.width, sphereBounds.depth) / 2;
-        
-        // Closest point on box to sphere center
-        const closestX = Math.max(boxPos.x - boxBounds.width/2, 
-                                   Math.min(spherePos.x, boxPos.x + boxBounds.width/2));
-        const closestZ = Math.max(boxPos.z - boxBounds.depth/2,
-                                   Math.min(spherePos.z, boxPos.z + boxBounds.depth/2));
-        const closestY = Math.max(boxPos.y - boxBounds.height/2,
-                                   Math.min(spherePos.y, boxPos.y + boxBounds.height/2));
-        
-        const dx = spherePos.x - closestX;
-        const dz = spherePos.z - closestZ;
-        const dy = spherePos.y - closestY;
-        const distSq = dx * dx + dz * dz + dy * dy;
-        
-        return distSq < radius * radius;
-    }
-    
-    // Box-Box collision (AABB)
-    const xOverlap = Math.abs(pos1.x - pos2.x) < (bounds1.width + bounds2.width) / 2;
-    const zOverlap = Math.abs(pos1.z - pos2.z) < (bounds1.depth + bounds2.depth) / 2;
-    const yOverlap = Math.abs(pos1.y - pos2.y) < (bounds1.height + bounds2.height) / 2;
-    
-    return xOverlap && zOverlap && yOverlap;
-}
-
 // Check collision between two objects
 function checkObjectCollision(obj1, pos1, obj2) {
     if (obj1 === obj2 || obj2.userData.hidden) return false;
-    
-    // Check collision layers
-    const layer1 = getObjectCollisionLayer(obj1);
-    const layer2 = getObjectCollisionLayer(obj2);
-    if (!canLayersCollide(layer1, layer2)) {
-        return false;
-    }
     
     const bounds1 = getObjectBounds(obj1);
     const bounds2 = getObjectBounds(obj2);
     const pos2 = obj2.position;
     
-    // Use improved shape-based collision detection
-    return checkShapeCollision(bounds1, pos1, bounds2, pos2);
-}
-
-// Calculate sliding vector along collision surface
-function calculateSlidingVector(velocity, collisionNormal) {
-    // Project velocity onto collision normal
-    const dot = velocity.x * collisionNormal.x + velocity.z * collisionNormal.z;
+    // Check X-Z plane collision (horizontal)
+    const xOverlap = Math.abs(pos1.x - pos2.x) < (bounds1.width + bounds2.width) / 2;
+    const zOverlap = Math.abs(pos1.z - pos2.z) < (bounds1.depth + bounds2.depth) / 2;
     
-    // Subtract normal component to get sliding vector
-    return {
-        x: velocity.x - dot * collisionNormal.x,
-        z: velocity.z - dot * collisionNormal.z
-    };
-}
-
-// Get collision normal between two objects
-function getCollisionNormal(obj1Pos, obj2Pos) {
-    const dx = obj1Pos.x - obj2Pos.x;
-    const dz = obj1Pos.z - obj2Pos.z;
-    const dist = Math.sqrt(dx * dx + dz * dz);
+    // Check Y collision (vertical) - objects at different heights don't collide
+    const yOverlap = Math.abs(pos1.y - pos2.y) < (bounds1.height + bounds2.height) / 2;
     
-    if (dist < 0.001) {
-        return { x: 1, z: 0 }; // Default normal if objects are at same position
-    }
-    
-    return {
-        x: dx / dist,
-        z: dz / dist
-    };
+    return xOverlap && zOverlap && yOverlap;
 }
 
 // Handle collision response with momentum transfer
@@ -3443,19 +2888,14 @@ function handleCollisionResponse(obj1, obj2, velocity1) {
     };
 }
 
-// Check if object can move to new position with sliding support
-function checkAllCollisions(movingObj, newX, newZ, velocity = 0, velocityVector = null) {
+// Check if object can move to new position
+function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
     const testPos = { x: newX, y: movingObj.position.y, z: newZ };
     let collisionHandled = false;
     
-    // Use spatial grid for better performance with many objects
-    const bounds = getObjectBounds(movingObj);
-    const queryRadius = Math.max(bounds.width, bounds.depth) + 3; // Extra margin for nearby objects
-    const nearbyObjects = spatialGrid.query(newX, newZ, queryRadius);
-    
-    // Check collision with nearby props
-    for (let prop of nearbyObjects) {
-        if (props.includes(prop) && checkObjectCollision(movingObj, testPos, prop)) {
+    // Check collision with all props
+    for (let prop of props) {
+        if (checkObjectCollision(movingObj, testPos, prop)) {
             if (velocity > 0) {
                 // Calculate collision response
                 const response = handleCollisionResponse(movingObj, prop, velocity);
@@ -3484,9 +2924,9 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0, velocityVector 
         }
     }
     
-    // Check collision with nearby actors
-    for (let actor of nearbyObjects) {
-        if (actors.includes(actor) && checkObjectCollision(movingObj, testPos, actor)) {
+    // Check collision with all actors
+    for (let actor of actors) {
+        if (checkObjectCollision(movingObj, testPos, actor)) {
             if (velocity > 0) {
                 const response = handleCollisionResponse(movingObj, actor, velocity);
                 
@@ -3518,30 +2958,6 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0, velocityVector 
     }
     
     return false; // No collision
-}
-
-// Attempt to move with sliding along obstacles
-function tryMoveWithSliding(obj, targetX, targetZ, velocity = 0) {
-    const currentX = obj.position.x;
-    const currentZ = obj.position.z;
-    
-    // Try direct movement first
-    if (!checkAllCollisions(obj, targetX, targetZ, velocity)) {
-        return { x: targetX, z: targetZ, moved: true };
-    }
-    
-    // If direct movement blocked, try sliding along X axis
-    if (!checkAllCollisions(obj, targetX, currentZ, velocity)) {
-        return { x: targetX, z: currentZ, moved: true };
-    }
-    
-    // Try sliding along Z axis
-    if (!checkAllCollisions(obj, currentX, targetZ, velocity)) {
-        return { x: currentX, z: targetZ, moved: true };
-    }
-    
-    // No movement possible
-    return { x: currentX, z: currentZ, moved: false };
 }
 
 function checkPropSceneryCollision(prop, newX, newZ) {
@@ -3582,114 +2998,8 @@ function checkPropSceneryCollision(prop, newX, newZ) {
     return false;
 }
 
-// Debug visualization functions
-function updateDebugVisualization() {
-    // Clear existing debug helpers
-    clearDebugVisualization();
-    
-    if (!debugVisualizationEnabled) {
-        return;
-    }
-    
-    // Create debug helpers for all props
-    props.forEach(prop => {
-        if (!prop.userData.hidden) {
-            const helper = createCollisionDebugHelper(prop);
-            if (helper) {
-                scene.add(helper);
-                debugVisualizationHelpers.push(helper);
-            }
-        }
-    });
-    
-    // Create debug helpers for all actors
-    actors.forEach(actor => {
-        if (!actor.userData.hidden) {
-            const helper = createCollisionDebugHelper(actor);
-            if (helper) {
-                scene.add(helper);
-                debugVisualizationHelpers.push(helper);
-            }
-        }
-    });
-}
-
-function createCollisionDebugHelper(obj) {
-    const bounds = getObjectBounds(obj);
-    const pos = obj.position;
-    let geometry;
-    
-    const material = new THREE.MeshBasicMaterial({
-        color: 0x00ff00,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.5
-    });
-    
-    switch (bounds.shape) {
-        case COLLISION_SHAPES.BOX:
-            geometry = new THREE.BoxGeometry(bounds.width, bounds.height, bounds.depth);
-            break;
-        case COLLISION_SHAPES.SPHERE:
-            const radius = Math.max(bounds.width, bounds.depth, bounds.height) / 2;
-            geometry = new THREE.SphereGeometry(radius, 16, 16);
-            break;
-        case COLLISION_SHAPES.CAPSULE:
-            // Approximate capsule with cylinder
-            const capRadius = Math.max(bounds.width, bounds.depth) / 2;
-            geometry = new THREE.CylinderGeometry(capRadius, capRadius, bounds.height, 16);
-            break;
-        default:
-            geometry = new THREE.BoxGeometry(bounds.width, bounds.height, bounds.depth);
-    }
-    
-    const helper = new THREE.Mesh(geometry, material);
-    helper.position.copy(pos);
-    helper.rotation.copy(obj.rotation);
-    
-    // Store reference to original object for updating
-    helper.userData.trackedObject = obj;
-    
-    return helper;
-}
-
-function clearDebugVisualization() {
-    debugVisualizationHelpers.forEach(helper => {
-        scene.remove(helper);
-        if (helper.geometry) helper.geometry.dispose();
-        if (helper.material) helper.material.dispose();
-    });
-    debugVisualizationHelpers = [];
-}
-
-function toggleDebugVisualization() {
-    debugVisualizationEnabled = !debugVisualizationEnabled;
-    updateDebugVisualization();
-    console.log('Debug visualization:', debugVisualizationEnabled ? 'ON' : 'OFF');
-}
-
-// Update spatial grid with all objects
-function updateSpatialGrid() {
-    spatialGrid.clear();
-    
-    props.forEach(prop => {
-        if (!prop.userData.hidden) {
-            spatialGrid.insert(prop);
-        }
-    });
-    
-    actors.forEach(actor => {
-        if (!actor.userData.hidden) {
-            spatialGrid.insert(actor);
-        }
-    });
-}
-
 function animate() {
     requestAnimationFrame(animate);
-    
-    // Update spatial grid for efficient collision detection
-    updateSpatialGrid();
     
     if (currentLightingPreset === 'default' || currentLightingPreset === 'dramatic') {
         lights.forEach((light, index) => {
@@ -3808,6 +3118,56 @@ function animate() {
             }
         }
         
+        // Handle props being held by actors
+        if (prop.userData.type === 'prop' && prop.userData.heldBy) {
+            const actor = prop.userData.heldBy;
+            // Position prop relative to actor (in front and slightly up)
+            prop.position.x = actor.position.x;
+            prop.position.z = actor.position.z - 0.8; // In front of actor
+            prop.position.y = actor.position.y + 1.5; // At chest height
+            return; // Skip other physics when held
+        }
+        
+        // Handle thrown props with physics
+        if (throwingProps.has(prop)) {
+            const throwData = throwingProps.get(prop);
+            const vel = throwData.velocity;
+            
+            // Apply gravity
+            vel.y += throwData.gravity * 0.016; // Assuming 60fps
+            
+            // Update position
+            const newX = prop.position.x + vel.x * 0.016;
+            const newZ = prop.position.z + vel.z * 0.016;
+            const newY = prop.position.y + vel.y * 0.016;
+            
+            // Check for collision or ground
+            if (newY <= prop.userData.originalY) {
+                // Hit ground
+                prop.position.y = prop.userData.originalY;
+                vel.x *= 0.3; // Bounce friction
+                vel.z *= 0.3;
+                vel.y *= -0.3; // Bounce up
+                
+                // Stop if velocity too low
+                if (Math.abs(vel.x) < 0.1 && Math.abs(vel.z) < 0.1 && Math.abs(vel.y) < 0.1) {
+                    throwingProps.delete(prop);
+                    updatePropRelationships(prop);
+                }
+            } else if (!checkAllCollisions(prop, newX, newZ, Math.sqrt(vel.x*vel.x + vel.z*vel.z))) {
+                prop.position.x = newX;
+                prop.position.z = newZ;
+                prop.position.y = newY;
+            } else {
+                // Hit obstacle - stop throwing
+                vel.x *= -0.3;
+                vel.z *= -0.3;
+                vel.y *= 0.5;
+            }
+            
+            return; // Skip other physics when being thrown
+        }
+        
         // Platform physics - elevation
         let baseY = prop.userData.originalY;
         if (propPlatformRelations.has(prop)) {
@@ -3885,30 +3245,8 @@ function animate() {
         }
     });
     
-    // Update debug visualization helpers to follow objects
-    if (debugVisualizationEnabled) {
-        debugVisualizationHelpers.forEach(helper => {
-            const trackedObj = helper.userData.trackedObject;
-            if (trackedObj) {
-                helper.position.copy(trackedObj.position);
-                helper.rotation.copy(trackedObj.rotation);
-            }
-        });
-    }
-    
     if (controls) {
         controls.update();
-    }
-    
-    // Update measurement label position if active
-    if (measurementLine && measurementLabel) {
-        const vertices = measurementLine.geometry.attributes.position.array;
-        const midPoint = new THREE.Vector3(
-            (vertices[0] + vertices[3]) / 2,
-            (vertices[1] + vertices[4]) / 2,
-            (vertices[2] + vertices[5]) / 2
-        );
-        updateMeasurementLabelPosition(midPoint);
     }
     
     renderer.render(scene, camera);
