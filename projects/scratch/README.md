@@ -31,6 +31,16 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Stage Props**: Crate, Barrel
 - **Decorative**: Potted Plant, Stage Lamp
 
+### 🤖 AI Actor Scripting System
+- **Movement Commands**: walk_to (with pathfinding), turn, face
+- **Action Commands**: wait, gesture, sit, stand
+- **Speed Controls**: slow, normal, fast, run
+- **JSON Script Format**: Easy-to-write choreography scripts
+- **Multi-Actor Support**: Coordinate multiple actors simultaneously
+- **Obstacle Avoidance**: Automatic pathfinding around props and scenery
+- **Example Scripts**: Four included examples demonstrating features
+- See [ACTOR_SCRIPTING_GUIDE.md](ACTOR_SCRIPTING_GUIDE.md) for detailed documentation
+
 ### ⚙️ Physics System
 - Props and actors elevate with platforms
 - Rotating stage carries objects in circular motion
@@ -67,6 +77,8 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 - **Toggle Trap Doors**: Open/close trap doors
 - **Show/Hide Elements**: Toggle optional stage elements
 - **Scenery Panels**: Slide panels to various positions (Off, 1/4, 1/2, 3/4, Full)
+- **Actor Scripts**: Load and execute JSON scripts for automated actor movements
+- **Save/Load Scene**: Save and restore complete stage configurations
 
 ## Architecture
 
@@ -93,15 +105,14 @@ An interactive 3D theater stage environment built with Three.js, designed for AI
 ## Known Issues
 - Props/actors may hover slightly when on elevated platforms
 - Collision detection is simplified (bounding box based)
-- No save/load functionality yet
 
 ## Future Enhancements
-- Save/load scenes
-- AI actor movement scripting
 - Advanced prop interactions
 - Sound system integration
 - Multi-user collaboration
 - Export to standard 3D formats
+- Enhanced pathfinding algorithms
+- More actor animations
 
 ## Dependencies
 - Three.js r128
