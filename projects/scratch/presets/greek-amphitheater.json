@@ -1,0 +1,148 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-01-19T00:00:00.000Z",
+  "name": "Greek Amphitheater",
+  "description": "Ancient Greek theater setup for classical tragedy and comedy with chorus positions",
+  "stage": {
+    "actors": [
+      {
+        "id": "actor_1",
+        "name": "Protagonist",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_2",
+        "name": "Antagonist",
+        "position": { "x": -3, "y": 0, "z": -1 },
+        "rotation": { "x": 0, "y": 0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_3",
+        "name": "Chorus Leader",
+        "position": { "x": 3, "y": 0, "z": 2 },
+        "rotation": { "x": 0, "y": 3.14, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_4",
+        "name": "Chorus Member 1",
+        "position": { "x": 0, "y": 0, "z": 4 },
+        "rotation": { "x": 0, "y": 3.14, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_5",
+        "name": "Chorus Member 2",
+        "position": { "x": -3, "y": 0, "z": 4 },
+        "rotation": { "x": 0, "y": 3.14, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_6",
+        "name": "Chorus Member 3",
+        "position": { "x": 3, "y": 0, "z": 4 },
+        "rotation": { "x": 0, "y": 3.14, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_7",
+        "name": "Messenger",
+        "position": { "x": 6, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": -1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "props": [
+      {
+        "id": "prop_1",
+        "name": "Altar/Throne",
+        "type": "table",
+        "position": { "x": 0, "y": 0, "z": -4 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_2",
+        "name": "Column Left",
+        "type": "barrel",
+        "position": { "x": -6, "y": 0, "z": -4 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_3",
+        "name": "Column Right",
+        "type": "barrel",
+        "position": { "x": 6, "y": 0, "z": -4 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_4",
+        "name": "Sacred Plant Left",
+        "type": "plant",
+        "position": { "x": -4, "y": 0, "z": -4 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_5",
+        "name": "Sacred Plant Right",
+        "type": "plant",
+        "position": { "x": 4, "y": 0, "z": -4 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "lighting": {
+      "preset": "day",
+      "customSettings": {}
+    },
+    "camera": {
+      "position": { "x": 0, "y": 10, "z": 20 },
+      "target": { "x": 0, "y": 0, "z": 0 }
+    },
+    "stageElements": {
+      "platforms": [
+        { "index": 0, "height": 0.5, "visible": true },
+        { "index": 1, "height": 0, "visible": true },
+        { "index": 2, "height": 0, "visible": true },
+        { "index": 3, "height": 0, "visible": true }
+      ],
+      "curtains": "open",
+      "rotatingStage": {
+        "visible": false,
+        "rotating": false,
+        "rotation": 0
+      },
+      "trapDoors": [
+        { "index": 0, "visible": false, "open": false },
+        { "index": 1, "visible": false, "open": false },
+        { "index": 2, "visible": false, "open": false },
+        { "index": 3, "visible": false, "open": false }
+      ],
+      "scenery": [
+        { "index": 0, "position": 1 },
+        { "index": 1, "position": 0 }
+      ],
+      "markers": {
+        "visible": true
+      }
+    }
+  }
+}
