@@ -1,0 +1,124 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-01-19T00:00:00.000Z",
+  "name": "Shakespeare Scene",
+  "description": "Medieval/Renaissance setting for classical Shakespeare plays with throne and court arrangement",
+  "stage": {
+    "actors": [
+      {
+        "id": "actor_1",
+        "name": "King/Queen",
+        "position": { "x": 0, "y": 0.5, "z": -3 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_2",
+        "name": "Courtier Left",
+        "position": { "x": -4, "y": 0, "z": -1 },
+        "rotation": { "x": 0, "y": 0.8, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_3",
+        "name": "Courtier Right",
+        "position": { "x": 4, "y": 0, "z": -1 },
+        "rotation": { "x": 0, "y": -0.8, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_4",
+        "name": "Messenger",
+        "position": { "x": 0, "y": 0, "z": 4 },
+        "rotation": { "x": 0, "y": 3.14, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "props": [
+      {
+        "id": "prop_1",
+        "name": "Throne",
+        "type": "chair",
+        "position": { "x": 0, "y": 0.5, "z": -3 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_2",
+        "name": "Table (Banquet)",
+        "type": "table",
+        "position": { "x": -3, "y": 0, "z": 2 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_3",
+        "name": "Candelabra Left",
+        "type": "lamp",
+        "position": { "x": -5, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_4",
+        "name": "Candelabra Right",
+        "type": "lamp",
+        "position": { "x": 5, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_5",
+        "name": "Decorative Plant",
+        "type": "plant",
+        "position": { "x": -7, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "lighting": {
+      "preset": "dramatic",
+      "customSettings": {}
+    },
+    "camera": {
+      "position": { "x": 0, "y": 7, "z": 18 },
+      "target": { "x": 0, "y": 1, "z": 0 }
+    },
+    "stageElements": {
+      "platforms": [
+        { "index": 0, "height": 0.5, "visible": true },
+        { "index": 1, "height": 0, "visible": true },
+        { "index": 2, "height": 0, "visible": true },
+        { "index": 3, "height": 0, "visible": true }
+      ],
+      "curtains": "open",
+      "rotatingStage": {
+        "visible": false,
+        "rotating": false,
+        "rotation": 0
+      },
+      "trapDoors": [
+        { "index": 0, "visible": false, "open": false },
+        { "index": 1, "visible": false, "open": false },
+        { "index": 2, "visible": false, "open": false },
+        { "index": 3, "visible": false, "open": false }
+      ],
+      "scenery": [
+        { "index": 0, "position": 1 },
+        { "index": 1, "position": 0.75 }
+      ],
+      "markers": {
+        "visible": true
+      }
+    }
+  }
+}

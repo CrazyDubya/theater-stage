@@ -1,0 +1,143 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-01-19T00:00:00.000Z",
+  "name": "Detective Office",
+  "description": "Film noir detective office for mystery and crime drama scenes",
+  "stage": {
+    "actors": [
+      {
+        "id": "actor_1",
+        "name": "Detective",
+        "position": { "x": -2, "y": 0, "z": -2 },
+        "rotation": { "x": 0, "y": 0.8, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_2",
+        "name": "Client",
+        "position": { "x": 1, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": -2.3, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_3",
+        "name": "Suspect",
+        "position": { "x": 4, "y": 0, "z": 3 },
+        "rotation": { "x": 0, "y": 3.14, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "props": [
+      {
+        "id": "prop_1",
+        "name": "Detective's Desk",
+        "type": "table",
+        "position": { "x": -2, "y": 0, "z": -2 },
+        "rotation": { "x": 0, "y": 0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_2",
+        "name": "Desk Chair",
+        "type": "chair",
+        "position": { "x": -3, "y": 0, "z": -2.5 },
+        "rotation": { "x": 0, "y": 0.8, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_3",
+        "name": "Client Chair",
+        "type": "chair",
+        "position": { "x": 0.5, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": -2.3, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_4",
+        "name": "Desk Lamp",
+        "type": "lamp",
+        "position": { "x": -1.5, "y": 0, "z": -2 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_5",
+        "name": "Filing Cabinet",
+        "type": "crate",
+        "position": { "x": -5, "y": 0, "z": -4 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_6",
+        "name": "Evidence Box",
+        "type": "crate",
+        "position": { "x": -4, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0.3, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_7",
+        "name": "Coat Rack",
+        "type": "plant",
+        "position": { "x": 4, "y": 0, "z": -4 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_8",
+        "name": "Side Table",
+        "type": "table",
+        "position": { "x": 5, "y": 0, "z": 2 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "lighting": {
+      "preset": "night",
+      "customSettings": {}
+    },
+    "camera": {
+      "position": { "x": 3, "y": 6, "z": 15 },
+      "target": { "x": 0, "y": 0, "z": 0 }
+    },
+    "stageElements": {
+      "platforms": [
+        { "index": 0, "height": 0, "visible": true },
+        { "index": 1, "height": 0, "visible": true },
+        { "index": 2, "height": 0, "visible": true },
+        { "index": 3, "height": 0, "visible": true }
+      ],
+      "curtains": "open",
+      "rotatingStage": {
+        "visible": false,
+        "rotating": false,
+        "rotation": 0
+      },
+      "trapDoors": [
+        { "index": 0, "visible": false, "open": false },
+        { "index": 1, "visible": false, "open": false },
+        { "index": 2, "visible": false, "open": false },
+        { "index": 3, "visible": false, "open": false }
+      ],
+      "scenery": [
+        { "index": 0, "position": 1 },
+        { "index": 1, "position": 0.5 }
+      ],
+      "markers": {
+        "visible": false
+      }
+    }
+  }
+}

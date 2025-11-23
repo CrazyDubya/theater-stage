@@ -1,0 +1,468 @@
+/**
+ * UI Improvements for Theater-Stage
+ * Modern, clean interface with better visual hierarchy
+ */
+
+/* ============================================
+   MENU TOGGLE BUTTON
+   ============================================ */
+#menu-toggle {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease !important;
+    font-size: 24px !important;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+#menu-toggle:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+#menu-toggle:active {
+    transform: scale(0.95);
+}
+
+/* ============================================
+   MAIN UI CONTAINER
+   ============================================ */
+#ui-container {
+    max-width: 320px !important;
+    max-height: calc(100vh - 120px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(68, 170, 255, 0.2) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+}
+
+#ui-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#ui-container::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+}
+
+#ui-container::-webkit-scrollbar-thumb {
+    background: rgba(68, 170, 255, 0.4);
+    border-radius: 4px;
+}
+
+#ui-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(68, 170, 255, 0.6);
+}
+
+/* ============================================
+   SECTION ORGANIZATION
+   ============================================ */
+.control-section {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(68, 170, 255, 0.15);
+}
+
+.control-section:last-child {
+    border-bottom: none;
+}
+
+.control-section h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #4af;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.control-section h3:hover {
+    color: #6cf;
+}
+
+.control-section h3::before {
+    content: '▶';
+    font-size: 10px;
+    transition: transform 0.3s ease;
+}
+
+.control-section h3.expanded::before {
+    transform: rotate(90deg);
+}
+
+/* ============================================
+   IMPROVED BUTTONS
+   ============================================ */
+button {
+    font-family: Arial, sans-serif;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+button::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: translate(-50%, -50%);
+    transition: width 0.4s ease, height 0.4s ease;
+}
+
+button:active::before {
+    width: 200px;
+    height: 200px;
+}
+
+/* Primary action buttons */
+button.primary,
+button[id*="place"],
+button[id*="add"] {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+button.primary:hover,
+button[id*="place"]:hover,
+button[id*="add"]:hover {
+    background: linear-gradient(135deg, #7c8df8 0%, #8c5bb2 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Secondary action buttons */
+button.secondary,
+button[id*="toggle"],
+button[id*="show"] {
+    background: linear-gradient(135deg, #434343 0%, #000000 100%);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+button.secondary:hover,
+button[id*="toggle"]:hover,
+button[id*="show"]:hover {
+    background: linear-gradient(135deg, #535353 0%, #1a1a1a 100%);
+    transform: translateY(-1px);
+}
+
+/* Success/Action buttons */
+button[id*="save"],
+button[id*="pickup"],
+button[id*="sit"] {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+button[id*="save"]:hover,
+button[id*="pickup"]:hover,
+button[id*="sit"]:hover {
+    background: linear-gradient(135deg, #21a89e 0%, #48ff8d 100%);
+    transform: translateY(-1px);
+}
+
+/* Danger/Remove buttons */
+button[id*="remove"],
+button[id*="delete"],
+button[id*="throw"] {
+    background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+button[id*="remove"]:hover,
+button[id*="delete"]:hover,
+button[id*="throw"]:hover {
+    background: linear-gradient(135deg, #fb4359 0%, #ff6c53 100%);
+    transform: translateY(-1px);
+}
+
+/* Disabled button state */
+button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+button:disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* ============================================
+   SELECT DROPDOWNS
+   ============================================ */
+select {
+    background: linear-gradient(135deg, rgba(50, 50, 70, 0.6) 0%, rgba(30, 30, 50, 0.6) 100%);
+    border: 1px solid rgba(68, 170, 255, 0.3);
+    border-radius: 6px;
+    color: white;
+    padding: 8px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+}
+
+select:hover {
+    border-color: rgba(68, 170, 255, 0.5);
+    background: linear-gradient(135deg, rgba(60, 60, 80, 0.7) 0%, rgba(40, 40, 60, 0.7) 100%);
+}
+
+select:focus {
+    border-color: #4af;
+    box-shadow: 0 0 0 3px rgba(68, 170, 255, 0.2);
+}
+
+select option {
+    background: #1a1a2e;
+    color: white;
+}
+
+select optgroup {
+    background: #16213e;
+    font-weight: bold;
+    color: #4af;
+}
+
+/* ============================================
+   INPUT FIELDS & SLIDERS
+   ============================================ */
+input[type="text"],
+input[type="number"] {
+    background: rgba(30, 30, 50, 0.6);
+    border: 1px solid rgba(68, 170, 255, 0.3);
+    border-radius: 6px;
+    color: white;
+    padding: 8px 12px;
+    font-size: 13px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus {
+    border-color: #4af;
+    box-shadow: 0 0 0 3px rgba(68, 170, 255, 0.2);
+}
+
+input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, rgba(68, 170, 255, 0.3) 0%, rgba(68, 170, 255, 0.6) 100%);
+    outline: none;
+    transition: opacity 0.2s;
+}
+
+input[type="range"]:hover {
+    opacity: 1;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    border: none;
+}
+
+/* ============================================
+   LABELS & TEXT
+   ============================================ */
+.control-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
+}
+
+.control-hint {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.control-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, rgba(68, 170, 255, 0.3) 50%, transparent 100%);
+    margin: 15px 0;
+}
+
+/* ============================================
+   BUTTON GROUPS
+   ============================================ */
+.button-group {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0;
+}
+
+.button-group button {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ============================================
+   ICON SUPPORT (emoji-based for simplicity)
+   ============================================ */
+.icon-button::before {
+    margin-right: 6px;
+}
+
+.icon-light::before { content: '💡 '; }
+.icon-camera::before { content: '📷 '; }
+.icon-prop::before { content: '📦 '; }
+.icon-actor::before { content: '🧍 '; }
+.icon-save::before { content: '💾 '; }
+.icon-load::before { content: '📂 '; }
+.icon-undo::before { content: '↶ '; }
+.icon-redo::before { content: '↷ '; }
+.icon-curtain::before { content: '🎭 '; }
+.icon-platform::before { content: '⬆️ '; }
+.icon-rotate::before { content: '🔄 '; }
+.icon-trapdoor::before { content: '🕳️ '; }
+.icon-texture::before { content: '🖼️ '; }
+.icon-measure::before { content: '📏 '; }
+.icon-grid::before { content: '⊞ '; }
+.icon-help::before { content: '❓ '; }
+.icon-settings::before { content: '⚙️ '; }
+
+/* ============================================
+   STATUS INDICATORS
+   ============================================ */
+.status-indicator {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+.status-active {
+    background: #38ef7d;
+    box-shadow: 0 0 8px rgba(56, 239, 125, 0.6);
+}
+
+.status-inactive {
+    background: #888;
+}
+
+.status-warning {
+    background: #f39c12;
+    box-shadow: 0 0 8px rgba(243, 156, 18, 0.6);
+}
+
+.status-error {
+    background: #eb3349;
+    box-shadow: 0 0 8px rgba(235, 51, 73, 0.6);
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+@media (max-height: 700px) {
+    #ui-container {
+        max-height: calc(100vh - 80px) !important;
+        font-size: 12px;
+    }
+
+    button {
+        padding: 4px 8px !important;
+        font-size: 11px !important;
+    }
+
+    select {
+        padding: 6px 10px !important;
+        font-size: 11px !important;
+    }
+}
+
+/* ============================================
+   ANIMATION CLASSES
+   ============================================ */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease;
+}
+
+.pulse {
+    animation: pulse 2s infinite;
+}
+
+/* ============================================
+   IMPROVED INFO BOX
+   ============================================ */
+#info {
+    background: linear-gradient(135deg, rgba(26, 26, 46, 0.9) 0%, rgba(22, 33, 62, 0.9) 100%) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(68, 170, 255, 0.2) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    font-size: 13px !important;
+    padding: 12px 16px !important;
+}
+
+/* ============================================
+   COLLAPSIBLE SECTIONS
+   ============================================ */
+.control-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+}
+
+.control-content.expanded {
+    max-height: 2000px;
+    opacity: 1;
+}
