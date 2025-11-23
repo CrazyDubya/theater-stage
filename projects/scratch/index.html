@@ -314,16 +314,26 @@
     <!-- Notification -->
     <div id="collaboration-notification"></div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/js/controls/OrbitControls.js"></script>
+    <!-- Three.js r170 (updated from r128) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.170.0/examples/js/controls/OrbitControls.js"></script>
+
+    <!-- Error handling (must load first) -->
+    <script src="js/error-handler.js"></script>
+
+    <!-- Core systems -->
     <script src="js/tooltips.js"></script>
     <script src="js/ui-enhancements.js"></script>
     <script src="js/collaboration.js"></script>
     <script src="js/stage.js"></script>
     <script src="js/expanded-prop-library.js"></script>
+
+    <!-- Advanced features -->
     <script src="js/animation-timeline.js"></script>
     <script src="js/sound-system.js"></script>
     <script src="js/stage-types.js"></script>
+
+    <!-- Integration & utilities -->
     <script src="js/stage-save-load.js"></script>
     <script src="js/collaboration-integration.js"></script>
     <script src="js/tutorial.js"></script>
