@@ -1,0 +1,150 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-01-19T00:00:00.000Z",
+  "name": "Courtroom Drama",
+  "description": "Legal drama setting with judge's bench, witness stand, and attorney positions",
+  "stage": {
+    "actors": [
+      {
+        "id": "actor_1",
+        "name": "Judge",
+        "position": { "x": 0, "y": 1, "z": -5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_2",
+        "name": "Prosecutor",
+        "position": { "x": -4, "y": 0, "z": 2 },
+        "rotation": { "x": 0, "y": -1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_3",
+        "name": "Defense Attorney",
+        "position": { "x": 4, "y": 0, "z": 2 },
+        "rotation": { "x": 0, "y": 1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_4",
+        "name": "Witness",
+        "position": { "x": -2, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": 1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_5",
+        "name": "Defendant",
+        "position": { "x": 3, "y": 0, "z": -1 },
+        "rotation": { "x": 0, "y": -0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "props": [
+      {
+        "id": "prop_1",
+        "name": "Judge's Bench",
+        "type": "table",
+        "position": { "x": 0, "y": 1, "z": -5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_2",
+        "name": "Witness Stand Table",
+        "type": "table",
+        "position": { "x": -2.5, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_3",
+        "name": "Witness Chair",
+        "type": "chair",
+        "position": { "x": -2, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": 1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_4",
+        "name": "Prosecutor's Table",
+        "type": "table",
+        "position": { "x": -4, "y": 0, "z": 1 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_5",
+        "name": "Defense Table",
+        "type": "table",
+        "position": { "x": 4, "y": 0, "z": 1 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_6",
+        "name": "Defense Chair 1",
+        "type": "chair",
+        "position": { "x": 3, "y": 0, "z": 1.5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_7",
+        "name": "Defense Chair 2",
+        "type": "chair",
+        "position": { "x": 4.5, "y": 0, "z": 1.5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "lighting": {
+      "preset": "day",
+      "customSettings": {}
+    },
+    "camera": {
+      "position": { "x": 0, "y": 6, "z": 16 },
+      "target": { "x": 0, "y": 1, "z": 0 }
+    },
+    "stageElements": {
+      "platforms": [
+        { "index": 0, "height": 1, "visible": true },
+        { "index": 1, "height": 0, "visible": true },
+        { "index": 2, "height": 0, "visible": true },
+        { "index": 3, "height": 0, "visible": true }
+      ],
+      "curtains": "open",
+      "rotatingStage": {
+        "visible": false,
+        "rotating": false,
+        "rotation": 0
+      },
+      "trapDoors": [
+        { "index": 0, "visible": false, "open": false },
+        { "index": 1, "visible": false, "open": false },
+        { "index": 2, "visible": false, "open": false },
+        { "index": 3, "visible": false, "open": false }
+      ],
+      "scenery": [
+        { "index": 0, "position": 1 },
+        { "index": 1, "position": 0 }
+      ],
+      "markers": {
+        "visible": false
+      }
+    }
+  }
+}
