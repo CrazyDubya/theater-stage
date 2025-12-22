@@ -21,6 +21,40 @@ let propPlatformRelations = new Map(); // prop -> platform
 let propRotatingStageRelations = new Set(); // props on rotating stage
 let propTrapDoorRelations = new Map(); // prop -> trapdoor
 
+// Performance optimization variables
+let benchmarkMode = false;
+let performanceStats = {
+    fps: 0,
+    frameTime: 0,
+    visibleObjects: 0,
+    totalObjects: 0,
+    drawCalls: 0,
+    triangles: 0
+};
+let lastFrameTime = performance.now();
+let frameCount = 0;
+let fpsUpdateTime = 0;
+
+// Object pooling
+let propPool = new Map(); // type -> array of unused meshes
+let maxPoolSize = 50;
+
+// Physics sleep states
+let sleepingObjects = new Set(); // objects that are static and don't need physics updates
+let sleepThreshold = 0.01; // velocity threshold for sleep
+let sleepTimer = new Map(); // object -> frames since last movement
+
+// LOD system
+let lodEnabled = true;
+let lodDistances = {
+    high: 15,
+    medium: 30,
+    low: 50
+};
+
+// Shared materials for texture atlasing
+let sharedMaterials = new Map();
+
 function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x001122);
@@ -35,6 +69,9 @@ function init() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
+    
+    // Enable frustum culling
+    renderer.sortObjects = true;
 
     createStage();
     createLighting();
@@ -47,6 +84,8 @@ function init() {
     createPlacementMarker();
     addControls();
     setupUI();
+    initializeSharedMaterials();
+    initializeObjectPool();
 
     window.addEventListener('resize', onWindowResize, false);
     window.addEventListener('click', onStageClick, false);
@@ -770,6 +809,32 @@ function setupUI() {
     uiContainer.appendChild(backdropSelect);
     uiContainer.appendChild(document.createElement('br'));
     uiContainer.appendChild(midstageSelect);
+    
+    // Performance controls section
+    const perfLabel = document.createElement('div');
+    perfLabel.innerHTML = '<strong>Performance</strong>';
+    perfLabel.style.cssText = 'margin-top: 10px; margin-bottom: 5px;';
+    uiContainer.appendChild(perfLabel);
+    
+    const benchmarkButton = document.createElement('button');
+    benchmarkButton.textContent = 'Toggle Benchmark';
+    benchmarkButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    benchmarkButton.addEventListener('click', toggleBenchmarkMode);
+    uiContainer.appendChild(benchmarkButton);
+    uiContainer.appendChild(document.createElement('br'));
+    
+    const lodButton = document.createElement('button');
+    lodButton.textContent = 'Toggle LOD';
+    lodButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer;';
+    lodButton.addEventListener('click', toggleLOD);
+    uiContainer.appendChild(lodButton);
+    uiContainer.appendChild(document.createElement('br'));
+    
+    const testSceneButton = document.createElement('button');
+    testSceneButton.textContent = 'Create Test Scene (60 objects)';
+    testSceneButton.style.cssText = 'margin: 5px 0; padding: 5px 10px; cursor: pointer; background: #228B22; color: white;';
+    testSceneButton.addEventListener('click', createLargeTestScene);
+    uiContainer.appendChild(testSceneButton);
 
     document.body.appendChild(uiContainer);
 }
@@ -1005,35 +1070,47 @@ function addPropAt(x, z) {
     const propDef = PROP_CATALOG[selectedPropType];
     if (!propDef) return;
     
-    let propObject;
-    const result = propDef.create();
+    // Try to get prop from pool first
+    let propObject = getPooledProp(selectedPropType);
     
-    if (result instanceof THREE.Group) {
-        propObject = result;
+    if (propObject) {
+        // Reuse pooled object
+        propObject.position.set(x, propDef.y, z);
+        propObject.visible = true;
+        propObject.userData.hidden = false;
+        scene.add(propObject);
     } else {
-        // Single geometry - wrap in mesh
-        const material = new THREE.MeshPhongMaterial({
-            color: propDef.color || new THREE.Color(Math.random(), Math.random(), Math.random())
-        });
-        propObject = new THREE.Mesh(result, material);
+        // Create new prop
+        const result = propDef.create();
+        
+        if (result instanceof THREE.Group) {
+            propObject = result;
+        } else {
+            // Single geometry - wrap in mesh with shared material
+            const color = propDef.color || 0x808080;
+            const material = getSharedMaterial(color);
+            propObject = new THREE.Mesh(result, material);
+        }
+        
+        propObject.position.set(x, propDef.y, z);
+        propObject.castShadow = true;
+        propObject.receiveShadow = true;
+        
+        const propId = `prop_${nextPropId++}`;
+        propObject.userData = { 
+            type: 'prop',
+            propType: selectedPropType,
+            id: propId,
+            name: `${propDef.name} (${propId})`,
+            draggable: true,
+            originalY: propDef.y,
+            hidden: false,
+            velocity: { x: 0, y: 0, z: 0 }
+        };
+        
+        scene.add(propObject);
     }
     
-    propObject.position.set(x, propDef.y, z);
-    propObject.castShadow = true;
-    propObject.receiveShadow = true;
-    
-    const propId = `prop_${nextPropId++}`;
-    propObject.userData = { 
-        type: 'prop',
-        propType: selectedPropType,
-        id: propId,
-        name: `${propDef.name} (${propId})`,
-        draggable: true,
-        originalY: propDef.y,
-        hidden: false
-    };
-    
-    scene.add(propObject);
     props.push(propObject);
     
     // Check initial relationships
@@ -1357,6 +1434,222 @@ function checkPropSceneryCollision(prop, newX, newZ) {
     return false;
 }
 
+// ============ Performance Optimization Functions ============
+
+function initializeSharedMaterials() {
+    // Create shared materials for common colors/properties to reduce draw calls
+    const commonColors = [
+        0x808080, 0x8B4513, 0x654321, 0xD2691E, 
+        0x444444, 0x228B22, 0xFFFFE0, 0x4169e1, 0xffdbac
+    ];
+    
+    commonColors.forEach(color => {
+        if (!sharedMaterials.has(color)) {
+            sharedMaterials.set(color, new THREE.MeshPhongMaterial({ 
+                color: color,
+                shininess: 30
+            }));
+        }
+    });
+}
+
+function getSharedMaterial(color) {
+    if (!sharedMaterials.has(color)) {
+        sharedMaterials.set(color, new THREE.MeshPhongMaterial({ 
+            color: color,
+            shininess: 30
+        }));
+    }
+    return sharedMaterials.get(color);
+}
+
+function initializeObjectPool() {
+    // Initialize pools for common prop types
+    Object.keys(PROP_CATALOG).forEach(propType => {
+        propPool.set(propType, []);
+    });
+}
+
+function getPooledProp(propType) {
+    const pool = propPool.get(propType);
+    if (pool && pool.length > 0) {
+        return pool.pop();
+    }
+    return null;
+}
+
+function returnPropToPool(prop) {
+    const propType = prop.userData.propType;
+    const pool = propPool.get(propType);
+    
+    if (pool && pool.length < maxPoolSize) {
+        // Reset prop state
+        prop.visible = false;
+        prop.position.set(0, -100, 0); // Move out of view
+        prop.userData.hidden = true;
+        scene.remove(prop);
+        pool.push(prop);
+        return true;
+    }
+    return false;
+}
+
+function updateLOD(object) {
+    if (!lodEnabled || !camera) return;
+    
+    const distance = camera.position.distanceTo(object.position);
+    
+    // Adjust detail level based on distance
+    if (distance > lodDistances.low) {
+        // Far: minimal detail
+        object.visible = false;
+    } else if (distance > lodDistances.medium) {
+        // Medium: reduce shadows and detail
+        object.visible = true;
+        object.castShadow = false;
+        object.receiveShadow = false;
+    } else if (distance > lodDistances.high) {
+        // Close: enable shadows but simplified
+        object.visible = true;
+        object.castShadow = true;
+        object.receiveShadow = false;
+    } else {
+        // Very close: full detail
+        object.visible = true;
+        object.castShadow = true;
+        object.receiveShadow = true;
+    }
+}
+
+function updatePhysicsSleep(object) {
+    // Check if object has moved recently
+    const velocity = object.userData.velocity || { x: 0, y: 0, z: 0 };
+    const speed = Math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z);
+    
+    if (speed < sleepThreshold) {
+        // Object is nearly still
+        if (!sleepTimer.has(object)) {
+            sleepTimer.set(object, 0);
+        }
+        
+        const frames = sleepTimer.get(object) + 1;
+        sleepTimer.set(object, frames);
+        
+        // Put to sleep after 60 frames (~1 second) of no movement
+        if (frames > 60) {
+            sleepingObjects.add(object);
+        }
+    } else {
+        // Object is moving, wake it up
+        sleepTimer.delete(object);
+        sleepingObjects.delete(object);
+    }
+    
+    // Update velocity for next frame (simplified)
+    if (object.userData.lastPosition) {
+        object.userData.velocity = {
+            x: object.position.x - object.userData.lastPosition.x,
+            y: object.position.y - object.userData.lastPosition.y,
+            z: object.position.z - object.userData.lastPosition.z
+        };
+    }
+    object.userData.lastPosition = object.position.clone();
+}
+
+function wakeObject(object) {
+    sleepingObjects.delete(object);
+    sleepTimer.delete(object);
+}
+
+function updatePerformanceStats() {
+    const now = performance.now();
+    frameCount++;
+    
+    // Update FPS every second
+    if (now - fpsUpdateTime >= 1000) {
+        performanceStats.fps = Math.round(frameCount * 1000 / (now - fpsUpdateTime));
+        frameCount = 0;
+        fpsUpdateTime = now;
+    }
+    
+    // Frame time
+    performanceStats.frameTime = (now - lastFrameTime).toFixed(2);
+    lastFrameTime = now;
+    
+    // Object counts
+    performanceStats.totalObjects = props.length + actors.length;
+    performanceStats.visibleObjects = props.filter(p => p.visible).length + 
+                                       actors.filter(a => a.visible).length;
+    
+    // Render info (approximation)
+    performanceStats.drawCalls = scene.children.length;
+    
+    // Update benchmark display
+    if (benchmarkMode) {
+        updateBenchmarkDisplay();
+    }
+}
+
+function updateBenchmarkDisplay() {
+    const displayDiv = document.getElementById('benchmark-display');
+    if (displayDiv) {
+        displayDiv.innerHTML = `
+            <strong>Performance Stats</strong><br>
+            FPS: ${performanceStats.fps}<br>
+            Frame Time: ${performanceStats.frameTime}ms<br>
+            Visible Objects: ${performanceStats.visibleObjects}/${performanceStats.totalObjects}<br>
+            Sleeping Objects: ${sleepingObjects.size}<br>
+            Draw Calls: ~${performanceStats.drawCalls}
+        `;
+    }
+}
+
+function toggleBenchmarkMode() {
+    benchmarkMode = !benchmarkMode;
+    
+    let displayDiv = document.getElementById('benchmark-display');
+    
+    if (benchmarkMode) {
+        if (!displayDiv) {
+            displayDiv = document.createElement('div');
+            displayDiv.id = 'benchmark-display';
+            displayDiv.style.cssText = `
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background: rgba(0,0,0,0.8);
+                color: #0f0;
+                padding: 15px;
+                border-radius: 5px;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                min-width: 200px;
+                z-index: 1000;
+            `;
+            document.body.appendChild(displayDiv);
+        }
+        displayDiv.style.display = 'block';
+        fpsUpdateTime = performance.now();
+        frameCount = 0;
+    } else if (displayDiv) {
+        displayDiv.style.display = 'none';
+    }
+}
+
+function toggleLOD() {
+    lodEnabled = !lodEnabled;
+    
+    // If disabling LOD, make all objects visible with full detail
+    if (!lodEnabled) {
+        const allObjects = [...props, ...actors];
+        allObjects.forEach(obj => {
+            obj.visible = !obj.userData.hidden;
+            obj.castShadow = true;
+            obj.receiveShadow = true;
+        });
+    }
+}
+
 function animate() {
     requestAnimationFrame(animate);
     
@@ -1455,6 +1748,16 @@ function animate() {
     // Apply physics to props and actors
     const allObjects = [...props, ...actors];
     allObjects.forEach(prop => {
+        // Skip sleeping objects for performance
+        if (sleepingObjects.has(prop)) {
+            return;
+        }
+        
+        // Apply LOD based on camera distance
+        if (lodEnabled) {
+            updateLOD(prop);
+        }
+        
         // Check if prop should be hidden by trap door first
         if (propTrapDoorRelations.has(prop)) {
             const trapDoor = propTrapDoorRelations.get(prop);
@@ -1483,6 +1786,7 @@ function animate() {
             const platform = propPlatformRelations.get(prop);
             // Platform is 0.5 units tall, positioned at y=0.25, so top is at 0.5
             baseY = platform.position.y + 0.25 + prop.userData.originalY;
+            wakeObject(prop); // Wake object when on moving platform
         }
         
         // Apply elevation smoothly
@@ -1512,12 +1816,19 @@ function animate() {
                 
                 // Also rotate the prop itself
                 prop.rotation.y += angle;
+                wakeObject(prop); // Wake object when rotating
             } else {
                 // Stop rotating stage if collision detected
                 rotatingStage.userData.rotating = false;
             }
         }
+        
+        // Update physics sleep state
+        updatePhysicsSleep(prop);
     });
+    
+    // Update performance stats
+    updatePerformanceStats();
     
     if (controls) {
         controls.update();
@@ -1525,6 +1836,37 @@ function animate() {
     
     renderer.render(scene, camera);
 }
+
+// Test function to create a large scene with many objects
+function createLargeTestScene() {
+    console.log('Creating large test scene with 50+ objects...');
+    
+    const propTypes = Object.keys(PROP_CATALOG);
+    let objectCount = 0;
+    
+    // Create objects in a grid pattern on the stage
+    for (let x = -8; x <= 8; x += 2) {
+        for (let z = -5; z <= 5; z += 2) {
+            if (objectCount >= 60) break;
+            
+            // Alternate between props and actors
+            if (objectCount % 3 === 0) {
+                addActorAt(x, z);
+            } else {
+                selectedPropType = propTypes[objectCount % propTypes.length];
+                addPropAt(x, z);
+            }
+            objectCount++;
+        }
+        if (objectCount >= 60) break;
+    }
+    
+    console.log(`Created ${objectCount} objects for performance testing`);
+    console.log('Press "Toggle Benchmark" button to see performance stats');
+}
+
+// Expose test function to window for manual testing
+window.createLargeTestScene = createLargeTestScene;
 
 init();
 animate();
