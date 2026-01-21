@@ -3,10 +3,26 @@
   "version": "1.0.0",
   "description": "An interactive 3D theater stage environment built with Three.js, designed for AI actor performances and theatrical simulations.",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
     "server": "node server/collaboration-server.js",
     "dev": "node server/collaboration-server.js & python3 -m http.server 8000"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testMatch": [
+      "**/__tests__/**/*.test.js",
+      "**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "js/**/*.js",
+      "!js/**/*.test.js",
+      "!**/node_modules/**"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -14,5 +30,9 @@
   "dependencies": {
     "uuid": "^13.0.0",
     "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.2.0"
   }
 }
