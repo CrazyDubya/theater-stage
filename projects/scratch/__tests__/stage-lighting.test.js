@@ -17,7 +17,7 @@ describe('Stage Lighting Module', () => {
         });
 
         test('default preset should be set initially', () => {
-            let currentLightingPreset = 'default';
+            const currentLightingPreset = 'default';
             expect(currentLightingPreset).toBe('default');
         });
 

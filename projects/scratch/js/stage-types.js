@@ -307,7 +307,7 @@ class StageTypeManager {
         // Side railings to indicate audience areas
         const railingMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
 
-        for (let side of [-1, 1]) {
+        for (const side of [-1, 1]) {
             for (let i = 0; i < 8; i++) {
                 const post = new THREE.Mesh(
                     new THREE.CylinderGeometry(0.1, 0.1, 1, 8),

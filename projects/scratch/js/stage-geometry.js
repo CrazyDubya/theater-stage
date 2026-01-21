@@ -4,12 +4,12 @@ import { scene } from './stage-core.js';
 
 export let stage;
 export let curtainLeft, curtainRight, curtainTop;
-export let curtainState = 'closed';
-export let stageMarkers = [];
-export let moveablePlatforms = [];
+export const curtainState = 'closed';
+export const stageMarkers = [];
+export const moveablePlatforms = [];
 export let rotatingStage = null;
-export let trapDoors = [];
-export let sceneryPanels = [];
+export const trapDoors = [];
+export const sceneryPanels = [];
 
 export function createStage() {
     const stageGeometry = new THREE.BoxGeometry(20, 1, 15);

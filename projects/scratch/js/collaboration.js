@@ -543,4 +543,4 @@ class CollaborationManager {
 }
 
 // Global instance
-let collaborationManager = null;
+const collaborationManager = null;

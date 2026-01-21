@@ -4,13 +4,13 @@ import { scene } from './stage-core.js';
 import { updatePropRelationships, checkAllCollisions } from './stage-physics.js';
 import { PROP_CATALOG, propStates } from './stage-props.js';
 
-export let actors = [];
+export const actors = [];
 export let nextActorId = 1;
 
 // Prop interaction tracking
-export let actorHeldProps = new Map(); // actor -> prop being held
-export let actorSittingOn = new Map(); // actor -> furniture prop being sat on
-export let throwingProps = new Map(); // prop -> {velocity, thrownBy}
+export const actorHeldProps = new Map(); // actor -> prop being held
+export const actorSittingOn = new Map(); // actor -> furniture prop being sat on
+export const throwingProps = new Map(); // prop -> {velocity, thrownBy}
 
 export function addActorAt(x, z) {
     // Create actor group
@@ -82,7 +82,7 @@ export function addActorAt(x, z) {
             {x: 1, z: 1}, {x: -1, z: 1}, {x: 1, z: -1}, {x: -1, z: -1}
         ];
         
-        for (let offset of offsets) {
+        for (const offset of offsets) {
             const newX = x + offset.x * 1.5;
             const newZ = z + offset.z * 1.5;
             actors.push(actorGroup); // Re-add to check
@@ -214,7 +214,7 @@ export function sitOnProp(actor, prop) {
     }
     
     // Check if someone already sitting
-    for (let [otherActor, sittingProp] of actorSittingOn) {
+    for (const [otherActor, sittingProp] of actorSittingOn) {
         if (sittingProp === prop) {
             console.log('Someone already sitting here');
             return false;

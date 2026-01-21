@@ -20,7 +20,7 @@ export let renderer;
 /** @type {THREE.OrbitControls} */
 export let controls;
 /** @type {Array<THREE.Light>} */
-export let lights = [];
+export const lights = [];
 
 /**
  * Initialize the Three.js scene, camera, and renderer

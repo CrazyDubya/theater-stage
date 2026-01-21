@@ -116,7 +116,7 @@ describe('Stage Props Module', () => {
 
     describe('Prop Selection', () => {
         test('should default to cube', () => {
-            let selectedPropType = 'cube';
+            const selectedPropType = 'cube';
             expect(selectedPropType).toBe('cube');
         });
 

@@ -67,14 +67,13 @@ jobs:
         working-directory: projects/scratch
         run: npm ci
       
-      - name: Check JavaScript syntax
+      - name: Run ESLint
         working-directory: projects/scratch
-        run: |
-          # Basic syntax check using Node.js
-          for file in js/*.js; do
-            echo "Checking $file..."
-            node --check "$file" || exit 1
-          done
+        run: npm run lint
+      
+      - name: Check code formatting
+        working-directory: projects/scratch
+        run: npm run format:check
   
   build-check:
     name: Build Verification

@@ -1,15 +1,15 @@
 let scene, camera, renderer, controls;
 let stage, lights = [];
-let stageMarkers = [];
+const stageMarkers = [];
 let props = [];
 let actors = [];
 let currentLightingPreset = 'default';
-let moveablePlatforms = [];
+const moveablePlatforms = [];
 let rotatingStage = null;
-let trapDoors = [];
+const trapDoors = [];
 let curtainLeft, curtainRight, curtainTop;
 let curtainState = 'closed';
-let sceneryPanels = [];
+const sceneryPanels = [];
 let placementMode = null; // 'prop' or 'actor'
 let placementMarker = null;
 let selectedPropType = 'cube'; // default prop type
@@ -17,15 +17,15 @@ let nextActorId = 1;
 let nextPropId = 1;
 
 // Physics tracking
-let propPlatformRelations = new Map(); // prop -> platform
-let propRotatingStageRelations = new Set(); // props on rotating stage
-let propTrapDoorRelations = new Map(); // prop -> trapdoor
+const propPlatformRelations = new Map(); // prop -> platform
+const propRotatingStageRelations = new Set(); // props on rotating stage
+const propTrapDoorRelations = new Map(); // prop -> trapdoor
 
 // Prop interaction tracking
-let actorHeldProps = new Map(); // actor -> prop being held
-let actorSittingOn = new Map(); // actor -> furniture prop being sat on
-let propStates = new Map(); // prop -> state object (e.g., lamp: {on: false}, door: {open: false})
-let throwingProps = new Map(); // prop -> {velocity, thrownBy}
+const actorHeldProps = new Map(); // actor -> prop being held
+const actorSittingOn = new Map(); // actor -> furniture prop being sat on
+const propStates = new Map(); // prop -> state object (e.g., lamp: {on: false}, door: {open: false})
+const throwingProps = new Map(); // prop -> {velocity, thrownBy}
 
 // Scene serializer for save/load functionality
 class SceneSerializer {
@@ -1651,8 +1651,8 @@ const PROP_CATALOG = {
             // Legs
             const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.5);
             const legMaterial = new THREE.MeshPhongMaterial({ color: 0x654321 });
-            for (let x of [-0.4, 0.4]) {
-                for (let z of [-0.4, 0.4]) {
+            for (const x of [-0.4, 0.4]) {
+                for (const z of [-0.4, 0.4]) {
                     const leg = new THREE.Mesh(legGeometry, legMaterial);
                     leg.position.set(x, 0.25, z);
                     group.add(leg);
@@ -1681,8 +1681,8 @@ const PROP_CATALOG = {
             // Legs
             const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1);
             const legMaterial = new THREE.MeshPhongMaterial({ color: 0x654321 });
-            for (let x of [-0.9, 0.9]) {
-                for (let z of [-0.65, 0.65]) {
+            for (const x of [-0.9, 0.9]) {
+                for (const z of [-0.65, 0.65]) {
                     const leg = new THREE.Mesh(legGeometry, legMaterial);
                     leg.position.set(x, 0.5, z);
                     group.add(leg);
@@ -1736,7 +1736,7 @@ const PROP_CATALOG = {
             group.add(barrel);
             // Metal bands
             const bandMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
-            for (let y of [0.2, 0.6, 1.0]) {
+            for (const y of [0.2, 0.6, 1.0]) {
                 const band = new THREE.Mesh(
                     new THREE.CylinderGeometry(0.52, 0.52, 0.05, 12),
                     bandMaterial
@@ -1919,7 +1919,7 @@ function addPropAt(x, z) {
             {x: 1, z: 1}, {x: -1, z: 1}, {x: 1, z: -1}, {x: -1, z: -1}
         ];
         
-        for (let offset of offsets) {
+        for (const offset of offsets) {
             const newX = x + offset.x * 1.5;
             const newZ = z + offset.z * 1.5;
             props.push(propObject); // Re-add to check
@@ -2016,7 +2016,7 @@ function addActorAt(x, z) {
             {x: 1, z: 1}, {x: -1, z: 1}, {x: 1, z: -1}, {x: -1, z: -1}
         ];
         
-        for (let offset of offsets) {
+        for (const offset of offsets) {
             const newX = x + offset.x * 1.5;
             const newZ = z + offset.z * 1.5;
             actors.push(actorGroup); // Re-add to check
@@ -2148,7 +2148,7 @@ function sitOnProp(actor, prop) {
     }
     
     // Check if someone already sitting
-    for (let [otherActor, sittingProp] of actorSittingOn) {
+    for (const [otherActor, sittingProp] of actorSittingOn) {
         if (sittingProp === prop) {
             console.log('Someone already sitting here');
             return false;
@@ -2507,7 +2507,7 @@ const OBJECT_PHYSICS = {
 };
 
 // Velocity tracking for momentum
-let objectVelocities = new Map();
+const objectVelocities = new Map();
 
 // Texture management system
 class TextureManager {
@@ -2894,7 +2894,7 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
     let collisionHandled = false;
     
     // Check collision with all props
-    for (let prop of props) {
+    for (const prop of props) {
         if (checkObjectCollision(movingObj, testPos, prop)) {
             if (velocity > 0) {
                 // Calculate collision response
@@ -2925,7 +2925,7 @@ function checkAllCollisions(movingObj, newX, newZ, velocity = 0) {
     }
     
     // Check collision with all actors
-    for (let actor of actors) {
+    for (const actor of actors) {
         if (checkObjectCollision(movingObj, testPos, actor)) {
             if (velocity > 0) {
                 const response = handleCollisionResponse(movingObj, actor, velocity);
@@ -2965,7 +2965,7 @@ function checkPropSceneryCollision(prop, newX, newZ) {
     const propRadius = Math.max(bounds.width, bounds.depth) / 2;
     
     // Check collision with each scenery panel
-    for (let panel of sceneryPanels) {
+    for (const panel of sceneryPanels) {
         if (panel.userData.currentPosition > 0) { // Panel is on stage
             const panelX = panel.position.x;
             const panelZ = panel.position.z;

@@ -28,13 +28,13 @@ import { updatePropRelationships, checkAllCollisions } from './stage-physics.js'
  */
 
 /** @type {Array<THREE.Mesh>} */
-export let props = [];
+export const props = [];
 /** @type {string} */
-export let selectedPropType = 'cube'; // default prop type
+export const selectedPropType = 'cube'; // default prop type
 /** @type {number} */
 export let nextPropId = 1;
 /** @type {Map<THREE.Mesh, PropState>} */
-export let propStates = new Map(); // prop -> state object (e.g., lamp: {on: false}, door: {open: false})
+export const propStates = new Map(); // prop -> state object (e.g., lamp: {on: false}, door: {open: false})
 
 /**
  * Prop catalog definitions
@@ -99,8 +99,8 @@ export const PROP_CATALOG = {
             // Legs
             const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.5);
             const legMaterial = new THREE.MeshPhongMaterial({ color: 0x654321 });
-            for (let x of [-0.4, 0.4]) {
-                for (let z of [-0.4, 0.4]) {
+            for (const x of [-0.4, 0.4]) {
+                for (const z of [-0.4, 0.4]) {
                     const leg = new THREE.Mesh(legGeometry, legMaterial);
                     leg.position.set(x, 0.25, z);
                     group.add(leg);
@@ -129,8 +129,8 @@ export const PROP_CATALOG = {
             // Legs
             const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1);
             const legMaterial = new THREE.MeshPhongMaterial({ color: 0x654321 });
-            for (let x of [-0.9, 0.9]) {
-                for (let z of [-0.65, 0.65]) {
+            for (const x of [-0.9, 0.9]) {
+                for (const z of [-0.65, 0.65]) {
                     const leg = new THREE.Mesh(legGeometry, legMaterial);
                     leg.position.set(x, 0.5, z);
                     group.add(leg);
@@ -184,7 +184,7 @@ export const PROP_CATALOG = {
             group.add(barrel);
             // Metal bands
             const bandMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
-            for (let y of [0.2, 0.6, 1.0]) {
+            for (const y of [0.2, 0.6, 1.0]) {
                 const band = new THREE.Mesh(
                     new THREE.CylinderGeometry(0.52, 0.52, 0.05, 12),
                     bandMaterial
@@ -374,7 +374,7 @@ export function addPropAt(x, z) {
             {x: 1, z: 1}, {x: -1, z: 1}, {x: 1, z: -1}, {x: -1, z: -1}
         ];
         
-        for (let offset of offsets) {
+        for (const offset of offsets) {
             const newX = x + offset.x * 1.5;
             const newZ = z + offset.z * 1.5;
             props.push(propObject); // Re-add to check
