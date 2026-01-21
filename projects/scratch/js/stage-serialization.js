@@ -2,10 +2,9 @@
 
 import { scene, camera, controls } from './stage-core.js';
 import { stage, moveablePlatforms, rotatingStage, trapDoors, sceneryPanels, stageMarkers, curtainState, curtainLeft, curtainRight, updateCurtainPositions, moveSceneryPanel } from './stage-geometry.js';
-import { props, actors, nextPropId, nextActorId, selectedPropType, PROP_CATALOG } from './stage-props.js';
+import { props, selectedPropType, PROP_CATALOG, addPropAt, propStates, nextPropId } from './stage-props.js';
+import { actors, nextActorId, addActorAt, pickUpProp, putDownProp, throwProp, sitOnProp, standUpFromProp, togglePropState, toggleDoorState } from './stage-actors.js';
 import { currentLightingPreset, applyLightingPreset, setCameraPreset } from './stage-lighting.js';
-import { addPropAt, propStates } from './stage-props.js';
-import { addActorAt, pickUpProp, putDownProp, throwProp, sitOnProp, standUpFromProp, togglePropState, toggleDoorState } from './stage-actors.js';
 import { updatePropRelationships, checkAllCollisions, objectVelocities, getObjectMass, getObjectFriction } from './stage-physics.js';
 
 export let placementMode = null; // 'prop', 'actor', 'select-actor', 'select-prop', 'push'

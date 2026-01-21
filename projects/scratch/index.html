@@ -325,7 +325,12 @@
     <script src="js/tooltips.js"></script>
     <script src="js/ui-enhancements.js"></script>
     <script src="js/collaboration.js"></script>
-    <script src="js/stage.js"></script>
+    
+    <!-- NEW MODULAR STAGE SYSTEM (ES6 Modules) -->
+    <!-- Main module that imports and integrates all stage components -->
+    <script type="module" src="js/stage-main.js"></script>
+    
+    <!-- Legacy support - These files work with the new modular system -->
     <script src="js/expanded-prop-library.js"></script>
 
     <!-- Advanced features -->
@@ -337,5 +342,18 @@
     <script src="js/stage-save-load.js"></script>
     <script src="js/collaboration-integration.js"></script>
     <script src="js/tutorial.js"></script>
+    
+    <!-- Note: Original monolithic stage.js has been split into modules:
+         - stage-core.js: Scene, camera, renderer, lighting
+         - stage-geometry.js: Platforms, curtains, scenery, trap doors
+         - stage-physics.js: Collision detection, physics calculations
+         - stage-props.js: Prop catalog and placement
+         - stage-actors.js: Actor management and interactions
+         - stage-lighting.js: Lighting and camera presets
+         - stage-serialization.js: Save/load, texture management, undo/redo
+         - stage-main.js: Integration and animation loop (entry point)
+         
+         Original file backed up as: js/stage.js.backup
+    -->
 </body>
 </html>
