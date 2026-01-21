@@ -27,8 +27,8 @@ const EXPANDED_PROP_CATALOG = {
             group.add(back);
             const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.5);
             const legMaterial = new THREE.MeshPhongMaterial({ color: 0x654321 });
-            for (let x of [-0.4, 0.4]) {
-                for (let z of [-0.4, 0.4]) {
+            for (const x of [-0.4, 0.4]) {
+                for (const z of [-0.4, 0.4]) {
                     const leg = new THREE.Mesh(legGeometry, legMaterial);
                     leg.position.set(x, 0.25, z);
                     group.add(leg);
@@ -57,7 +57,7 @@ const EXPANDED_PROP_CATALOG = {
             back.position.set(0, 1.05, -0.5);
             group.add(back);
             // Arms
-            for (let x of [-0.6, 0.6]) {
+            for (const x of [-0.6, 0.6]) {
                 const arm = new THREE.Mesh(
                     new THREE.BoxGeometry(0.15, 0.5, 0.8),
                     new THREE.MeshPhongMaterial({ color: 0x654321 })
@@ -87,7 +87,7 @@ const EXPANDED_PROP_CATALOG = {
             );
             back.position.set(0, 0.9, -0.35);
             group.add(back);
-            for (let x of [-1.1, 0, 1.1]) {
+            for (const x of [-1.1, 0, 1.1]) {
                 const leg = new THREE.Mesh(
                     new THREE.BoxGeometry(0.1, 0.5, 0.1),
                     new THREE.MeshPhongMaterial({ color: 0x654321 })
@@ -136,8 +136,8 @@ const EXPANDED_PROP_CATALOG = {
             group.add(top);
             const legGeometry = new THREE.CylinderGeometry(0.05, 0.05, 1);
             const legMaterial = new THREE.MeshPhongMaterial({ color: 0x654321 });
-            for (let x of [-0.9, 0.9]) {
-                for (let z of [-0.65, 0.65]) {
+            for (const x of [-0.9, 0.9]) {
+                for (const z of [-0.65, 0.65]) {
                     const leg = new THREE.Mesh(legGeometry, legMaterial);
                     leg.position.set(x, 0.5, z);
                     group.add(leg);
@@ -197,8 +197,8 @@ const EXPANDED_PROP_CATALOG = {
                 group.add(drawer);
             }
             // Legs
-            for (let x of [-0.65, 0.65]) {
-                for (let z of [-0.45, 0.45]) {
+            for (const x of [-0.65, 0.65]) {
+                for (const z of [-0.45, 0.45]) {
                     const leg = new THREE.Mesh(
                         new THREE.BoxGeometry(0.08, 0.9, 0.08),
                         new THREE.MeshPhongMaterial({ color: 0x654321 })
@@ -268,7 +268,7 @@ const EXPANDED_PROP_CATALOG = {
             back.position.set(0, 1, -0.5);
             group.add(back);
             // Arms
-            for (let x of [-1.25, 1.25]) {
+            for (const x of [-1.25, 1.25]) {
                 const arm = new THREE.Mesh(
                     new THREE.BoxGeometry(0.2, 0.6, 1),
                     new THREE.MeshPhongMaterial({ color: 0x36648B })
@@ -294,8 +294,8 @@ const EXPANDED_PROP_CATALOG = {
             group.add(top);
             const legGeometry = new THREE.BoxGeometry(0.1, 0.4, 0.1);
             const legMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
-            for (let x of [-0.65, 0.65]) {
-                for (let z of [-0.4, 0.4]) {
+            for (const x of [-0.65, 0.65]) {
+                for (const z of [-0.4, 0.4]) {
                     const leg = new THREE.Mesh(legGeometry, legMaterial);
                     leg.position.set(x, 0.2, z);
                     group.add(leg);
@@ -347,7 +347,7 @@ const EXPANDED_PROP_CATALOG = {
             barrel.position.y = 0.6;
             group.add(barrel);
             const bandMaterial = new THREE.MeshPhongMaterial({ color: 0x444444 });
-            for (let y of [0.2, 0.6, 1.0]) {
+            for (const y of [0.2, 0.6, 1.0]) {
                 const band = new THREE.Mesh(
                     new THREE.CylinderGeometry(0.52, 0.52, 0.05, 12),
                     bandMaterial
@@ -424,7 +424,7 @@ const EXPANDED_PROP_CATALOG = {
             body.position.y = 0.4;
             group.add(body);
             // Metal bands
-            for (let x of [-0.5, 0, 0.5]) {
+            for (const x of [-0.5, 0, 0.5]) {
                 const band = new THREE.Mesh(
                     new THREE.BoxGeometry(0.05, 0.82, 0.92),
                     new THREE.MeshPhongMaterial({ color: 0x444444 })
@@ -444,7 +444,7 @@ const EXPANDED_PROP_CATALOG = {
             const group = new THREE.Group();
             const sideGeometry = new THREE.BoxGeometry(0.1, 2.5, 0.1);
             const sideMaterial = new THREE.MeshPhongMaterial({ color: 0x8B4513 });
-            for (let x of [-0.3, 0.3]) {
+            for (const x of [-0.3, 0.3]) {
                 const side = new THREE.Mesh(sideGeometry, sideMaterial);
                 side.position.set(x, 1.25, 0);
                 group.add(side);
@@ -641,7 +641,7 @@ const EXPANDED_PROP_CATALOG = {
             stem.position.y = 0.3;
             group.add(stem);
             // Three candle holders
-            for (let x of [-0.3, 0, 0.3]) {
+            for (const x of [-0.3, 0, 0.3]) {
                 const holder = new THREE.Mesh(
                     new THREE.CylinderGeometry(0.03, 0.03, 0.15),
                     new THREE.MeshPhongMaterial({ color: 0xFFD700 })
@@ -773,7 +773,7 @@ const EXPANDED_PROP_CATALOG = {
             rod.position.y = 2;
             group.add(rod);
             // Curtain panels
-            for (let x of [-0.5, 0.5]) {
+            for (const x of [-0.5, 0.5]) {
                 const panel = new THREE.Mesh(
                     new THREE.BoxGeometry(0.6, 1.8, 0.05),
                     new THREE.MeshPhongMaterial({ color: 0x4169E1 })
@@ -817,7 +817,7 @@ const EXPANDED_PROP_CATALOG = {
             crown.position.set(0, 2.9, -0.7);
             group.add(crown);
             // Arms
-            for (let x of [-0.75, 0.75]) {
+            for (const x of [-0.75, 0.75]) {
                 const arm = new THREE.Mesh(
                     new THREE.BoxGeometry(0.2, 0.8, 1),
                     new THREE.MeshPhongMaterial({ color: 0x654321 })
@@ -917,7 +917,7 @@ const EXPANDED_PROP_CATALOG = {
             main.position.y = 0.65;
             group.add(main);
             // Candles
-            for (let x of [-0.6, 0, 0.6]) {
+            for (const x of [-0.6, 0, 0.6]) {
                 const candle = new THREE.Mesh(
                     new THREE.CylinderGeometry(0.04, 0.04, 0.3),
                     new THREE.MeshPhongMaterial({ color: 0xFFFACD })
@@ -1020,8 +1020,8 @@ const EXPANDED_PROP_CATALOG = {
             // Glass panes
             const glassGeometry = new THREE.BoxGeometry(0.7, 0.85, 0.02);
             const glassMaterial = new THREE.MeshPhongMaterial({ color: 0x87CEEB, transparent: true, opacity: 0.3 });
-            for (let x of [-0.375, 0.375]) {
-                for (let y of [1.1, 1.9]) {
+            for (const x of [-0.375, 0.375]) {
+                for (const y of [1.1, 1.9]) {
                     const pane = new THREE.Mesh(glassGeometry, glassMaterial);
                     pane.position.set(x, y, 0);
                     group.add(pane);
@@ -1062,8 +1062,8 @@ const EXPANDED_PROP_CATALOG = {
             body.position.y = 0.45;
             group.add(body);
             // Burners
-            for (let x of [-0.4, 0.4]) {
-                for (let z of [-0.2, 0.2]) {
+            for (const x of [-0.4, 0.4]) {
+                for (const z of [-0.2, 0.2]) {
                     const burner = new THREE.Mesh(
                         new THREE.CylinderGeometry(0.12, 0.12, 0.02, 16),
                         new THREE.MeshPhongMaterial({ color: 0x444444 })
@@ -1089,7 +1089,7 @@ const EXPANDED_PROP_CATALOG = {
             body.position.y = 1;
             group.add(body);
             // Handles
-            for (let y of [1.5, 0.5]) {
+            for (const y of [1.5, 0.5]) {
                 const handle = new THREE.Mesh(
                     new THREE.BoxGeometry(0.05, 0.3, 0.05),
                     new THREE.MeshPhongMaterial({ color: 0xC0C0C0 })
@@ -1175,8 +1175,8 @@ const EXPANDED_PROP_CATALOG = {
             headboard.position.set(0, 1, -0.5);
             group.add(headboard);
             // Wheels
-            for (let x of [-0.9, 0.9]) {
-                for (let z of [-0.4, 0.4]) {
+            for (const x of [-0.9, 0.9]) {
+                for (const z of [-0.4, 0.4]) {
                     const wheel = new THREE.Mesh(
                         new THREE.CylinderGeometry(0.08, 0.08, 0.05, 8),
                         new THREE.MeshPhongMaterial({ color: 0x444444 })
@@ -1242,8 +1242,8 @@ const EXPANDED_PROP_CATALOG = {
                 group.add(shelf);
             }
             // Wheels
-            for (let x of [-0.3, 0.3]) {
-                for (let z of [-0.25, 0.25]) {
+            for (const x of [-0.3, 0.3]) {
+                for (const z of [-0.25, 0.25]) {
                     const wheel = new THREE.Mesh(
                         new THREE.CylinderGeometry(0.05, 0.05, 0.05, 8),
                         new THREE.MeshPhongMaterial({ color: 0x444444 })
