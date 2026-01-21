@@ -1,14 +1,46 @@
-// Stage Props Module - Prop catalog and placement
+/**
+ * @file Stage Props Module - Prop catalog and placement
+ * @module stage-props
+ */
 
 import { scene } from './stage-core.js';
 import { updatePropRelationships, checkAllCollisions } from './stage-physics.js';
 
+/**
+ * @typedef {Object} PropDefinition
+ * @property {string} name - Display name of the prop
+ * @property {string} category - Category (basic, furniture, items)
+ * @property {Function} create - Function that returns THREE.Geometry
+ * @property {number} color - Hex color code
+ * @property {number} y - Default Y position
+ * @property {Object} interactions - Interaction flags
+ * @property {boolean} interactions.grabbable - Can be picked up
+ * @property {boolean} interactions.throwable - Can be thrown
+ * @property {boolean} [interactions.sittable] - Can be sat on
+ * @property {boolean} [interactions.toggleable] - Has on/off state
+ */
+
+/**
+ * @typedef {Object} PropState
+ * @property {boolean} [on] - For lamps and lights
+ * @property {boolean} [open] - For doors and containers
+ * @property {Array} [contents] - For containers
+ */
+
+/** @type {Array<THREE.Mesh>} */
 export let props = [];
+/** @type {string} */
 export let selectedPropType = 'cube'; // default prop type
+/** @type {number} */
 export let nextPropId = 1;
+/** @type {Map<THREE.Mesh, PropState>} */
 export let propStates = new Map(); // prop -> state object (e.g., lamp: {on: false}, door: {open: false})
 
-// Prop catalog definitions
+/**
+ * Prop catalog definitions
+ * Contains all available prop types with their properties and behaviors
+ * @type {Object.<string, PropDefinition>}
+ */
 export const PROP_CATALOG = {
     // Basic shapes
     cube: {
@@ -279,6 +311,13 @@ export const PROP_CATALOG = {
     }
 };
 
+/**
+ * Add a prop to the stage at the specified coordinates
+ * Automatically handles collision detection and finds nearby free spot if needed
+ * @param {number} x - X coordinate on the stage
+ * @param {number} z - Z coordinate on the stage
+ * @returns {THREE.Mesh|null} The created prop object or null if placement failed
+ */
 export function addPropAt(x, z) {
     const propDef = PROP_CATALOG[selectedPropType];
     if (!propDef) return;

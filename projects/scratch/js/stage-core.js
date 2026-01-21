@@ -1,8 +1,32 @@
-// Stage Core Module - Scene, camera, renderer, lighting, and controls
+/**
+ * @file Stage Core Module - Scene, camera, renderer, lighting, and controls
+ * @module stage-core
+ */
 
-export let scene, camera, renderer, controls;
+/**
+ * @typedef {Object} THREE.Scene
+ * @typedef {Object} THREE.PerspectiveCamera
+ * @typedef {Object} THREE.WebGLRenderer
+ * @typedef {Object} THREE.OrbitControls
+ * @typedef {Object} THREE.Light
+ */
+
+/** @type {THREE.Scene} */
+export let scene;
+/** @type {THREE.PerspectiveCamera} */
+export let camera;
+/** @type {THREE.WebGLRenderer} */
+export let renderer;
+/** @type {THREE.OrbitControls} */
+export let controls;
+/** @type {Array<THREE.Light>} */
 export let lights = [];
 
+/**
+ * Initialize the Three.js scene, camera, and renderer
+ * Sets up the basic 3D environment for the theater stage
+ * @returns {void}
+ */
 export function init() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x001122);
@@ -19,6 +43,11 @@ export function init() {
     document.body.appendChild(renderer.domElement);
 }
 
+/**
+ * Create and configure stage lighting
+ * Sets up ambient light and multiple spotlights for dramatic effect
+ * @returns {void}
+ */
 export function createLighting() {
     const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
     scene.add(ambientLight);
@@ -69,6 +98,11 @@ export function createLighting() {
     lights.push(spotLight1, spotLight2, centerSpotLight);
 }
 
+/**
+ * Add OrbitControls for camera manipulation
+ * Enables mouse/touch controls for rotating and zooming the camera
+ * @returns {void}
+ */
 export function addControls() {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -79,6 +113,11 @@ export function addControls() {
     controls.maxPolarAngle = Math.PI / 2;
 }
 
+/**
+ * Handle window resize events
+ * Updates camera aspect ratio and renderer size to maintain proper display
+ * @returns {void}
+ */
 export function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
