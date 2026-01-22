@@ -2835,9 +2835,8 @@ function executeActorScript(scriptData) {
     if (success) {
         scriptEngine.start();
         console.log('Script execution started');
-        alert('Actor script loaded and started!');
     } else {
-        alert('Failed to load script');
+        console.error('Failed to load script');
     }
 }
 
@@ -2856,6 +2855,8 @@ function resolveScriptPositions(scriptData) {
                             ...action,
                             position: { x: prop.position.x, z: prop.position.z }
                         };
+                    } else {
+                        console.warn(`Prop ${action.position} not found in scene`);
                     }
                 }
             }

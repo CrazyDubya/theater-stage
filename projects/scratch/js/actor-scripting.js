@@ -70,7 +70,6 @@ class PathFinder {
     isPathClear(start, end, obstacles) {
         // Simple collision check along path
         const steps = 10;
-        const direction = new THREE.Vector3().subVectors(end, start);
         
         for (let i = 0; i <= steps; i++) {
             const t = i / steps;
@@ -93,7 +92,7 @@ class PathFinder {
         if (!obstacle.userData) return false;
         
         const pos = obstacle.position;
-        const radius = 1.5; // Collision radius
+        const radius = (obstacle.userData && obstacle.userData.collisionRadius) ? obstacle.userData.collisionRadius : 1.5; // Allow per-object override
         
         const dx = point.x - pos.x;
         const dz = point.z - pos.z;
@@ -315,7 +314,7 @@ class ActionQueue {
         this.currentAction = this.actions.shift();
         
         if (this.currentAction.type === 'wait') {
-            this.waitStartTime = Date.now();
+            this.waitStartTime = performance.now();
         } else if (this.currentAction.execute) {
             this.currentAction.execute();
         }
@@ -330,7 +329,7 @@ class ActionQueue {
         }
 
         if (this.currentAction.type === 'wait') {
-            const elapsed = (Date.now() - this.waitStartTime) / 1000;
+            const elapsed = (performance.now() - this.waitStartTime) / 1000;
             if (elapsed >= this.currentAction.duration) {
                 this.executeNextAction();
             }
@@ -488,14 +487,16 @@ class ScriptEngine {
         
         return {
             type: 'turn',
-            execute: () => {
-                let completed = false;
+            completed: false,
+            execute: function() {
+                const self = this;
                 controller.turnTo(direction, () => {
-                    completed = true;
+                    self.completed = true;
                 });
-                this._turnCompleted = () => completed;
             },
-            isComplete: () => this._turnCompleted && this._turnCompleted()
+            isComplete: function() {
+                return this.completed;
+            }
         };
     }
 
@@ -539,8 +540,8 @@ class ScriptEngine {
             
             // Prop ID (e.g., "prop_5")
             if (positionData.startsWith('prop_')) {
-                // This will be handled by the script executor with actual prop objects
-                return { x: 0, z: 0 }; // Placeholder
+                console.warn(`Prop position ${positionData} will be resolved at runtime`);
+                return null; // Let caller handle prop resolution
             }
             
             return null;
@@ -559,7 +560,7 @@ class ScriptEngine {
         if (this.isRunning) return;
         
         this.isRunning = true;
-        this.lastUpdateTime = Date.now();
+        this.lastUpdateTime = performance.now();
         
         // Start all actor queues
         this.actorQueues.forEach(queue => {
@@ -590,7 +591,7 @@ class ScriptEngine {
     update() {
         if (!this.isRunning) return;
 
-        const currentTime = Date.now();
+        const currentTime = performance.now();
         const deltaTime = (currentTime - this.lastUpdateTime) / 1000;
         this.lastUpdateTime = currentTime;
 
@@ -639,9 +640,4 @@ class ScriptEngine {
         });
         return status;
     }
-}
-
-// Export for use in main script
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { ScriptEngine, ActorController, PathFinder, ActionQueue };
 }

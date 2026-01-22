@@ -33,22 +33,39 @@ JSON_FILES=(
     "example-scripts/speed-demo.json"
 )
 
-for json in "${JSON_FILES[@]}"; do
-    if python3 -m json.tool "$json" > /dev/null 2>&1; then
-        echo "   ✓ $json is valid JSON"
-    else
-        echo "   ✗ $json has invalid JSON"
-        exit 1
-    fi
-done
+if command -v python3 &> /dev/null; then
+    for json in "${JSON_FILES[@]}"; do
+        if python3 -m json.tool "$json" > /dev/null 2>&1; then
+            echo "   ✓ $json is valid JSON"
+        else
+            echo "   ✗ $json has invalid JSON"
+            exit 1
+        fi
+    done
+elif command -v jq &> /dev/null; then
+    for json in "${JSON_FILES[@]}"; do
+        if jq empty "$json" > /dev/null 2>&1; then
+            echo "   ✓ $json is valid JSON"
+        else
+            echo "   ✗ $json has invalid JSON"
+            exit 1
+        fi
+    done
+else
+    echo "   ⚠ Neither python3 nor jq found, skipping JSON validation"
+fi
 
 echo ""
 echo "3. Checking JavaScript syntax..."
-if node -c js/actor-scripting.js 2>&1; then
-    echo "   ✓ actor-scripting.js syntax is valid"
+if command -v node &> /dev/null; then
+    if node -c js/actor-scripting.js 2>&1; then
+        echo "   ✓ actor-scripting.js syntax is valid"
+    else
+        echo "   ✗ actor-scripting.js has syntax errors"
+        exit 1
+    fi
 else
-    echo "   ✗ actor-scripting.js has syntax errors"
-    exit 1
+    echo "   ⚠ node not found, skipping JavaScript syntax check"
 fi
 
 echo ""
