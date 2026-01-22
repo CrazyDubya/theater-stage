@@ -1,7 +1,11 @@
 /**
- * GLTFExporter for Three.js r128
- * This is a stub/placeholder that provides the basic structure for GLTF export
- * For production use, include the full Three.js GLTFExporter from:
+ * Minimal GLTFExporter implementation for Three.js r128.
+ * Provides basic functionality for exporting scenes and meshes to GLTF/GLB format.
+ * This implementation supports simple scene structure export and binary (GLB) output, 
+ * but creates placeholder geometry and lacks many advanced features of the official Three.js GLTFExporter.
+ * 
+ * LIMITATION: Actual vertex data is not exported - only scene structure, transforms, and materials.
+ * For production use with full geometry export, include the complete Three.js GLTFExporter from:
  * https://github.com/mrdoob/three.js/blob/r128/examples/js/exporters/GLTFExporter.js
  */
 
@@ -12,7 +16,6 @@ THREE.GLTFExporter = function() {
         options = options || {};
         const binary = options.binary !== undefined ? options.binary : false;
         const onlyVisible = options.onlyVisible !== undefined ? options.onlyVisible : true;
-        const embedImages = options.embedImages !== undefined ? options.embedImages : true;
         
         try {
             // Create basic GLTF structure

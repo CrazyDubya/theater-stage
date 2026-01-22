@@ -126,7 +126,6 @@ class SceneExporter {
             // Configure export options
             const exportOptions = {
                 binary: binary,
-                trs: false, // Use matrix instead of TRS for transforms
                 onlyVisible: true, // Only export visible objects
                 truncateDrawRange: true,
                 embedImages: true, // Embed images in the GLTF/GLB
@@ -291,13 +290,25 @@ class SceneExporter {
         }
 
         // Add curtains
-        if (curtainLeft && curtainRight && curtainTop) {
+        if (curtainLeft || curtainRight || curtainTop) {
             const curtainsGroup = new THREE.Group();
             curtainsGroup.name = 'curtains';
-            curtainsGroup.add(curtainLeft.clone());
-            curtainsGroup.add(curtainRight.clone());
-            curtainsGroup.add(curtainTop.clone());
-            exportGroup.add(curtainsGroup);
+            let hasCurtain = false;
+            if (curtainLeft && curtainLeft.visible) {
+                curtainsGroup.add(curtainLeft.clone());
+                hasCurtain = true;
+            }
+            if (curtainRight && curtainRight.visible) {
+                curtainsGroup.add(curtainRight.clone());
+                hasCurtain = true;
+            }
+            if (curtainTop && curtainTop.visible) {
+                curtainsGroup.add(curtainTop.clone());
+                hasCurtain = true;
+            }
+            if (hasCurtain) {
+                exportGroup.add(curtainsGroup);
+            }
         }
 
         // Add scenery panels
@@ -378,6 +389,10 @@ class SceneExporter {
      * Exports the current scene state for each frame
      * @param {number} frameCount - Number of frames to export
      * @param {Function} updateCallback - Function to call between frames to update the scene
+     * @param {string} format - Export format ('gltf', 'glb', or 'obj')
+     * 
+     * Note: This will trigger multiple browser download prompts in succession.
+     * For large frame counts, consider exporting in smaller batches.
      */
     async exportAnimationFrames(frameCount = 30, updateCallback, format = 'gltf') {
         try {
@@ -388,6 +403,9 @@ class SceneExporter {
                 if (updateCallback && typeof updateCallback === 'function') {
                     updateCallback(i);
                 }
+
+                // Log progress
+                console.log(`Exporting frame ${i + 1} of ${frameCount}...`);
 
                 // Export current frame
                 const frameName = `theater-scene-frame-${String(i).padStart(4, '0')}`;
@@ -421,13 +439,30 @@ const sceneExporter = new SceneExporter();
  */
 
 /**
+ * Sanitize a string for use as a safe filename.
+ * Removes or replaces characters invalid in filenames.
+ * @param {string} name - The filename to sanitize
+ * @returns {string} - The sanitized filename
+ */
+function sanitizeFilename(name) {
+    // Remove or replace invalid filename characters: / \ : * ? " < > |
+    return name.replace(/[\/\\:\*\?"<>\|]/g, '_').trim();
+}
+
+/**
  * Export scene to GLB (binary GLTF)
  */
 async function exportSceneGLB() {
     try {
-        const sceneName = prompt('Enter a name for the GLB export:', 'theater-scene');
-        if (!sceneName) {
+        const sceneNameRaw = prompt('Enter a name for the GLB export:', 'theater-scene');
+        if (!sceneNameRaw) {
             console.log('Export cancelled by user');
+            return;
+        }
+        
+        const sceneName = sanitizeFilename(sceneNameRaw);
+        if (!sceneName) {
+            alert('Invalid filename. Please enter a valid name for the export.');
             return;
         }
 
@@ -451,9 +486,15 @@ async function exportSceneGLB() {
  */
 async function exportSceneGLTF() {
     try {
-        const sceneName = prompt('Enter a name for the GLTF export:', 'theater-scene');
-        if (!sceneName) {
+        const sceneNameRaw = prompt('Enter a name for the GLTF export:', 'theater-scene');
+        if (!sceneNameRaw) {
             console.log('Export cancelled by user');
+            return;
+        }
+        
+        const sceneName = sanitizeFilename(sceneNameRaw);
+        if (!sceneName) {
+            alert('Invalid filename. Please enter a valid name for the export.');
             return;
         }
 
@@ -477,9 +518,15 @@ async function exportSceneGLTF() {
  */
 async function exportSceneOBJ() {
     try {
-        const sceneName = prompt('Enter a name for the OBJ export:', 'theater-scene');
-        if (!sceneName) {
+        const sceneNameRaw = prompt('Enter a name for the OBJ export:', 'theater-scene');
+        if (!sceneNameRaw) {
             console.log('Export cancelled by user');
+            return;
+        }
+        
+        const sceneName = sanitizeFilename(sceneNameRaw);
+        if (!sceneName) {
+            alert('Invalid filename. Please enter a valid name for the export.');
             return;
         }
 

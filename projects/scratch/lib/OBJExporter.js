@@ -1,7 +1,8 @@
 /**
- * OBJExporter for Three.js r128
- * This is a stub/placeholder that provides the basic structure for OBJ export
- * For production use, include the full Three.js OBJExporter from:
+ * Working OBJExporter implementation for Three.js r128.
+ * Provides functionality to export 3D objects to the Wavefront OBJ format.
+ * This is a functional implementation that exports geometry with vertices, normals, and UVs.
+ * For advanced features or the official version, see the full Three.js OBJExporter from:
  * https://github.com/mrdoob/three.js/blob/r128/examples/js/exporters/OBJExporter.js
  */
 
@@ -15,7 +16,6 @@ THREE.OBJExporter = function() {
         let indexNormals = 0;
         
         output += '# Wavefront OBJ exported by Theater-Stage\n';
-        output += '# www.theater-stage.example.com\n';
         output += '\n';
         
         const materials = {};
