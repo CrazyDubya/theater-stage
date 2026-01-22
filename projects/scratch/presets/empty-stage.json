@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-01-15T00:00:00.000Z",
+  "name": "Empty Stage",
+  "description": "A clean, empty stage with default lighting and no props or actors",
+  "stage": {
+    "actors": [],
+    "props": [],
+    "lighting": {
+      "preset": "default",
+      "customSettings": {}
+    },
+    "camera": {
+      "position": { "x": 0, "y": 8, "z": 15 },
+      "target": { "x": 0, "y": 0, "z": 0 }
+    },
+    "stageElements": {
+      "platforms": [
+        { "index": 0, "height": 0.25, "visible": true },
+        { "index": 1, "height": 0.25, "visible": true },
+        { "index": 2, "height": 0.25, "visible": true },
+        { "index": 3, "height": 0.25, "visible": true }
+      ],
+      "curtains": "closed",
+      "rotatingStage": {
+        "visible": false,
+        "rotating": false,
+        "rotation": 0
+      },
+      "trapDoors": [
+        { "index": 0, "visible": false, "open": false },
+        { "index": 1, "visible": false, "open": false },
+        { "index": 2, "visible": false, "open": false },
+        { "index": 3, "visible": false, "open": false }
+      ],
+      "scenery": [
+        { "index": 0, "position": 0 },
+        { "index": 1, "position": 0 }
+      ],
+      "markers": {
+        "visible": true
+      }
+    }
+  }
+}

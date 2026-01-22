@@ -1,0 +1,133 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-01-19T00:00:00.000Z",
+  "name": "Hospital Emergency",
+  "description": "Modern medical drama setting with hospital bed and medical equipment arrangement",
+  "stage": {
+    "actors": [
+      {
+        "id": "actor_1",
+        "name": "Doctor",
+        "position": { "x": -1, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_2",
+        "name": "Nurse",
+        "position": { "x": 1, "y": 0, "z": -1 },
+        "rotation": { "x": 0, "y": -1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_3",
+        "name": "Patient (standing)",
+        "position": { "x": 0, "y": 0, "z": 3 },
+        "rotation": { "x": 0, "y": 3.14, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_4",
+        "name": "Family Member",
+        "position": { "x": -4, "y": 0, "z": 2 },
+        "rotation": { "x": 0, "y": 0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "props": [
+      {
+        "id": "prop_1",
+        "name": "Hospital Bed",
+        "type": "table",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_2",
+        "name": "Medical Cart",
+        "type": "crate",
+        "position": { "x": 2, "y": 0, "z": -2 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_3",
+        "name": "Waiting Chair",
+        "type": "chair",
+        "position": { "x": -4, "y": 0, "z": 2 },
+        "rotation": { "x": 0, "y": 0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_4",
+        "name": "Monitor/Equipment",
+        "type": "cube",
+        "position": { "x": -2, "y": 0, "z": -1 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_5",
+        "name": "IV Stand",
+        "type": "lamp",
+        "position": { "x": 1, "y": 0, "z": 0.5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_6",
+        "name": "Supply Cabinet",
+        "type": "barrel",
+        "position": { "x": -5, "y": 0, "z": -4 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "lighting": {
+      "preset": "day",
+      "customSettings": {}
+    },
+    "camera": {
+      "position": { "x": -2, "y": 6, "z": 14 },
+      "target": { "x": 0, "y": 0, "z": 0 }
+    },
+    "stageElements": {
+      "platforms": [
+        { "index": 0, "height": 0, "visible": true },
+        { "index": 1, "height": 0, "visible": true },
+        { "index": 2, "height": 0, "visible": true },
+        { "index": 3, "height": 0, "visible": true }
+      ],
+      "curtains": "open",
+      "rotatingStage": {
+        "visible": false,
+        "rotating": false,
+        "rotation": 0
+      },
+      "trapDoors": [
+        { "index": 0, "visible": false, "open": false },
+        { "index": 1, "visible": false, "open": false },
+        { "index": 2, "visible": false, "open": false },
+        { "index": 3, "visible": false, "open": false }
+      ],
+      "scenery": [
+        { "index": 0, "position": 1 },
+        { "index": 1, "position": 0.5 }
+      ],
+      "markers": {
+        "visible": false
+      }
+    }
+  }
+}

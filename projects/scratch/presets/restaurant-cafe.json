@@ -1,0 +1,179 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-01-15T00:00:00.000Z",
+  "name": "Restaurant/Cafe",
+  "description": "A cozy restaurant or cafe with tables and chairs for dining",
+  "stage": {
+    "actors": [
+      {
+        "id": "actor_1",
+        "name": "Actor actor_1",
+        "position": { "x": -5, "y": 0, "z": 1 },
+        "rotation": { "x": 0, "y": 0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_2",
+        "name": "Actor actor_2",
+        "position": { "x": 5, "y": 0, "z": 1 },
+        "rotation": { "x": 0, "y": -0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_3",
+        "name": "Actor actor_3",
+        "position": { "x": 0, "y": 0, "z": -5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "props": [
+      {
+        "id": "prop_1",
+        "name": "Table (prop_1)",
+        "type": "table",
+        "position": { "x": -5, "y": 0, "z": 3 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_2",
+        "name": "Chair (prop_2)",
+        "type": "chair",
+        "position": { "x": -5, "y": 0, "z": 1 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_3",
+        "name": "Chair (prop_3)",
+        "type": "chair",
+        "position": { "x": -5, "y": 0, "z": 5 },
+        "rotation": { "x": 0, "y": 3.14, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_4",
+        "name": "Table (prop_4)",
+        "type": "table",
+        "position": { "x": 5, "y": 0, "z": 3 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_5",
+        "name": "Chair (prop_5)",
+        "type": "chair",
+        "position": { "x": 5, "y": 0, "z": 1 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_6",
+        "name": "Chair (prop_6)",
+        "type": "chair",
+        "position": { "x": 5, "y": 0, "z": 5 },
+        "rotation": { "x": 0, "y": 3.14, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_7",
+        "name": "Table (prop_7)",
+        "type": "table",
+        "position": { "x": 0, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": 1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_8",
+        "name": "Chair (prop_8)",
+        "type": "chair",
+        "position": { "x": 2, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": -1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_9",
+        "name": "Chair (prop_9)",
+        "type": "chair",
+        "position": { "x": -2, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": 1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_10",
+        "name": "Potted Plant (prop_10)",
+        "type": "plant",
+        "position": { "x": -8, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_11",
+        "name": "Potted Plant (prop_11)",
+        "type": "plant",
+        "position": { "x": 8, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_12",
+        "name": "Stage Lamp (prop_12)",
+        "type": "lamp",
+        "position": { "x": 0, "y": 0, "z": -6 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "lighting": {
+      "preset": "sunset",
+      "customSettings": {}
+    },
+    "camera": {
+      "position": { "x": 0, "y": 8, "z": 15 },
+      "target": { "x": 0, "y": 0, "z": 0 }
+    },
+    "stageElements": {
+      "platforms": [
+        { "index": 0, "height": 0.25, "visible": true },
+        { "index": 1, "height": 0.25, "visible": true },
+        { "index": 2, "height": 0.25, "visible": true },
+        { "index": 3, "height": 0.25, "visible": true }
+      ],
+      "curtains": "open",
+      "rotatingStage": {
+        "visible": false,
+        "rotating": false,
+        "rotation": 0
+      },
+      "trapDoors": [
+        { "index": 0, "visible": false, "open": false },
+        { "index": 1, "visible": false, "open": false },
+        { "index": 2, "visible": false, "open": false },
+        { "index": 3, "visible": false, "open": false }
+      ],
+      "scenery": [
+        { "index": 0, "position": 0.5 },
+        { "index": 1, "position": 0 }
+      ],
+      "markers": {
+        "visible": false
+      }
+    }
+  }
+}

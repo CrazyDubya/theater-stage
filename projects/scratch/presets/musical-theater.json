@@ -1,0 +1,139 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-01-19T00:00:00.000Z",
+  "name": "Musical Theater",
+  "description": "Broadway-style musical theater setup with chorus line positions and dramatic lighting",
+  "stage": {
+    "actors": [
+      {
+        "id": "actor_1",
+        "name": "Lead Singer Center",
+        "position": { "x": 0, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_2",
+        "name": "Dancer Left",
+        "position": { "x": -4, "y": 0, "z": -1 },
+        "rotation": { "x": 0, "y": 0.3, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_3",
+        "name": "Dancer Right",
+        "position": { "x": 4, "y": 0, "z": -1 },
+        "rotation": { "x": 0, "y": -0.3, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_4",
+        "name": "Chorus Member 1",
+        "position": { "x": -6, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": 0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_5",
+        "name": "Chorus Member 2",
+        "position": { "x": -2, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": 0.2, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_6",
+        "name": "Chorus Member 3",
+        "position": { "x": 2, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": -0.2, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_7",
+        "name": "Chorus Member 4",
+        "position": { "x": 6, "y": 0, "z": -3 },
+        "rotation": { "x": 0, "y": -0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "props": [
+      {
+        "id": "prop_1",
+        "name": "Stage Lamp Left",
+        "type": "lamp",
+        "position": { "x": -8, "y": 0, "z": -5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_2",
+        "name": "Stage Lamp Right",
+        "type": "lamp",
+        "position": { "x": 8, "y": 0, "z": -5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_3",
+        "name": "Prop Table",
+        "type": "table",
+        "position": { "x": -7, "y": 0, "z": 5 },
+        "rotation": { "x": 0, "y": -0.5, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_4",
+        "name": "Decorative Plant",
+        "type": "plant",
+        "position": { "x": 7, "y": 0, "z": 5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "lighting": {
+      "preset": "dramatic",
+      "customSettings": {}
+    },
+    "camera": {
+      "position": { "x": 0, "y": 5, "z": 20 },
+      "target": { "x": 0, "y": 0, "z": 0 }
+    },
+    "stageElements": {
+      "platforms": [
+        { "index": 0, "height": 0, "visible": true },
+        { "index": 1, "height": 0, "visible": true },
+        { "index": 2, "height": 0, "visible": true },
+        { "index": 3, "height": 0, "visible": true }
+      ],
+      "curtains": "open",
+      "rotatingStage": {
+        "visible": true,
+        "rotating": false,
+        "rotation": 0
+      },
+      "trapDoors": [
+        { "index": 0, "visible": true, "open": false },
+        { "index": 1, "visible": true, "open": false },
+        { "index": 2, "visible": true, "open": false },
+        { "index": 3, "visible": true, "open": false }
+      ],
+      "scenery": [
+        { "index": 0, "position": 1 },
+        { "index": 1, "position": 1 }
+      ],
+      "markers": {
+        "visible": true
+      }
+    }
+  }
+}

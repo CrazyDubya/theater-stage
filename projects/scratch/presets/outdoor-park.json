@@ -1,0 +1,117 @@
+{
+  "version": "1.0",
+  "timestamp": "2025-01-15T00:00:00.000Z",
+  "name": "Outdoor Park",
+  "description": "An outdoor park setting with plants and natural day lighting",
+  "stage": {
+    "actors": [
+      {
+        "id": "actor_1",
+        "name": "Actor actor_1",
+        "position": { "x": 2, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": -1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "actor_2",
+        "name": "Actor actor_2",
+        "position": { "x": -2, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 1.57, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "props": [
+      {
+        "id": "prop_1",
+        "name": "Potted Plant (prop_1)",
+        "type": "plant",
+        "position": { "x": -5, "y": 0, "z": -5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_2",
+        "name": "Potted Plant (prop_2)",
+        "type": "plant",
+        "position": { "x": 5, "y": 0, "z": -5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_3",
+        "name": "Potted Plant (prop_3)",
+        "type": "plant",
+        "position": { "x": -5, "y": 0, "z": 5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_4",
+        "name": "Potted Plant (prop_4)",
+        "type": "plant",
+        "position": { "x": 5, "y": 0, "z": 5 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_5",
+        "name": "Barrel (prop_5)",
+        "type": "barrel",
+        "position": { "x": -7, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      },
+      {
+        "id": "prop_6",
+        "name": "Barrel (prop_6)",
+        "type": "barrel",
+        "position": { "x": 7, "y": 0, "z": 0 },
+        "rotation": { "x": 0, "y": 0, "z": 0 },
+        "visible": true,
+        "hidden": false
+      }
+    ],
+    "lighting": {
+      "preset": "day",
+      "customSettings": {}
+    },
+    "camera": {
+      "position": { "x": 0, "y": 10, "z": 18 },
+      "target": { "x": 0, "y": 0, "z": 0 }
+    },
+    "stageElements": {
+      "platforms": [
+        { "index": 0, "height": 0.25, "visible": true },
+        { "index": 1, "height": 0.25, "visible": true },
+        { "index": 2, "height": 0.25, "visible": true },
+        { "index": 3, "height": 0.25, "visible": true }
+      ],
+      "curtains": "open",
+      "rotatingStage": {
+        "visible": false,
+        "rotating": false,
+        "rotation": 0
+      },
+      "trapDoors": [
+        { "index": 0, "visible": false, "open": false },
+        { "index": 1, "visible": false, "open": false },
+        { "index": 2, "visible": false, "open": false },
+        { "index": 3, "visible": false, "open": false }
+      ],
+      "scenery": [
+        { "index": 0, "position": 0 },
+        { "index": 1, "position": 0 }
+      ],
+      "markers": {
+        "visible": false
+      }
+    }
+  }
+}

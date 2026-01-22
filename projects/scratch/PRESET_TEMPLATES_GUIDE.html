@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stage Preset Templates - Quick Guide</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            line-height: 1.6;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #4CAF50;
+            margin-top: 30px;
+        }
+        .preset-card {
+            background: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+        .preset-card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .feature-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        .feature-list li:before {
+            content: "✓ ";
+            color: #4CAF50;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .instructions {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Stage Preset Templates</h1>
+        <p>The 3D Theater Stage now includes six preset templates for common theatrical scenarios. These templates provide ready-to-use stage configurations with actors, props, lighting, and stage elements.</p>
+        
+        <div class="instructions">
+            <h3>How to Use Preset Templates</h3>
+            <ol>
+                <li>Open <code>index.html</code> in your browser</li>
+                <li>Click the menu toggle button (☰) in the top-left corner</li>
+                <li>Scroll down to the <strong>"Preset Templates"</strong> section</li>
+                <li>Select a preset from the dropdown menu</li>
+                <li>Click <strong>"Load Preset"</strong></li>
+                <li>Confirm to clear the current scene and load the template</li>
+            </ol>
+            <p><strong>Note:</strong> Loading a preset will clear your current scene. Save your work first if necessary!</p>
+        </div>
+
+        <h2>Available Presets</h2>
+
+        <div class="preset-card">
+            <h3>1. Empty Stage</h3>
+            <p><em>A clean slate for building your own scene</em></p>
+            <ul class="feature-list">
+                <li>Default lighting</li>
+                <li>No actors or props</li>
+                <li>Curtains closed</li>
+                <li>Stage markers visible</li>
+            </ul>
+        </div>
+
+        <div class="preset-card">
+            <h3>2. Living Room Scene</h3>
+            <p><em>A cozy domestic setting with warm ambiance</em></p>
+            <ul class="feature-list">
+                <li>2 actors seated in chairs</li>
+                <li>Central table with surrounding furniture</li>
+                <li>Decorative plants and lamps</li>
+                <li>Sunset lighting for warmth</li>
+                <li>Backdrop scenery at 50%</li>
+            </ul>
+        </div>
+
+        <div class="preset-card">
+            <h3>3. Outdoor Park</h3>
+            <p><em>Natural outdoor environment with day lighting</em></p>
+            <ul class="feature-list">
+                <li>2 actors facing each other</li>
+                <li>Plants scattered around the stage</li>
+                <li>Barrels for decoration</li>
+                <li>Bright day lighting</li>
+                <li>Open setting with no scenery panels</li>
+            </ul>
+        </div>
+
+        <div class="preset-card">
+            <h3>4. Office Setting</h3>
+            <p><em>Professional workplace environment</em></p>
+            <ul class="feature-list">
+                <li>3 actors at different workstations</li>
+                <li>Multiple desks and chairs</li>
+                <li>Office storage and decorative plant</li>
+                <li>Neutral default lighting</li>
+                <li>Backdrop scenery at 50%</li>
+            </ul>
+        </div>
+
+        <div class="preset-card">
+            <h3>5. Restaurant/Cafe</h3>
+            <p><em>Dining establishment with multiple tables</em></p>
+            <ul class="feature-list">
+                <li>3 actors (guests and staff)</li>
+                <li>3 dining tables with chairs</li>
+                <li>Decorative plants and ambient lamp</li>
+                <li>Warm sunset lighting</li>
+                <li>Backdrop scenery at 50%</li>
+            </ul>
+        </div>
+
+        <div class="preset-card">
+            <h3>6. Classical Theater</h3>
+            <p><em>Traditional theatrical setup with dramatic elements</em></p>
+            <ul class="feature-list">
+                <li>3 actors in classic blocking positions</li>
+                <li>Minimal props (chairs and stage lamps)</li>
+                <li>Dramatic spotlight lighting</li>
+                <li>Rotating stage visible</li>
+                <li>Trap doors visible</li>
+                <li>Full backdrop and midstage scenery panels</li>
+                <li>Stage markers visible for blocking</li>
+            </ul>
+        </div>
+
+        <h2>Technical Details</h2>
+        <p>All preset templates are stored as JSON files in the <code>presets/</code> directory. They use the Scene Serializer format version 1.0 and include:</p>
+        <ul>
+            <li>Scene metadata (name, description, timestamp)</li>
+            <li>Actor positions and rotations</li>
+            <li>Prop types and placements</li>
+            <li>Lighting configurations</li>
+            <li>Camera positions</li>
+            <li>Stage element states (platforms, curtains, scenery panels, etc.)</li>
+        </ul>
+
+        <h2>Creating Custom Presets</h2>
+        <p>You can create your own preset templates:</p>
+        <ol>
+            <li>Set up your stage with the desired configuration</li>
+            <li>Click <strong>"Save Scene"</strong> in the UI</li>
+            <li>Rename your file using kebab-case (e.g., <code>my-custom-scene.json</code>) and move it to the <code>presets/</code> directory</li>
+            <li>Edit <code>js/stage.js</code> around line 1270-1277 in the <code>presetSelect.innerHTML</code> section</li>
+            <li>Add a new option line: <code>&lt;option value="my-custom-scene"&gt;My Custom Scene&lt;/option&gt;</code></li>
+            <li>The <code>value</code> attribute must match your filename (without .json extension)</li>
+        </ol>
+        <p><strong>File Naming Convention:</strong> Use lowercase kebab-case for preset filenames (e.g., <code>outdoor-park.json</code>, <code>living-room.json</code>). The dropdown value must exactly match the filename without the .json extension.</p>
+
+        <div class="instructions">
+            <h3>💡 Pro Tip</h3>
+            <p>Use presets as starting points! Load a preset, then customize it by adding/removing props, changing lighting, or repositioning actors to match your specific needs.</p>
+        </div>
+    </div>
+</body>
+</html>

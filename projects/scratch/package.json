@@ -1,0 +1,46 @@
+{
+  "name": "scratch",
+  "version": "1.0.0",
+  "description": "An interactive 3D theater stage environment built with Three.js, designed for AI actor performances and theatrical simulations.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "npx jest",
+    "test:watch": "npx jest --watch",
+    "test:coverage": "npx jest --coverage",
+    "lint": "eslint 'js/**/*.js' '__tests__/**/*.js'",
+    "lint:fix": "eslint 'js/**/*.js' '__tests__/**/*.js' --fix",
+    "format": "prettier --write 'js/**/*.js' '__tests__/**/*.js' '*.json' '*.md'",
+    "format:check": "prettier --check 'js/**/*.js' '__tests__/**/*.js' '*.json' '*.md'",
+    "server": "node server/collaboration-server.js",
+    "dev": "node server/collaboration-server.js & python3 -m http.server 8000"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "transform": {},
+    "testMatch": [
+      "**/__tests__/**/*.test.js",
+      "**/*.test.js"
+    ],
+    "collectCoverageFrom": [
+      "js/**/*.js",
+      "!js/**/*.test.js",
+      "!**/node_modules/**"
+    ]
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "uuid": "^13.0.0",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-jest": "^29.12.1",
+    "jest": "^30.2.0",
+    "prettier": "^3.8.0"
+  }
+}
