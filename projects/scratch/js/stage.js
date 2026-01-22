@@ -105,7 +105,10 @@ class SoundSystem {
                 url: url
             };
             
-            this.sounds[category].push(sound);
+            // Only store looping sounds in the array to avoid memory leaks
+            if (loop) {
+                this.sounds[category].push(sound);
+            }
             return sound;
         } catch (error) {
             console.error('Failed to load sound:', url, error);
@@ -131,6 +134,9 @@ class SoundSystem {
         const gainNode = this.audioContext.createGain();
         const categoryVolume = this.volumes[sound.category] || 1.0;
         gainNode.gain.value = volume * categoryVolume * this.volumes.master;
+
+        // Store original volume for later recalculation when category volume changes
+        sound.originalVolume = volume;
 
         // Create panner for 3D audio if position is provided
         let pannerNode = null;
@@ -218,7 +224,8 @@ class SoundSystem {
         this.sounds[category].forEach(sound => {
             if (sound.isPlaying && sound.gainNode) {
                 const categoryVolume = this.volumes[sound.category] || 1.0;
-                sound.gainNode.gain.value = categoryVolume * this.volumes.master;
+                const originalVolume = sound.originalVolume || 1.0;
+                sound.gainNode.gain.value = originalVolume * categoryVolume * this.volumes.master;
             }
         });
     }
