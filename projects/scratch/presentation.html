@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Theater-Stage: A 3D Platform for AI Actor Performances</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reset.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/theme/black.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/monokai.css">
+    <style>
+        :root {
+            --r-heading-color: #58a6ff;
+            --r-link-color: #58a6ff;
+        }
+        .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+        .reveal pre { width: 100%; font-size: 0.55em; }
+        .reveal pre code { max-height: 500px; }
+        .reveal table { font-size: 0.7em; margin: 0 auto; }
+        .reveal th, .reveal td { padding: 0.3em 0.6em; border: 1px solid #444; }
+        .reveal th { background: #333; }
+        .stat-box {
+            display: inline-block;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border: 2px solid #58a6ff;
+            border-radius: 10px;
+            padding: 15px 25px;
+            margin: 10px;
+            text-align: center;
+        }
+        .stat-number { font-size: 2em; color: #58a6ff; font-weight: bold; }
+        .stat-label { font-size: 0.8em; color: #aaa; }
+        .architecture-diagram {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: monospace;
+            font-size: 0.6em;
+            line-height: 1.4;
+            text-align: left;
+            white-space: pre;
+        }
+        .loop-diagram {
+            background: linear-gradient(135deg, #0d1117 0%, #161b22 100%);
+            border: 2px solid #238636;
+            border-radius: 12px;
+            padding: 20px;
+            font-family: monospace;
+            font-size: 0.55em;
+            line-height: 1.3;
+            white-space: pre;
+        }
+        .issue-card {
+            background: linear-gradient(135deg, #3d1a1a 0%, #2d1515 100%);
+            border-left: 4px solid #f85149;
+            padding: 15px;
+            margin: 10px 0;
+            text-align: left;
+            font-size: 0.7em;
+            border-radius: 0 8px 8px 0;
+        }
+        .issue-critical { border-left-color: #f85149; }
+        .issue-high { border-left-color: #db6d28; }
+        .issue-medium { border-left-color: #d29922; }
+        .code-file { color: #8b949e; font-size: 0.8em; }
+        .highlight-box {
+            background: rgba(88, 166, 255, 0.1);
+            border: 1px solid #58a6ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .stage-preview {
+            background: linear-gradient(180deg, #1a0a0a 0%, #0a0a1a 50%, #1a1a0a 100%);
+            border: 3px solid #58a6ff;
+            border-radius: 12px;
+            padding: 30px;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .stage-floor {
+            width: 80%;
+            height: 60px;
+            background: linear-gradient(90deg, #4a3728 0%, #6b4423 50%, #4a3728 100%);
+            border-radius: 5px;
+            position: relative;
+        }
+        .spotlight {
+            width: 40px;
+            height: 80px;
+            background: radial-gradient(ellipse at center, rgba(255,255,200,0.3) 0%, transparent 70%);
+            position: absolute;
+            top: -80px;
+        }
+        .actor-figure {
+            width: 30px;
+            height: 50px;
+            background: linear-gradient(180deg, #ffdbac 0% 20%, #3498db 20% 100%);
+            border-radius: 15px 15px 5px 5px;
+            position: absolute;
+            bottom: 60px;
+        }
+        .curtain {
+            width: 40px;
+            height: 150px;
+            background: linear-gradient(180deg, #8b0000 0%, #5c0000 100%);
+            position: absolute;
+            top: 20px;
+        }
+        .two-column { display: flex; gap: 40px; align-items: flex-start; }
+        .two-column > div { flex: 1; }
+        .fragment.fade-in-then-semi-out.visible:not(.current-fragment) { opacity: 0.3; }
+        @media (max-width: 768px) {
+            .reveal pre { font-size: 0.45em; }
+            .stat-box { padding: 10px 15px; margin: 5px; }
+            .stat-number { font-size: 1.5em; }
+            .two-column { flex-direction: column; gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+            <!-- Slide 1: Title -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1a2e 100%)">
+                <h1 style="font-size: 2.2em;">Theater-Stage</h1>
+                <h3 style="color: #8b949e;">A 3D Platform for AI Actor Performances</h3>
+                <div style="margin-top: 40px;">
+                    <div class="stat-box">
+                        <div class="stat-number">12,601</div>
+                        <div class="stat-label">Lines of Code</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">21</div>
+                        <div class="stat-label">ES6 Modules</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-number">15</div>
+                        <div class="stat-label">Scene Presets</div>
+                    </div>
+                </div>
+                <p style="margin-top: 30px; color: #6e7681; font-size: 0.7em;">
+                    Three.js r170 | Node.js | WebSocket | Zero-build Architecture
+                </p>
+            </section>
+
+            <!-- Slide 2: What It Does -->
+            <section data-background-gradient="linear-gradient(180deg, #0d1117 0%, #161b22 100%)">
+                <h2>What Does It Do?</h2>
+                <div class="stage-preview">
+                    <div class="curtain" style="left: 20px;"></div>
+                    <div class="curtain" style="right: 20px;"></div>
+                    <div class="spotlight" style="left: 25%;"></div>
+                    <div class="spotlight" style="left: 50%; transform: translateX(-50%);"></div>
+                    <div class="spotlight" style="right: 25%;"></div>
+                    <div class="actor-figure" style="left: 30%;"></div>
+                    <div class="actor-figure" style="right: 35%;"></div>
+                    <div class="stage-floor">
+                        <div style="position: absolute; width: 100%; text-align: center; top: 20px; color: #8b949e; font-size: 0.8em;">
+                            MAIN STAGE (20x15 units)
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: center; gap: 20px; margin-top: 20px; flex-wrap: wrap;">
+                    <span class="highlight-box" style="font-size: 0.6em;">Humanoid Actors</span>
+                    <span class="highlight-box" style="font-size: 0.6em;">20+ Props</span>
+                    <span class="highlight-box" style="font-size: 0.6em;">5 Lighting Presets</span>
+                    <span class="highlight-box" style="font-size: 0.6em;">Real-time Collaboration</span>
+                </div>
+            </section>
+
+            <!-- Slide 3: Architecture Overview -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #1a1a2e 100%)">
+                <h2>High-Level Architecture</h2>
+                <div class="architecture-diagram">
+                           index.html
+                               │
+                         <span style="color: #58a6ff;">stage-main.js</span>
+                          (Entry Point)
+                               │
+           ┌───────────────────┼───────────────────┐
+           │                   │                   │
+    <span style="color: #7ee787;">stage-core.js</span>      <span style="color: #7ee787;">stage-geometry.js</span>   <span style="color: #7ee787;">stage-physics.js</span>
+    (Scene/Camera)      (Stage Elements)     (Collisions)
+           │                   │                   │
+           └─────────┬─────────┴─────────┬─────────┘
+                     │                   │
+              <span style="color: #ffa657;">stage-props.js</span>      <span style="color: #ffa657;">stage-actors.js</span>
+               (20+ Props)        (Humanoid Actors)
+                     │                   │
+                     └─────────┬─────────┘
+                               │
+                    <span style="color: #d2a8ff;">stage-serialization.js</span>
+                      (Save/Load System)
+                </div>
+            </section>
+
+            <!-- Slide 4: Module Breakdown -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #161b22 100%)">
+                <h2>Module Breakdown</h2>
+                <table>
+                    <thead>
+                        <tr><th>Module</th><th>Lines</th><th>Purpose</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td><code>stage-main.js</code></td><td>203</td><td>Animation loop, integration</td></tr>
+                        <tr><td><code>stage-core.js</code></td><td>126</td><td>Three.js scene setup</td></tr>
+                        <tr><td><code>stage-geometry.js</code></td><td>340</td><td>Stage elements</td></tr>
+                        <tr><td><code>stage-physics.js</code></td><td>305</td><td>Collision detection</td></tr>
+                        <tr><td><code>stage-props.js</code></td><td>400</td><td>Prop catalog & placement</td></tr>
+                        <tr><td><code>stage-actors.js</code></td><td>250</td><td>Actor management</td></tr>
+                        <tr><td><code>collaboration.js</code></td><td>546</td><td>WebSocket multi-user</td></tr>
+                        <tr><td><code>animation-timeline.js</code></td><td>655</td><td>Keyframe animations</td></tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Slide 5: Main Animation Loop -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #0a1628 100%)">
+                <h2>The Main Animation Loop</h2>
+                <p style="color: #8b949e; font-size: 0.7em;">The heart of the system: <code>requestAnimationFrame</code> @ 60 FPS</p>
+                <pre><code class="javascript" data-trim data-line-numbers="1-3|5-8|10-13|15-19|21-22">
+// js/stage-main.js:42-195
+function animate() {
+    requestAnimationFrame(animate);  // Recursive ~60 FPS
+
+    // 1. LIGHT ANIMATION - Subtle pulsing
+    lights.forEach((light, i) => {
+        light.intensity = baseIntensity + Math.sin(time * 0.5 + i) * 0.1;
+    });
+
+    // 2. MARKER ANIMATION - Floating effect
+    stageMarkers.forEach((marker, i) => {
+        marker.position.y = baseY + Math.sin(time * 2 + i * 0.5) * 0.05;
+    });
+
+    // 3. PHYSICS UPDATE - Thrown props, gravity
+    props.forEach(prop => {
+        if (throwingProps.has(prop)) {
+            vel.y -= 0.01;  // Gravity
+            prop.position.add(velocity);
+        }
+    });
+
+    // 4. RENDER
+    renderer.render(scene, camera);
+}
+                </code></pre>
+            </section>
+
+            <!-- Slide 6: Agentic Loop 1 - Physics -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #1a2e1a 100%)">
+                <h2>Agentic Loop #1: Physics Simulation</h2>
+                <div class="loop-diagram">
+<span style="color: #7ee787;">THROWN PROP PHYSICS CYCLE</span>
+
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   <span style="color: #ffa657;">THROW</span>     │ ──▶ │   <span style="color: #ffa657;">FLIGHT</span>   │ ──▶ │   <span style="color: #ffa657;">BOUNCE</span>   │
+│   Event     │     │   Update    │     │   Response  │
+└─────────────┘     └─────────────┘     └─────────────┘
+      │                   │                   │
+      ▼                   ▼                   ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Set initial │     │ Apply       │     │ Detect      │
+│ velocity &  │     │ gravity     │     │ collision   │
+│ direction   │     │ <span style="color: #58a6ff;">vel.y -= 0.01</span>│     │ with ground │
+└─────────────┘     └─────────────┘     └─────────────┘
+                          │                   │
+                          ▼                   ▼
+                    ┌─────────────┐     ┌─────────────┐
+                    │ Update pos  │     │ Reverse vel │
+                    │ <span style="color: #58a6ff;">pos += vel</span>  │     │ <span style="color: #58a6ff;">vel *= -0.3</span> │
+                    └─────────────┘     └─────────────┘
+                </div>
+                <p style="font-size: 0.6em; color: #8b949e;">Code: <code>stage-main.js:131-178</code></p>
+            </section>
+
+            <!-- Slide 7: Agentic Loop 2 - Relationships -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #1a1a2e 100%)">
+                <h2>Agentic Loop #2: Platform Relationships</h2>
+                <div class="loop-diagram">
+<span style="color: #d2a8ff;">DYNAMIC OBJECT-PLATFORM BINDING</span>
+
+              ┌───────────────────────────┐
+              │  <span style="color: #ffa657;">updateAllPropRelations</span>  │ ◀── Every Frame
+              └─────────────┬─────────────┘
+                            │
+              ┌─────────────┼─────────────┐
+              ▼             ▼             ▼
+        ┌──────────┐  ┌──────────┐  ┌──────────┐
+        │ Platform │  │ Rotating │  │ Trap     │
+        │ Check    │  │ Stage    │  │ Door     │
+        └────┬─────┘  └────┬─────┘  └────┬─────┘
+             │             │             │
+             ▼             ▼             ▼
+        ┌──────────┐  ┌──────────┐  ┌──────────┐
+        │ <span style="color: #7ee787;">Elevate</span>  │  │ <span style="color: #7ee787;">Rotate</span>   │  │ <span style="color: #7ee787;">Hide</span>     │
+        │ with     │  │ around   │  │ prop     │
+        │ platform │  │ center   │  │          │
+        └──────────┘  └──────────┘  └──────────┘
+                </div>
+                <p style="font-size: 0.6em; color: #8b949e;">Code: <code>stage-physics.js:242-288</code></p>
+            </section>
+
+            <!-- Slide 8: Agentic Loop 3 - Collaboration -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #2e1a1a 100%)">
+                <h2>Agentic Loop #3: WebSocket Collaboration</h2>
+                <div class="loop-diagram">
+<span style="color: #f85149;">REAL-TIME MULTI-USER SYNCHRONIZATION</span>
+
+  CLIENT A              SERVER              CLIENT B
+  (Director)                                 (Actor)
+      │                    │                    │
+      │   <span style="color: #7ee787;">state_update</span>     │                    │
+      │──────────────────▶ │                    │
+      │                    │   <span style="color: #58a6ff;">broadcast</span>        │
+      │                    │──────────────────▶ │
+      │                    │                    │
+      │   <span style="color: #ffa657;">cursor_move</span>      │                    │
+      │◀───────────────────│◀───────────────────│
+      │                    │                    │
+      │   <span style="color: #d2a8ff;">lock_object</span>     │                    │
+      │──────────────────▶ │                    │
+      │                    │   <span style="color: #d2a8ff;">object_locked</span>   │
+      │                    │──────────────────▶ │
+                </div>
+                <div style="display: flex; justify-content: center; gap: 15px; margin-top: 15px;">
+                    <span class="highlight-box" style="font-size: 0.55em; background: rgba(35, 134, 54, 0.2);">Director: Full Control</span>
+                    <span class="highlight-box" style="font-size: 0.55em; background: rgba(219, 109, 40, 0.2);">Actor: Can Edit</span>
+                    <span class="highlight-box" style="font-size: 0.55em; background: rgba(139, 148, 158, 0.2);">Viewer: Read-only</span>
+                </div>
+            </section>
+
+            <!-- Slide 9: Agentic Loop 4 - Animation Timeline -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #1a2e2e 100%)">
+                <h2>Agentic Loop #4: Animation Timeline</h2>
+                <div class="loop-diagram">
+<span style="color: #58a6ff;">KEYFRAME ANIMATION PLAYBACK</span>
+
+    ┌─────────────────────┐
+    │   <span style="color: #ffa657;">updateAnimation</span>   │ ◀── requestAnimationFrame
+    └──────────┬──────────┘
+               │
+               ▼
+    ┌─────────────────────┐
+    │  Calculate delta    │
+    │  <span style="color: #7ee787;">Δt = now - last</span>    │
+    └──────────┬──────────┘
+               │
+               ▼
+    ┌─────────────────────┐     ┌─────────────────────┐
+    │  Update currentTime │     │   Check end/loop    │
+    │  <span style="color: #7ee787;">t += Δt * speed</span>   │────▶│   if (t >= dur)     │
+    └─────────────────────┘     │     loop ? reset    │
+                                └──────────┬──────────┘
+                                           │
+                                           ▼
+                                ┌─────────────────────┐
+                                │ <span style="color: #d2a8ff;">applyAnimationAt(t)</span> │
+                                │ Interpolate all     │
+                                │ keyframes           │
+                                └─────────────────────┘
+                </div>
+                <p style="font-size: 0.6em; color: #8b949e;">Code: <code>animation-timeline.js:504-531</code></p>
+            </section>
+
+            <!-- Slide 10: Event-Driven Pattern -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #161b22 100%)">
+                <h2>Event-Driven Architecture</h2>
+                <pre><code class="javascript" data-trim data-line-numbers="1-4|6-12|14-20">
+// Custom event emitter pattern - collaboration.js
+class CollaborationManager {
+    constructor() {
+        this.messageHandlers = new Map();  // type -> handlers[]
+    }
+
+    // Register handler
+    on(messageType, handler) {
+        if (!this.messageHandlers.has(messageType)) {
+            this.messageHandlers.set(messageType, []);
+        }
+        this.messageHandlers.get(messageType).push(handler);
+    }
+
+    // Dispatch to all handlers
+    handleMessage(data) {
+        const handlers = this.messageHandlers.get(message.type);
+        handlers.forEach(handler => handler(message));
+    }
+}
+                </code></pre>
+                <div style="margin-top: 20px;">
+                    <p style="font-size: 0.65em; color: #8b949e;">Built-in Message Types:</p>
+                    <code style="font-size: 0.6em;">user_joined | user_left | cursor_move | state_update | object_locked | chat_message</code>
+                </div>
+            </section>
+
+            <!-- Slide 11: State Management -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #1a1a2e 100%)">
+                <h2>State Management</h2>
+                <div class="two-column">
+                    <div>
+                        <h4 style="color: #7ee787;">Global Maps</h4>
+                        <pre><code class="javascript" data-trim style="font-size: 0.9em;">
+// Relationship tracking
+actorHeldProps      // actor → prop
+actorSittingOn      // actor → furniture
+throwingProps       // prop → velocity
+propPlatformRelations
+propRotatingStageRelations
+propTrapDoorRelations
+propStates          // prop → {on, open}
+                        </code></pre>
+                    </div>
+                    <div>
+                        <h4 style="color: #ffa657;">Object userData</h4>
+                        <pre><code class="javascript" data-trim style="font-size: 0.9em;">
+actor.userData = {
+    type: 'actor',
+    id: 'actor_1',
+    draggable: true,
+    hidden: false,
+    name: 'Actor 1'
+}
+                        </code></pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 12: Issues Found - Critical -->
+            <section data-background-gradient="linear-gradient(135deg, #1a0a0a 0%, #2d1515 100%)">
+                <h2 style="color: #f85149;">Issues Found: Critical</h2>
+
+                <div class="issue-card issue-critical">
+                    <strong>1. Async/Await Syntax Error</strong>
+                    <div class="code-file">stage-physics.js:136</div>
+                    <pre><code class="javascript" style="font-size: 0.85em;">// Function is NOT async but uses await!
+export function checkAllCollisions(movingObj, newX, newZ) {
+    const { props } = await import('./stage-props.js');  // WILL FAIL!
+}</code></pre>
+                    <span style="color: #f85149;">Impact: Code will not execute</span>
+                </div>
+
+                <div class="issue-card issue-critical">
+                    <strong>2. Race Condition in Physics Updates</strong>
+                    <div class="code-file">stage-main.js:182-183</div>
+                    <pre><code class="javascript" style="font-size: 0.85em;">// Async function called without await
+if (updateAllPropRelationships) {
+    updateAllPropRelationships();  // Returns Promise, not awaited!
+}</code></pre>
+                    <span style="color: #f85149;">Impact: Relationships may not update before next render</span>
+                </div>
+            </section>
+
+            <!-- Slide 13: Issues Found - High/Medium -->
+            <section data-background-gradient="linear-gradient(135deg, #1a150a 0%, #2d2515 100%)">
+                <h2 style="color: #db6d28;">Issues Found: High/Medium</h2>
+
+                <div class="issue-card issue-high">
+                    <strong>3. Missing null Checks (123+ instances)</strong>
+                    <pre><code class="javascript" style="font-size: 0.85em;">const baseIntensity = light.userData.baseIntensity;
+// If light.userData is undefined → crash!</code></pre>
+                </div>
+
+                <div class="issue-card issue-high">
+                    <strong>4. Dynamic Imports in Hot Path</strong>
+                    <div class="code-file">stage-physics.js - called every frame @ 60 FPS!</div>
+                    <pre><code class="javascript" style="font-size: 0.85em;">const { props } = await import('./stage-props.js');  // ~50ms overhead</code></pre>
+                </div>
+
+                <div class="issue-card issue-medium">
+                    <strong>5. XSS Vulnerability via innerHTML</strong>
+                    <div class="code-file">error-handler.js:137, 158, 364</div>
+                    <pre><code class="javascript" style="font-size: 0.85em;">header.innerHTML = `...${args}...`;  // User input not sanitized!</code></pre>
+                </div>
+
+                <div class="issue-card issue-medium">
+                    <strong>6. Memory Leak - Unbounded Arrays</strong>
+                    <div class="code-file">error-handler.js:11</div>
+                    <pre><code class="javascript" style="font-size: 0.85em;">this.errors = [];  // Grows indefinitely (max 500 entries)</code></pre>
+                </div>
+            </section>
+
+            <!-- Slide 14: More Issues -->
+            <section data-background-gradient="linear-gradient(135deg, #0a1a1a 0%, #152525 100%)">
+                <h2 style="color: #d29922;">More Issues Found</h2>
+
+                <div class="issue-card" style="border-left-color: #d29922;">
+                    <strong>7. Constant Polling with setInterval</strong>
+                    <div class="code-file">tooltips.js:92</div>
+                    <pre><code class="javascript" style="font-size: 0.85em;">setInterval(() => this.scanForTooltips(), 2000);  // Never stops!</code></pre>
+                </div>
+
+                <div class="issue-card" style="border-left-color: #d29922;">
+                    <strong>8. Tautological Tests (Always Pass)</strong>
+                    <div class="code-file">stage-physics.test.js</div>
+                    <pre><code class="javascript" style="font-size: 0.85em;">test('should calculate bounds', () => {
+    const expected = { width: 1 };
+    expect(expected).toEqual({ width: 1 });  // Doesn't test function!
+});</code></pre>
+                </div>
+
+                <div class="issue-card" style="border-left-color: #8b949e;">
+                    <strong>9. Duplicate Code</strong>
+                    <p style="margin: 5px 0;">stage.js (3258 lines) contains duplicate SceneSerializer class also in stage-serialization.js</p>
+                </div>
+            </section>
+
+            <!-- Slide 15: Recommendations -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #0a1a28 100%)">
+                <h2>Recommendations</h2>
+                <div class="two-column" style="font-size: 0.75em;">
+                    <div>
+                        <h4 style="color: #f85149;">Short-Term (Week 1)</h4>
+                        <ul>
+                            <li>Add <code>async</code> to checkAllCollisions</li>
+                            <li>Use <code>await</code> or restructure physics</li>
+                            <li>Add <code>?.</code> optional chaining</li>
+                            <li>Move imports to module top</li>
+                        </ul>
+
+                        <h4 style="color: #db6d28; margin-top: 20px;">Medium-Term (Weeks 2-3)</h4>
+                        <ul>
+                            <li>Refactor 3258-line stage.js</li>
+                            <li>Add try-catch in animation loop</li>
+                            <li>Fix innerHTML with textContent</li>
+                            <li>Rewrite tautological tests</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 style="color: #7ee787;">Long-Term (Month+)</h4>
+                        <ul>
+                            <li><strong>TypeScript migration</strong> for type safety</li>
+                            <li><strong>Comprehensive test suite</strong> with real integration tests</li>
+                            <li><strong>Performance monitoring</strong> for frame budget</li>
+                            <li><strong>Architecture docs</strong> with data flow diagrams</li>
+                            <li><strong>State management refactor</strong> - consider centralized store</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 16: Summary -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #161b22 50%, #1a1a2e 100%)">
+                <h2>Summary</h2>
+                <div class="two-column" style="font-size: 0.7em;">
+                    <div>
+                        <h4 style="color: #58a6ff;">What It Is</h4>
+                        <ul>
+                            <li>3D theatrical staging with Three.js</li>
+                            <li>Real-time multi-user collaboration</li>
+                            <li>Physics simulation for props</li>
+                            <li>Animation timeline system</li>
+                            <li>20+ interactive props</li>
+                        </ul>
+
+                        <h4 style="color: #7ee787; margin-top: 20px;">Agentic Loops</h4>
+                        <ol>
+                            <li>Main Render Loop (60 FPS)</li>
+                            <li>Physics Simulation</li>
+                            <li>Platform Relationships</li>
+                            <li>WebSocket Sync</li>
+                            <li>Animation Timeline</li>
+                        </ol>
+                    </div>
+                    <div>
+                        <h4 style="color: #f85149;">Issues to Address</h4>
+                        <ul>
+                            <li><strong>Critical:</strong> Async syntax, race conditions</li>
+                            <li><strong>Important:</strong> Null checks, dynamic imports</li>
+                            <li><strong>Nice-to-have:</strong> TypeScript, better tests</li>
+                        </ul>
+
+                        <h4 style="color: #d2a8ff; margin-top: 20px;">Code Quality</h4>
+                        <ul>
+                            <li>Well-modularized (15 ES6 modules)</li>
+                            <li>Good docs (27+ markdown files)</li>
+                            <li>CI/CD pipeline in place</li>
+                            <li>Room for testing improvement</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Slide 17: Live Demo / Questions -->
+            <section data-background-gradient="linear-gradient(135deg, #0d1117 0%, #1a1a2e 100%)">
+                <h2>Live Demo</h2>
+                <div class="highlight-box" style="font-size: 0.8em;">
+                    <p><strong>To run locally:</strong></p>
+                    <pre><code class="bash">cd projects/scratch
+python3 -m http.server 8000
+# Open http://localhost:8000</code></pre>
+                </div>
+                <div class="highlight-box" style="font-size: 0.8em; margin-top: 20px;">
+                    <p><strong>Collaboration server:</strong></p>
+                    <pre><code class="bash">node server/collaboration-server.js</code></pre>
+                </div>
+                <div style="margin-top: 40px;">
+                    <h2>Questions?</h2>
+                    <p style="color: #8b949e;">Repository: <code>/home/user/theater-stage/projects/scratch</code></p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/dist/reveal.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/highlight/highlight.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.6.1/plugin/notes/notes.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            touch: true,
+            progress: true,
+            controls: true,
+            controlsTutorial: true,
+            controlsLayout: 'bottom-right',
+            controlsBackArrows: 'faded',
+            transition: 'slide',
+            transitionSpeed: 'default',
+            backgroundTransition: 'fade',
+            plugins: [RevealHighlight, RevealNotes],
+            // Mobile-friendly settings
+            width: '100%',
+            height: '100%',
+            margin: 0.04,
+            minScale: 0.2,
+            maxScale: 2.0
+        });
+    </script>
+</body>
+</html>
